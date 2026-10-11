@@ -1,0 +1,6 @@
+app:
+  name: Business Management System
+  version: "@project.version@"
+  profile: dev
+  github:
+    api: https://api.github.com/repos/{owner}/{repo}

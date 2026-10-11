@@ -1,0 +1,6 @@
+/* Base styles. "Nirmala UI" ships with Windows and renders Bangla correctly. */
+.root {
+    -fx-font-family: "Nirmala UI", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: #f4f6f8;
+}

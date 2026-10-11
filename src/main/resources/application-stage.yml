@@ -1,0 +1,14 @@
+# stage profile
+db:
+  url: jdbc:mysql://localhost:3306/bms?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Dhaka
+  username: root
+  password: root
+  pool:
+    max-size: 10
+    min-idle: 2
+
+# Admin user (created on first launch if not present)
+admin:
+  name: Administrator
+  username: admin
+  password: admin123
