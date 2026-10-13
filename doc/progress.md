@@ -47,7 +47,7 @@ Depends on: Stage 0
 | 2.1 | `messages_bn.properties` and `messages_en.properties` with base keys | Files load without error | ✅ |
 | 2.2 | I18n util that switches all labels instantly | Toggle changes labels without restart | ✅ |
 
-## Stage 3 — Entities & Schema
+## Stage 3 — Entities & Schema ✅
 Depends on: Stage 1
 
 Rules for every table:
@@ -60,20 +60,20 @@ Rules for every table:
 | 3.2 | Entities: `product_categories`, `products`, `stock_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.3 | Entities: `parties`, `party_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.4 | Entities: `transactions`, `transaction_items`, `transaction_payments` | Tables created with FKs and user-approved indexes | ✅ |
-| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | [T] |
-| 3.6 | Entities: `employees`, `attendance`, `salary_processing` | Tables created with FKs and user-approved indexes | [ ] |
-| 3.7 | Entities: `users`, `permissions`, `audit_log` | Tables created with FKs and user-approved indexes | [ ] |
-| 3.8 | Auto schema creation on startup (IF NOT EXISTS, FK order) | Empty DB → all tables; second run → no error | [ ] |
+| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.6 | Entities: `employees`, `attendance`, `salary_processing` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.7 | Entities: `users`, `permissions`, `audit_log` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.8 | Auto schema creation on startup (IF NOT EXISTS, FK order) | Empty DB → all tables; second run → no error | ✅ |
 
-## Stage 4 — Startup Seeding
+## Stage 4 — Startup Seeding ✅
 Depends on: Stage 3
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 4.1 | Seed default `app_config` rows if missing | 6 default rows exist, no duplicates on rerun | [ ] |
-| 4.2 | Seed default `business_profile` row if missing | 1 row exists, no duplicate on rerun | [ ] |
-| 4.3 | Create admin from active profile yml if missing (BCrypt) | Admin row exists, password hashed | [ ] |
-| 4.4 | Seed default role permissions (cashier limited) | Permission rows exist per role | [ ] |
+| 4.1 | Seed default `app_config` rows if missing | 6 default rows exist, no duplicates on rerun | ✅ |
+| 4.2 | Seed default `business_profile` row if missing | 1 row exists, no duplicate on rerun | ✅ |
+| 4.3 | Create admin from active profile yml if missing (BCrypt) | Admin row exists, password hashed | ✅ |
+| 4.4 | Seed default role permissions (cashier limited) | Permission rows exist per role | ✅ |
 
 ## Stage 5 — Login & Security
 Depends on: Stage 4
@@ -287,12 +287,14 @@ Depends on: Stages 11, 12, 17
 | N2.1 | Decide which actions staff can do (to be given by user) | User confirms list | [ ] |
 | N2.2 | Decide stock rule while pending (block overselling or not) | User confirms rule | [ ] |
 | N2.3 | Add `pending` and `rejected` to transaction status | Status values saved and read correctly | [ ] |
-| N2.4 | Staff sale/purchase saves with status `pending` (no ledger change) | Entry in pending; stock/party/account unchanged | [ ] |
-| N2.5 | Admin pending list view | All pending entries listed | [ ] |
-| N2.6 | Admin approve (atomic): status → `confirmed`, update stock/party/account | Status confirmed; ledgers correct; failure rolls back | [ ] |
-| N2.7 | Admin reject with reason: status → `rejected` | Entry marked rejected; no ledger change | [ ] |
-| N2.8 | Staff view of own entries (pending/approved/rejected) | Status shows correctly | [ ] |
-| N2.9 | Audit log for approve/reject | Audit row with admin and time | [ ] |
+| N2.4 | Add to `transactions`: `created_by` (FK → users), `approved_by` (FK → users), `approved_at`, `reject_reason` | Columns and FKs created; entry saves creator | [ ] |
+| N2.5 | Link login to employee: `users.employee_id` (FK → employees, optional, unique) | User saved with/without employee; one employee → at most one user | [ ] |
+| N2.6 | Staff sale/purchase saves with status `pending` (no ledger change) | Entry in pending; stock/party/account unchanged | [ ] |
+| N2.7 | Admin pending list view (shows who entered) | All pending entries listed with creator | [ ] |
+| N2.8 | Admin approve (atomic): status → `confirmed`, set `approved_by`/`approved_at`, update stock/party/account | Status confirmed; ledgers correct; failure rolls back | [ ] |
+| N2.9 | Admin reject with reason: status → `rejected`, set `approved_by`/`approved_at`/`reject_reason` | Entry marked rejected; no ledger change | [ ] |
+| N2.10 | Staff view of own entries (pending/approved/rejected) by `created_by` | Status shows correctly | [ ] |
+| N2.11 | Audit log for approve/reject | Audit row with admin and time | [ ] |
 
 ### N3 — Keep Passwords Out of the Public Repo
 `application-{dev,stage,prod}.yml` hold DB and admin passwords; the GitHub repo is public.

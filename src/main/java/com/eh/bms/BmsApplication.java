@@ -1,6 +1,7 @@
 package com.eh.bms;
 
 import com.eh.bms.config.AppConfig;
+import com.eh.bms.config.DataSeeder;
 import com.eh.bms.config.DatabaseConfig;
 import com.eh.bms.util.I18n;
 import javafx.application.Application;
@@ -26,7 +27,15 @@ public class BmsApplication extends Application {
             DatabaseConfig.init();
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Database connection failed", e);
-            showDatabaseError(e);
+            showStartupError(e, "db.error.header", "db.error.content");
+            Platform.exit();
+            return;
+        }
+        try {
+            DataSeeder.run();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Startup seeding failed", e);
+            showStartupError(e, "seed.error.header", "seed.error.content");
             Platform.exit();
             return;
         }
@@ -47,15 +56,15 @@ public class BmsApplication extends Application {
         DatabaseConfig.shutdown();
     }
 
-    private void showDatabaseError(Throwable e) {
+    private void showStartupError(Throwable e, String headerKey, String contentKey) {
         Throwable root = e;
         while (root.getCause() != null) {
             root = root.getCause();
         }
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(I18n.get("db.error.title"));
-        alert.setHeaderText(I18n.get("db.error.header"));
-        alert.setContentText(I18n.get("db.error.content", AppConfig.get().getProfile())
+        alert.setHeaderText(I18n.get(headerKey));
+        alert.setContentText(I18n.get(contentKey, AppConfig.get().getProfile())
                 + "\n\n" + root.getMessage());
         alert.showAndWait();
     }
