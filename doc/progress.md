@@ -60,7 +60,7 @@ Rules for every table:
 | 3.2 | Entities: `product_categories`, `products`, `stock_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.3 | Entities: `parties`, `party_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.4 | Entities: `transactions`, `transaction_items`, `transaction_payments` | Tables created with FKs and user-approved indexes | ✅ |
-| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | [ ] |
+| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | [T] |
 | 3.6 | Entities: `employees`, `attendance`, `salary_processing` | Tables created with FKs and user-approved indexes | [ ] |
 | 3.7 | Entities: `users`, `permissions`, `audit_log` | Tables created with FKs and user-approved indexes | [ ] |
 | 3.8 | Auto schema creation on startup (IF NOT EXISTS, FK order) | Empty DB → all tables; second run → no error | [ ] |

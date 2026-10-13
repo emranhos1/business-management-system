@@ -1,8 +1,12 @@
 package com.eh.bms.config;
 
+import com.eh.bms.model.Account;
+import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.BusinessTransaction;
+import com.eh.bms.model.Expense;
+import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
 import com.eh.bms.model.Product;
@@ -41,7 +45,11 @@ public final class DatabaseConfig {
             PartyLedger.class,
             BusinessTransaction.class,
             TransactionItem.class,
-            TransactionPayment.class
+            TransactionPayment.class,
+            Account.class,
+            AccountTransaction.class,
+            ExpenseCategory.class,
+            Expense.class
     );
 
     private static HikariDataSource dataSource;
