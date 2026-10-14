@@ -11,6 +11,13 @@ public class BusinessProfileRepository {
                 .getSingleResult();
     }
 
+    /** The single profile row (seeded on startup). */
+    public BusinessProfile get(Session session) {
+        return session.createSelectionQuery("from BusinessProfile b order by b.id", BusinessProfile.class)
+                .setMaxResults(1)
+                .getSingleResult();
+    }
+
     public void save(Session session, BusinessProfile profile) {
         session.persist(profile);
     }
