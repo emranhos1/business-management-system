@@ -52,6 +52,8 @@ public class PaginatedTable<T> extends VBox {
 
         previousButton.textProperty().bind(I18n.bind("pagination.previous"));
         nextButton.textProperty().bind(I18n.bind("pagination.next"));
+        previousButton.getStyleClass().add("page-button");
+        nextButton.getStyleClass().add("page-button");
         previousButton.setOnAction(event -> goTo(page - 1));
         nextButton.setOnAction(event -> goTo(page + 1));
 

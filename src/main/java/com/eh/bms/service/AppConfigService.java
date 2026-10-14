@@ -20,6 +20,8 @@ public class AppConfigService {
     public static final String DATE_FORMAT = "date_format";
     public static final String ITEMS_PER_PAGE = "items_per_page";
     public static final String AUTO_BACKUP = "auto_backup";
+    /** Folder for files the user adds (logo, images, documents). Missing = {@code AppPaths.dataDir()}. */
+    public static final String STORAGE_PATH = "storage_path";
 
     private final AppConfigRepository repository = new AppConfigRepository();
     private final AuditService auditService = new AuditService();

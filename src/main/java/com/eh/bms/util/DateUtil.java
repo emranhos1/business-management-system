@@ -6,6 +6,7 @@ import javafx.util.StringConverter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -36,27 +37,35 @@ public final class DateUtil {
         }
     }
 
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("hh:mm:ss a", Locale.ENGLISH);
+
     private static volatile Formats formats;
 
     private DateUtil() {
     }
 
+    /** Date in the current pattern; Bangla digits in Bangla mode. */
     public static String format(LocalDate date) {
-        return date == null ? "" : formats().date().format(date);
+        return date == null ? "" : I18n.digits(formats().date().format(date));
     }
 
-    /** Date plus 12-hour time, e.g. 14/10/2026 02:35 PM. */
+    /** Date plus 12-hour time, e.g. 14/10/2026 02:35 PM; Bangla digits in Bangla mode. */
     public static String format(LocalDateTime dateTime) {
-        return dateTime == null ? "" : formats().dateTime().format(dateTime);
+        return dateTime == null ? "" : I18n.digits(formats().dateTime().format(dateTime));
     }
 
-    /** Parses text in the current pattern; null for blank or invalid text. */
+    /** 12-hour time with seconds, e.g. 07:56:49 PM; Bangla digits in Bangla mode. */
+    public static String formatTime(LocalTime time) {
+        return time == null ? "" : I18n.digits(TIME.format(time));
+    }
+
+    /** Parses text in the current pattern (Bangla digits allowed); null for blank or invalid text. */
     public static LocalDate parse(String text) {
         if (text == null || text.isBlank()) {
             return null;
         }
         try {
-            return LocalDate.parse(text.trim(), formats().date());
+            return LocalDate.parse(InputFilters.toAsciiDigits(text.trim()), formats().date());
         } catch (DateTimeParseException e) {
             return null;
         }

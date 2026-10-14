@@ -36,7 +36,7 @@
 
         <Label fx:id="errorLabel" styleClass="error-label" wrapText="true" visible="false" managed="false"/>
 
-        <Button fx:id="loginButton" styleClass="primary-button" maxWidth="Infinity"
+        <Button fx:id="loginButton" styleClass="login-button" maxWidth="Infinity"
                 defaultButton="true" onAction="#onLogin"/>
     </VBox>
 </StackPane>

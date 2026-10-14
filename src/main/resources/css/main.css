@@ -82,11 +82,45 @@
     -fx-font-weight: bold;
 }
 
+/* Sidebar footer: BN/EN + time, then logout + date */
+.sidebar-footer,
+.sidebar-bottom {
+    -fx-padding: 10 16 10 16;
+    -fx-border-color: #374151 transparent transparent transparent;
+}
+
+/* Time and date boxes; they take the width of their text (minWidth in FXML), never cut */
+.clock-box {
+    -fx-text-fill: #e5e7eb;
+    -fx-padding: 4 8;
+    -fx-alignment: center;
+    -fx-border-color: #4b5563;
+    -fx-border-radius: 4;
+    -fx-background-color: #111827;
+    -fx-background-radius: 4;
+}
+
+.lang-button {
+    -fx-background-color: #374151;
+    -fx-text-fill: #d1d5db;
+    -fx-padding: 4 10;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+}
+
+.lang-button:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.lang-button.active {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+}
+
 .sidebar-logout {
     -fx-text-fill: #fca5a5;
-    -fx-background-radius: 0;
-    -fx-padding: 14 22;
-    -fx-border-color: #374151 transparent transparent transparent;
+    -fx-padding: 4 8;
 }
 
 /* Main layout: header and content */
@@ -108,6 +142,30 @@
 
 .content-area {
     -fx-padding: 24;
+}
+
+/* Message bar under the header (Notifier): hidden when empty; a message pushes the page down for 5 s */
+.message-bar {
+    -fx-padding: 16 24 0 24;
+}
+
+.toast {
+    -fx-padding: 8 14;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-font-weight: bold;
+}
+
+.toast-success {
+    -fx-background-color: #e6f4ea;
+    -fx-border-color: #9fd5b0;
+    -fx-text-fill: #1e6b3a;
+}
+
+.toast-error {
+    -fx-background-color: #fdecec;
+    -fx-border-color: #f5b5b0;
+    -fx-text-fill: #b42318;
 }
 
 .placeholder-title {
@@ -141,6 +199,8 @@
 
 .form-label {
     -fx-text-fill: #374151;
+    /* Labels sit at the top of their row; this lines their text up with the input text */
+    -fx-padding: 6 0 0 0;
 }
 
 .form-label.required {
@@ -181,14 +241,161 @@
     -fx-text-fill: #d64545;
 }
 
-.primary-button {
-    -fx-background-color: #2563eb;
-    -fx-text-fill: #ffffff;
-    -fx-font-weight: bold;
-    -fx-padding: 8 16;
-    -fx-cursor: hand;
+
+/* Form errors (FormValidator): red box, message under it */
+.field-box {
+    -fx-spacing: 4;
 }
 
-.primary-button:hover {
-    -fx-background-color: #1d4ed8;
+.text-input.field-invalid {
+    -fx-text-box-border: #d64545;
+    -fx-focus-color: #d64545;
+    -fx-faint-focus-color: #d6454522;
+    -fx-control-inner-background: #fff5f5;
+}
+
+.field-error {
+    -fx-text-fill: #d64545;
+    -fx-font-size: 12px;
+}
+
+.field-hint {
+    -fx-text-fill: #7b8794;
+    -fx-font-size: 12px;
+}
+
+/* Checkbox row: same height as a text field so its label lines up */
+.check-row {
+    -fx-min-height: 30;
+}
+
+/* List pages: toolbar above a table */
+.toolbar {
+    -fx-padding: 0 0 4 0;
+}
+
+
+/* Money columns: right-aligned so amounts line up */
+.money-column {
+    -fx-alignment: center-right;
+}
+
+/* Add/edit popup forms */
+.dialog-form {
+    -fx-padding: 24;
+    -fx-background-color: #ffffff;
+}
+
+/* Small caption inside a field row, e.g. "বাংলা [ ৳ ]  ইংরেজি [ Tk. ]" */
+.inline-caption {
+    -fx-text-fill: #616e7c;
+}
+
+/* Heading of a section on a page (e.g. Accounts / Account types) */
+.section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+/* Popup form rows: label (200 px, top-aligned) + input filling the rest; a hidden row takes no space */
+.form-row {
+    -fx-spacing: 16;
+    -fx-alignment: top-left;
+}
+
+.form-row-label {
+    -fx-min-width: 200;
+    -fx-pref-width: 200;
+    -fx-max-width: 200;
+}
+
+.dialog-buttons {
+    -fx-padding: 4 0 0 0;
+}
+
+/* =====================================================================
+   Buttons — the ONLY place their look is defined. Give each button one
+   class by what it does; changing a rule here changes that button
+   everywhere in the app.
+     save-button   Save (forms, Settings), Yes in confirm dialogs   blue
+     add-button    New ... (toolbars)                               blue
+     login-button  Login                                            blue
+     edit-button   Edit                                             orange
+     delete-button Delete                                           red
+     cancel-button Cancel, No in confirm dialogs                    grey
+     page-button   Previous / Next under tables                     grey
+   Normal: light background, coloured border and text, soft shadow.
+   Hover: filled with the colour, white text, deeper shadow.
+   ===================================================================== */
+
+.save-button, .add-button, .login-button, .edit-button,
+.delete-button, .cancel-button, .page-button {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-width: 1.5;
+    -fx-padding: 0 12;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 4, 0, 0, 1);
+    /* Every button the same height */
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+
+/* Every button the same width (Login fills its card instead) */
+.save-button, .add-button, .edit-button,
+.delete-button, .cancel-button, .page-button {
+    -fx-min-width: 140;
+    -fx-pref-width: 140;
+    -fx-max-width: 140;
+}
+
+.save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
+.delete-button:hover, .cancel-button:hover, .page-button:hover {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
+}
+
+/* Blue: Save / Add / Login */
+.save-button, .add-button, .login-button {
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #2563eb;
+}
+
+.save-button:hover, .add-button:hover, .login-button:hover {
+    -fx-background-color: #2563eb;
+}
+
+/* Orange: Edit */
+.edit-button {
+    -fx-border-color: #d97706;
+    -fx-text-fill: #d97706;
+}
+
+.edit-button:hover {
+    -fx-background-color: #d97706;
+}
+
+/* Red: Delete */
+.delete-button {
+    -fx-border-color: #dc2626;
+    -fx-text-fill: #dc2626;
+}
+
+.delete-button:hover {
+    -fx-background-color: #dc2626;
+}
+
+/* Grey: Cancel / Previous / Next (light grey background) */
+.cancel-button, .page-button {
+    -fx-background-color: #f3f4f6;
+    -fx-border-color: #6b7280;
+    -fx-text-fill: #374151;
+}
+
+.cancel-button:hover, .page-button:hover {
+    -fx-background-color: #6b7280;
 }

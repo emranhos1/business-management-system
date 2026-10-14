@@ -11,11 +11,11 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Main layout: sidebar on the left, header on top, the selected view in the center. -->
+<!-- Main layout: sidebar on the left, header + message bar on top, the selected view in the center. -->
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.eh.bms.controller.MainController">
     <left>
-        <VBox styleClass="sidebar" prefWidth="230">
+        <VBox styleClass="sidebar" prefWidth="250" minWidth="250">
             <HBox styleClass="sidebar-brand" spacing="10" alignment="CENTER_LEFT">
                 <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
                     <Image url="@../icons/bms-64.png"/>
@@ -27,19 +27,38 @@
                 <VBox fx:id="menuBox" styleClass="sidebar-menu" spacing="2"/>
             </ScrollPane>
 
-            <Button fx:id="logoutButton" styleClass="sidebar-button, sidebar-logout"
-                    maxWidth="Infinity" onAction="#onLogout"/>
+            <!-- Language switch + time, then logout + today's date (date format setting) -->
+            <HBox styleClass="sidebar-footer" spacing="8" alignment="CENTER_LEFT">
+                <!-- minWidth = pref width, so the buttons never shrink to "..." -->
+                <HBox minWidth="-Infinity">
+                    <Button fx:id="bnButton" text="BN" styleClass="lang-button" minWidth="-Infinity" onAction="#onBangla"/>
+                    <Button fx:id="enButton" text="EN" styleClass="lang-button" minWidth="-Infinity" onAction="#onEnglish"/>
+                </HBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="timeLabel" styleClass="clock-box" minWidth="-Infinity"/>
+            </HBox>
+            <HBox styleClass="sidebar-bottom" spacing="8" alignment="CENTER_LEFT">
+                <Button fx:id="logoutButton" styleClass="sidebar-button, sidebar-logout" minWidth="-Infinity"
+                        onAction="#onLogout"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="dateLabel" styleClass="clock-box" minWidth="-Infinity"/>
+            </HBox>
         </VBox>
     </left>
 
     <center>
         <BorderPane>
             <top>
-                <HBox styleClass="header" spacing="12" alignment="CENTER_LEFT">
-                    <Label fx:id="pageTitleLabel" styleClass="header-title"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="userLabel" styleClass="header-user"/>
-                </HBox>
+                <VBox>
+                    <HBox styleClass="header" spacing="12" alignment="CENTER_LEFT">
+                        <Label fx:id="pageTitleLabel" styleClass="header-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="userLabel" styleClass="header-user"/>
+                    </HBox>
+                    <!-- Success/error messages (Notifier); takes no space while empty -->
+                    <StackPane fx:id="messageBar" styleClass="message-bar" alignment="CENTER_LEFT"
+                               visible="false" managed="false"/>
+                </VBox>
             </top>
             <center>
                 <StackPane fx:id="contentArea" styleClass="content-area"/>

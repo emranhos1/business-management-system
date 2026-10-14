@@ -1,11 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Placeholder; the real view comes with its own stage. -->
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      styleClass="placeholder-view" alignment="CENTER" spacing="8">
-    <Label text="%menu.accounts" styleClass="placeholder-title"/>
-    <Label text="%page.coming_soon" styleClass="placeholder-text"/>
-</VBox>
+<!-- Accounts page (7.1): accounts on the left, account types on the right (own FXML + controller). -->
+<GridPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+          fx:controller="com.eh.bms.controller.AccountsController" hgap="24">
+    <columnConstraints>
+        <ColumnConstraints percentWidth="62"/>
+        <ColumnConstraints percentWidth="38"/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints vgrow="ALWAYS"/>
+    </rowConstraints>
+
+    <VBox spacing="12" GridPane.columnIndex="0">
+        <Label text="%accounts.section.accounts" styleClass="section-title"/>
+        <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+            <Button fx:id="addButton" text="%accounts.add" styleClass="add-button" onAction="#onAdd"/>
+            <Button fx:id="editButton" text="%button.edit" styleClass="edit-button" onAction="#onEdit"/>
+            <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"/>
+        </HBox>
+        <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
+    </VBox>
+
+    <fx:include fx:id="types" source="account-types.fxml" GridPane.columnIndex="1"/>
+</GridPane>

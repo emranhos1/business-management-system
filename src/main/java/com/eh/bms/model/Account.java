@@ -2,36 +2,44 @@ package com.eh.bms.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** Cash, bank or mobile banking account. */
+/** A money account (cash, bank, mobile banking, ...), with a Bangla and an English name. */
 @Entity
 @Table(name = "accounts",
-        uniqueConstraints = @UniqueConstraint(name = "uk_accounts_name", columnNames = "name"))
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_accounts_name", columnNames = "name"),
+                @UniqueConstraint(name = "uk_accounts_name_en", columnNames = "name_en")
+        })
 public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Bangla name (column kept as "name" from the first version). */
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR) // VARCHAR, not MySQL ENUM
-    @Column(name = "type", nullable = false, length = 20)
+    /** English name. Nullable only so the column can be added to existing rows; the form requires it. */
+    @Column(name = "name_en", length = 100)
+    private String nameEn;
+
+    /** Nullable only for rows from the first version until startup migration fills it; the form requires it. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "type_id", foreignKey = @ForeignKey(name = "fk_accounts_type"))
     private AccountType type;
 
     @Column(name = "account_number", length = 50)
@@ -54,6 +62,14 @@ public class Account {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
     }
 
     public AccountType getType() {

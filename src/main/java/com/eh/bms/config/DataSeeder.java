@@ -1,5 +1,7 @@
 package com.eh.bms.config;
 
+import com.eh.bms.model.AccountNumberRule;
+import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.BusinessProfile;
@@ -7,6 +9,7 @@ import com.eh.bms.model.Permission;
 import com.eh.bms.model.User;
 import com.eh.bms.model.UserRole;
 import com.eh.bms.model.UserStatus;
+import com.eh.bms.repository.AccountTypeRepository;
 import com.eh.bms.repository.AppConfigRepository;
 import com.eh.bms.repository.BusinessProfileRepository;
 import com.eh.bms.repository.PermissionRepository;
@@ -40,6 +43,8 @@ public final class DataSeeder {
 
     private static final String DEFAULT_BUSINESS_NAME = "আমার ব্যবসা";
     private static final String DEFAULT_CURRENCY = "৳";
+    /** English-mode symbol; also used when an older row has none. */
+    public static final String DEFAULT_CURRENCY_EN = "Tk.";
     private static final int DEFAULT_FINANCIAL_YEAR_START = 7; // July
 
     /** Manager: everything except settings and user management. */
@@ -56,6 +61,14 @@ public final class DataSeeder {
     private static final BusinessProfileRepository PROFILE_REPO = new BusinessProfileRepository();
     private static final UserRepository USER_REPO = new UserRepository();
     private static final PermissionRepository PERMISSION_REPO = new PermissionRepository();
+    private static final AccountTypeRepository ACCOUNT_TYPE_REPO = new AccountTypeRepository();
+
+    /** Bangla name, English name, number rule. */
+    private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
+            {"ক্যাশ", "Cash", AccountNumberRule.NONE},
+            {"ব্যাংক", "Bank", AccountNumberRule.BANK},
+            {"মোবাইল ব্যাংকিং", "Mobile banking", AccountNumberRule.MOBILE}
+    };
 
     private DataSeeder() {
     }
@@ -65,6 +78,33 @@ public final class DataSeeder {
         seedBusinessProfile();
         seedAdmin();
         seedPermissions();
+        seedAccountTypes();
+        migrateAccountTypes();
+    }
+
+    /** Cash, Bank and Mobile banking, only when the table is empty (the user may delete or rename them later). */
+    static void seedAccountTypes() {
+        TransactionHelper.runInTransaction(session -> {
+            if (ACCOUNT_TYPE_REPO.count(session) == 0) {
+                for (Object[] row : DEFAULT_ACCOUNT_TYPES) {
+                    AccountType t = new AccountType();
+                    t.setNameBn((String) row[0]);
+                    t.setNameEn((String) row[1]);
+                    t.setNumberRule((AccountNumberRule) row[2]);
+                    ACCOUNT_TYPE_REPO.save(session, t);
+                }
+                LOG.info("Seeded account_types");
+            }
+        });
+    }
+
+    /** Moves accounts from the old text type column to account_types (first version only). */
+    static void migrateAccountTypes() {
+        TransactionHelper.runInTransaction(session -> {
+            if (ACCOUNT_TYPE_REPO.migrateOldTypeColumn(session)) {
+                LOG.info("Migrated accounts.type to accounts.type_id");
+            }
+        });
     }
 
     static void seedAppConfig() {
@@ -88,6 +128,7 @@ public final class DataSeeder {
                 BusinessProfile p = new BusinessProfile();
                 p.setName(DEFAULT_BUSINESS_NAME);
                 p.setCurrencySymbol(DEFAULT_CURRENCY);
+                p.setCurrencySymbolEn(DEFAULT_CURRENCY_EN);
                 p.setVatPercentage(BigDecimal.ZERO);
                 p.setFinancialYearStart(DEFAULT_FINANCIAL_YEAR_START);
                 PROFILE_REPO.save(session, p);

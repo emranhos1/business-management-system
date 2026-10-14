@@ -2,6 +2,7 @@ package com.eh.bms.config;
 
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
+import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.Attendance;
 import com.eh.bms.model.AuditLog;
@@ -53,6 +54,7 @@ public final class DatabaseConfig {
             BusinessTransaction.class,
             TransactionItem.class,
             TransactionPayment.class,
+            AccountType.class,
             Account.class,
             AccountTransaction.class,
             ExpenseCategory.class,

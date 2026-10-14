@@ -89,22 +89,22 @@ Depends on: Stage 4
 | 5.7 | Audit log service for data changes | Change creates audit row | ✅ |
 | 5.8 | Reusable paginated table (uses `items_per_page`) | Table pages correctly | ✅ |
 
-## Stage 6 — Settings & Business Profile
+## Stage 6 — Settings & Business Profile ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 6.1 | Business profile edit (name, address, phone, email, logo) | Saved values reload correctly | [T] |
-| 6.2 | App config edit (date format, pagination, auto backup, low stock default) | Saved values apply | [T] |
-| 6.3 | Language toggle saved to `app_config`, applies instantly | UI switches bn/en without restart | [T] |
-| 6.4 | Date format util used across app | Dates follow selected format | [T] |
+| 6.1 | Business profile edit (name, address, phone, email, logo) | Saved values reload correctly | ✅ |
+| 6.2 | App config edit (date format, pagination, auto backup, low stock default) | Saved values apply | ✅ |
+| 6.3 | Language toggle (BN/EN above logout) saved to `app_config`, applies instantly | UI switches bn/en without restart | ✅ |
+| 6.4 | Date format util used across app | Dates follow selected format (sidebar clock) | ✅ |
 
 ## Stage 7 — Accounts
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 7.1 | Account CRUD (cash/bank/mobile banking) | Create/edit/delete works | [ ] |
+| 7.1 | Account CRUD (cash/bank/mobile banking) | Create/edit/delete works | ✅ |
 | 7.2 | Account transaction ledger view | Entries list correctly | [ ] |
 | 7.3 | Current balance per account | Balance matches ledger | [ ] |
 | 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | [ ] |
@@ -306,7 +306,7 @@ Depends on: before first release (Stage 18)
 | N3.2 | Remove real passwords from tracked yml files; load them per N3.1 | Repo has no real password; app still connects | [ ] |
 | N3.3 | GitHub Actions build works without passwords in the repo | Tag push builds release | [ ] |
 
-### N4 — App Icon
+### N4 — App Icon ✅
 Replace the default Java icon in the title bar and taskbar with a BMS icon.
 Depends on: Stage 0 (N4.4 is used by 18.2)
 
@@ -315,9 +315,9 @@ Depends on: Stage 0 (N4.4 is used by 18.2)
 | N4.1 | Decide icon design: blue rounded square, 3 white bars + "BMS" (16/32 px: bars only) | User approves design | ✅ |
 | N4.2 | Icon PNGs (16, 32, 48, 64, 128, 256) in `resources/icons/` | Files exist and look right at each size | ✅ |
 | N4.3 | Set icon on every window (title bar + taskbar) via `AppIcons.apply` | Title bar and taskbar show BMS icon, not Java | ✅ |
-| N4.4 | `packaging/bms.ico` (all sizes) for the installer | .ico opens with all sizes | [T] |
+| N4.4 | `packaging/bms.ico` (all sizes) for the installer | .ico opens with all sizes | ✅ |
 
-### N5 — Splash Screen
+### N5 — Splash Screen ✅
 Show a splash screen before the login screen while the app starts.
 Depends on: N4.2
 

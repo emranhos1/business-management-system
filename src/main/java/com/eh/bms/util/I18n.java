@@ -78,6 +78,23 @@ public final class I18n {
         return args.length == 0 ? pattern : new MessageFormat(pattern, getLocale()).format(args);
     }
 
+    /** The Bangla or English name for the current language; the Bangla one if the English one is empty. */
+    public static String pick(String bangla, String english) {
+        return ENGLISH.equals(getLocale()) && english != null && !english.isBlank() ? english : bangla;
+    }
+
+    /** Shows 0-9 as Bangla digits (০-৯) in Bangla mode; unchanged in English. For display only, never for saving. */
+    public static String digits(String text) {
+        if (text == null || !BANGLA.equals(getLocale())) {
+            return text;
+        }
+        StringBuilder sb = new StringBuilder(text.length());
+        for (char c : text.toCharArray()) {
+            sb.append(c >= '0' && c <= '9' ? (char) ('০' + (c - '0')) : c);
+        }
+        return sb.toString();
+    }
+
     /** Text that follows the current language. Use with textProperty().bind(...). */
     public static StringBinding bind(String key, Object... args) {
         return Bindings.createStringBinding(() -> get(key, args), LOCALE);

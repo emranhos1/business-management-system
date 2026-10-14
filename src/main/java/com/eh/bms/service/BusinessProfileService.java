@@ -17,7 +17,7 @@ public class BusinessProfileService {
 
     /** Values from the edit form. Blank optional fields are saved as null. */
     public record ProfileData(String name, String address, String phone, String email,
-                              String currencySymbol, BigDecimal vatPercentage,
+                              String currencySymbol, String currencySymbolEn, BigDecimal vatPercentage,
                               int financialYearStart, String logoPath) {
     }
 
@@ -35,6 +35,7 @@ public class BusinessProfileService {
             p.setPhone(blankToNull(data.phone()));
             p.setEmail(blankToNull(data.email()));
             p.setCurrencySymbol(data.currencySymbol().trim());
+            p.setCurrencySymbolEn(data.currencySymbolEn().trim());
             p.setVatPercentage(data.vatPercentage());
             p.setFinancialYearStart(data.financialYearStart());
             p.setLogoPath(blankToNull(data.logoPath()));
@@ -53,6 +54,7 @@ public class BusinessProfileService {
                 .add("phone=" + p.getPhone())
                 .add("email=" + p.getEmail())
                 .add("currency=" + p.getCurrencySymbol())
+                .add("currencyEn=" + p.getCurrencySymbolEn())
                 .add("vat=" + (p.getVatPercentage() == null ? null : p.getVatPercentage().stripTrailingZeros().toPlainString()))
                 .add("fyStart=" + p.getFinancialYearStart())
                 .add("logo=" + p.getLogoPath())
