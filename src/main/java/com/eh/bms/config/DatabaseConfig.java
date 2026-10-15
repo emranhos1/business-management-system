@@ -1,15 +1,27 @@
 package com.eh.bms.config;
 
+import com.eh.bms.model.Account;
+import com.eh.bms.model.AccountTransaction;
+import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
+import com.eh.bms.model.Attendance;
+import com.eh.bms.model.AuditLog;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.BusinessTransaction;
+import com.eh.bms.model.Employee;
+import com.eh.bms.model.Expense;
+import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
+import com.eh.bms.model.Permission;
 import com.eh.bms.model.Product;
 import com.eh.bms.model.ProductCategory;
+import com.eh.bms.model.SalaryProcessing;
 import com.eh.bms.model.StockLedger;
 import com.eh.bms.model.TransactionItem;
 import com.eh.bms.model.TransactionPayment;
+import com.eh.bms.model.Unit;
+import com.eh.bms.model.User;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.hibernate.SessionFactory;
@@ -17,6 +29,7 @@ import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.JdbcSettings;
+import org.hibernate.cfg.SchemaToolingSettings;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -35,13 +48,25 @@ public final class DatabaseConfig {
             BusinessProfile.class,
             AppConfigEntry.class,
             ProductCategory.class,
+            Unit.class,
             Product.class,
             StockLedger.class,
             Party.class,
             PartyLedger.class,
             BusinessTransaction.class,
             TransactionItem.class,
-            TransactionPayment.class
+            TransactionPayment.class,
+            AccountType.class,
+            Account.class,
+            AccountTransaction.class,
+            ExpenseCategory.class,
+            Expense.class,
+            Employee.class,
+            Attendance.class,
+            SalaryProcessing.class,
+            User.class,
+            Permission.class,
+            AuditLog.class
     );
 
     private static HikariDataSource dataSource;
@@ -51,7 +76,7 @@ public final class DatabaseConfig {
     }
 
     /**
-     * Opens the pool and builds the SessionFactory.
+     * Opens the pool, builds the SessionFactory and creates any missing tables.
      * Throws a RuntimeException if MySQL cannot be reached.
      */
     public static synchronized void init() {
@@ -74,6 +99,8 @@ public final class DatabaseConfig {
         try {
             StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                     .applySetting(JdbcSettings.DATASOURCE, ds)
+                    // Creates missing tables (FK order) and adds missing columns. Never drops anything.
+                    .applySetting(SchemaToolingSettings.HBM2DDL_AUTO, "update")
                     .build();
             MetadataSources sources = new MetadataSources(registry);
             ENTITIES.forEach(sources::addAnnotatedClass);

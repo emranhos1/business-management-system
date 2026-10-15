@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Add / edit product popup (8.2). One field per row (label 200 px, input fills the rest).
+     Rows are HBoxes, so the hidden conversion row takes no space at all. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ProductFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <HBox styleClass="form-row">
+        <Label text="%products.name_bn" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameBnField" maxWidth="Infinity"/>
+            <Label fx:id="nameBnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.name_en" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameEnField" maxWidth="Infinity"/>
+            <Label fx:id="nameEnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.category" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="categoryBox" maxWidth="Infinity"/>
+            <Label fx:id="categoryError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.sku" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="skuField" maxWidth="Infinity"/>
+            <Label fx:id="skuError" styleClass="field-error" wrapText="true"/>
+            <Label text="%products.sku.hint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.unit" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="unitBox" promptText="%products.unit.prompt" maxWidth="Infinity"/>
+            <Label fx:id="unitError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.secondary_unit" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="secondaryUnitBox" promptText="%products.secondary_unit.none" maxWidth="Infinity"/>
+            <Label fx:id="secondaryUnitError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox fx:id="conversionRow" styleClass="form-row" visible="false" managed="false">
+        <Label text="%products.conversion" styleClass="form-label, required, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="conversionField" maxWidth="Infinity"/>
+            <Label fx:id="conversionError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="conversionHint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%products.min_stock" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="minStockField" maxWidth="Infinity"/>
+            <Label fx:id="minStockError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="minStockHint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button text="%button.save" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>

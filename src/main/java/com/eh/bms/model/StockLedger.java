@@ -13,19 +13,28 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
- * One stock movement for a product. Quantity is signed: + stock in, - stock out.
- * runningBalance is the product's stock after this entry.
+ * One stock movement for a product, in the product's main unit. Quantity is signed: + stock in, - stock out.
+ * <p>
+ * Snapshots: runningBalance and avgCostAfter are the product's stock and weighted average cost right after
+ * this entry was posted (posting order). So the newest row (highest id) of a product gives its current
+ * stock and average cost; nothing is cached on {@link Product}. Screens work the running balance out by
+ * date instead (an entry may be back-dated), see {@code StockLedgerService.page}.
  */
 @Entity
 @Table(name = "stock_ledger",
-        indexes = @Index(name = "idx_stock_ledger_product_date", columnList = "product_id, date"))
+        indexes = {
+                @Index(name = "idx_stock_ledger_product_date", columnList = "product_id, date"),
+                @Index(name = "idx_stock_ledger_type", columnList = "type")
+        })
 public class StockLedger {
 
     @Id
@@ -48,11 +57,23 @@ public class StockLedger {
     @Column(name = "quantity", nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
 
+    /** Cost of one main unit. For stock out: the average cost at that time. */
     @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitPrice;
 
+    /** Stock after this entry (posting order). */
     @Column(name = "running_balance", nullable = false, precision = 14, scale = 3)
     private BigDecimal runningBalance;
+
+    /** Weighted average cost after this entry (posting order). */
+    @Column(name = "avg_cost_after", nullable = false, precision = 14, scale = 2)
+    private BigDecimal avgCostAfter;
+
+    /** Set for ADJUSTMENT entries only. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "reason", length = 20)
+    private StockAdjustmentReason reason;
 
     /** Id of the source record (transaction, adjustment, ...). */
     @Column(name = "reference_id")
@@ -61,8 +82,45 @@ public class StockLedger {
     @Column(name = "note", length = 255)
     private String note;
 
+    /** Empty for entries made by the system. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", foreignKey = @ForeignKey(name = "fk_stock_ledger_created_by"))
+    private User createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     public Long getId() {
         return id;
+    }
+
+    public BigDecimal getAvgCostAfter() {
+        return avgCostAfter;
+    }
+
+    public void setAvgCostAfter(BigDecimal avgCostAfter) {
+        this.avgCostAfter = avgCostAfter;
+    }
+
+    public StockAdjustmentReason getReason() {
+        return reason;
+    }
+
+    public void setReason(StockAdjustmentReason reason) {
+        this.reason = reason;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public Product getProduct() {

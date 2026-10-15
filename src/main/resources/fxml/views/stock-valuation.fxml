@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Stock value (9.7, "Stock value" tab of the Stock page): stock x average cost per product,
+     grand total on top; only products in stock are listed. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.StockValuationController" spacing="12">
+    <FlowPane hgap="12" vgap="12">
+        <VBox styleClass="stat-tile, stat-tile-main">
+            <Label text="%stock.value.total" styleClass="stat-label"/>
+            <Label fx:id="totalLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile">
+            <Label text="%stock.value.count" styleClass="stat-label"/>
+            <Label fx:id="countLabel" styleClass="stat-value"/>
+        </VBox>
+    </FlowPane>
+    <!-- FlowPane: wraps to a second line when the page is narrow -->
+    <FlowPane styleClass="toolbar" hgap="8" vgap="8" alignment="CENTER_LEFT">
+        <ComboBox fx:id="categoryBox" prefWidth="260"/>
+        <Button text="%button.refresh" styleClass="page-button" onAction="#refresh"/>
+    </FlowPane>
+    <Label text="%stock.value.hint" styleClass="field-hint" wrapText="true"/>
+    <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
+</VBox>

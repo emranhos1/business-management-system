@@ -47,7 +47,7 @@ Depends on: Stage 0
 | 2.1 | `messages_bn.properties` and `messages_en.properties` with base keys | Files load without error | ✅ |
 | 2.2 | I18n util that switches all labels instantly | Toggle changes labels without restart | ✅ |
 
-## Stage 3 — Entities & Schema
+## Stage 3 — Entities & Schema ✅
 Depends on: Stage 1
 
 Rules for every table:
@@ -60,76 +60,79 @@ Rules for every table:
 | 3.2 | Entities: `product_categories`, `products`, `stock_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.3 | Entities: `parties`, `party_ledger` | Tables created with FKs and user-approved indexes | ✅ |
 | 3.4 | Entities: `transactions`, `transaction_items`, `transaction_payments` | Tables created with FKs and user-approved indexes | ✅ |
-| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | [ ] |
-| 3.6 | Entities: `employees`, `attendance`, `salary_processing` | Tables created with FKs and user-approved indexes | [ ] |
-| 3.7 | Entities: `users`, `permissions`, `audit_log` | Tables created with FKs and user-approved indexes | [ ] |
-| 3.8 | Auto schema creation on startup (IF NOT EXISTS, FK order) | Empty DB → all tables; second run → no error | [ ] |
+| 3.5 | Entities: `accounts`, `account_transactions`, `expense_categories`, `expenses` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.6 | Entities: `employees`, `attendance`, `salary_processing` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.7 | Entities: `users`, `permissions`, `audit_log` | Tables created with FKs and user-approved indexes | ✅ |
+| 3.8 | Auto schema creation on startup (IF NOT EXISTS, FK order) | Empty DB → all tables; second run → no error | ✅ |
 
-## Stage 4 — Startup Seeding
+## Stage 4 — Startup Seeding ✅
 Depends on: Stage 3
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 4.1 | Seed default `app_config` rows if missing | 6 default rows exist, no duplicates on rerun | [ ] |
-| 4.2 | Seed default `business_profile` row if missing | 1 row exists, no duplicate on rerun | [ ] |
-| 4.3 | Create admin from active profile yml if missing (BCrypt) | Admin row exists, password hashed | [ ] |
-| 4.4 | Seed default role permissions (cashier limited) | Permission rows exist per role | [ ] |
+| 4.1 | Seed default `app_config` rows if missing | 6 default rows exist, no duplicates on rerun | ✅ |
+| 4.2 | Seed default `business_profile` row if missing | 1 row exists, no duplicate on rerun | ✅ |
+| 4.3 | Create admin from active profile yml if missing (BCrypt) | Admin row exists, password hashed | ✅ |
+| 4.4 | Seed default role permissions (cashier limited) | Permission rows exist per role | ✅ |
 
-## Stage 5 — Login & Security
+## Stage 5 — Login & Security ✅
 Depends on: Stage 4
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 5.1 | Login screen (FXML + controller) | Screen shows on launch | [ ] |
-| 5.2 | Auth service: BCrypt check, block inactive users | Right/wrong/inactive login behave correctly | [ ] |
-| 5.3 | Session object (user_id, role, permissions map) | Session holds data after login | [ ] |
-| 5.4 | Main layout with sidebar; each button loads its own FXML | Each button opens its view | [ ] |
-| 5.5 | Sidebar by role (cashier: no HR, reports, settings) | Cashier login shows limited sidebar | [ ] |
-| 5.6 | Permission util hides create/edit/delete buttons | Button hidden without permission | [ ] |
-| 5.7 | Audit log service for data changes | Change creates audit row | [ ] |
-| 5.8 | Reusable paginated table (uses `items_per_page`) | Table pages correctly | [ ] |
+| 5.1 | Login screen (FXML + controller) | Screen shows on launch | ✅ |
+| 5.2 | Auth service: BCrypt check, block inactive users | Right/wrong/inactive login behave correctly | ✅ |
+| 5.3 | Session object (user_id, role, permissions map) | Session holds data after login | ✅ |
+| 5.4 | Main layout with sidebar; each button loads its own FXML | Each button opens its view | ✅ |
+| 5.5 | Sidebar by role (cashier: no HR, reports, settings, accounts) | Cashier login shows limited sidebar | ✅ |
+| 5.6 | Permission util hides create/edit/delete buttons | Button hidden without permission | ✅ |
+| 5.7 | Audit log service for data changes | Change creates audit row | ✅ |
+| 5.8 | Reusable paginated table (uses `items_per_page`) | Table pages correctly | ✅ |
 
-## Stage 6 — Settings & Business Profile
+## Stage 6 — Settings & Business Profile ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 6.1 | Business profile edit (name, address, phone, email, logo) | Saved values reload correctly | [ ] |
-| 6.2 | App config edit (date format, pagination, auto backup, low stock default) | Saved values apply | [ ] |
-| 6.3 | Language toggle saved to `app_config`, applies instantly | UI switches bn/en without restart | [ ] |
-| 6.4 | Date format util used across app | Dates follow selected format | [ ] |
+| 6.1 | Business profile edit (name, address, phone, email, logo) | Saved values reload correctly | ✅ |
+| 6.2 | App config edit (date format, pagination, auto backup, low stock default) | Saved values apply | ✅ |
+| 6.3 | Language toggle (BN/EN above logout) saved to `app_config`, applies instantly | UI switches bn/en without restart | ✅ |
+| 6.4 | Date format util used across app | Dates follow selected format (sidebar clock) | ✅ |
 
-## Stage 7 — Accounts
+## Stage 7 — Accounts ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 7.1 | Account CRUD (cash/bank/mobile banking) | Create/edit/delete works | [ ] |
-| 7.2 | Account transaction ledger view | Entries list correctly | [ ] |
-| 7.3 | Current balance per account | Balance matches ledger | [ ] |
-| 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | [ ] |
+| 7.1 | Account CRUD (cash/bank/mobile banking) | Create/edit/delete works | ✅ |
+| 7.2 | Account transaction ledger view | Entries list correctly | ✅ |
+| 7.3 | Current balance per account | Balance matches ledger | ✅ |
+| 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | ✅ |
 
-## Stage 8 — Products
+## Stage 8 — Products ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 8.1 | Product category CRUD | Create/edit/delete works | [ ] |
-| 8.2 | Product CRUD (name, sku, unit, secondary unit, conversion, min stock) | Create/edit/delete works | [ ] |
-| 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | [ ] |
+| 8.1 | Product category CRUD | Create/edit/delete works | ✅ |
+| 8.2 | Product CRUD (name, sku, unit, secondary unit, conversion, min stock) | Create/edit/delete works | ✅ |
+| 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | ✅ |
+| 8.4 | Units list (`units` table, Bangla + English name, ~30 common units seeded) with add/edit/delete in a "একক" tab next to categories; product unit / secondary unit picked from it (FK) | Units CRUD works; product form uses the list; old text units migrated | ✅ |
+| 8.5 | Copy button on each product row (opens add form filled in); min stock prefilled with the default (0 = no alert); same name allowed with another pack size | Copy works; same name + other conversion saves | ✅ |
 
-## Stage 9 — Stock
+## Stage 9 — Stock ✅
 Depends on: Stage 8
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 9.1 | Stock ledger service (entry + running balance) | Balance correct after entries | [ ] |
-| 9.2 | Weighted average cost calculation | Matches manual calculation | [ ] |
-| 9.3 | Current stock per product view | Matches ledger | [ ] |
-| 9.4 | Stock ledger view per product | Full history shows | [ ] |
-| 9.5 | Stock adjustment with reason (damage/loss/correction) | Stock and ledger update | [ ] |
-| 9.6 | Low stock alert list | Products below threshold listed | [ ] |
-| 9.7 | Stock valuation view (stock × average cost) | Values match calculation | [ ] |
+| 9.1 | Stock ledger service (entry + running balance) | Balance correct after entries | ✅ |
+| 9.2 | Weighted average cost calculation | Matches manual calculation | ✅ |
+| 9.3 | Current stock per product view | Matches ledger | ✅ |
+| 9.4 | Stock ledger view per product | Full history shows | ✅ |
+| 9.5 | Stock adjustment with reason (damage/loss/correction) | Stock and ledger update | ✅ |
+| 9.6 | Low stock alert list | Products below threshold listed | ✅ |
+| 9.7 | Stock valuation view (stock × average cost) | Values match calculation | ✅ |
+| 9.8 | Popups: no window title bar, full title turned 90° on a dark left strip (drag to move), shadow, open centered right of the sidebar; Yes/No uses the same popup; long ledger details show in a tooltip | Popups look and sit right; tooltip shows full note | ✅ |
 
 ## Stage 10 — Parties
 Depends on: Stage 5 (10.5 also needs Stage 7)
@@ -287,12 +290,14 @@ Depends on: Stages 11, 12, 17
 | N2.1 | Decide which actions staff can do (to be given by user) | User confirms list | [ ] |
 | N2.2 | Decide stock rule while pending (block overselling or not) | User confirms rule | [ ] |
 | N2.3 | Add `pending` and `rejected` to transaction status | Status values saved and read correctly | [ ] |
-| N2.4 | Staff sale/purchase saves with status `pending` (no ledger change) | Entry in pending; stock/party/account unchanged | [ ] |
-| N2.5 | Admin pending list view | All pending entries listed | [ ] |
-| N2.6 | Admin approve (atomic): status → `confirmed`, update stock/party/account | Status confirmed; ledgers correct; failure rolls back | [ ] |
-| N2.7 | Admin reject with reason: status → `rejected` | Entry marked rejected; no ledger change | [ ] |
-| N2.8 | Staff view of own entries (pending/approved/rejected) | Status shows correctly | [ ] |
-| N2.9 | Audit log for approve/reject | Audit row with admin and time | [ ] |
+| N2.4 | Add to `transactions`: `created_by` (FK → users), `approved_by` (FK → users), `approved_at`, `reject_reason` | Columns and FKs created; entry saves creator | [ ] |
+| N2.5 | Link login to employee: `users.employee_id` (FK → employees, optional, unique) | User saved with/without employee; one employee → at most one user | [ ] |
+| N2.6 | Staff sale/purchase saves with status `pending` (no ledger change) | Entry in pending; stock/party/account unchanged | [ ] |
+| N2.7 | Admin pending list view (shows who entered) | All pending entries listed with creator | [ ] |
+| N2.8 | Admin approve (atomic): status → `confirmed`, set `approved_by`/`approved_at`, update stock/party/account | Status confirmed; ledgers correct; failure rolls back | [ ] |
+| N2.9 | Admin reject with reason: status → `rejected`, set `approved_by`/`approved_at`/`reject_reason` | Entry marked rejected; no ledger change | [ ] |
+| N2.10 | Staff view of own entries (pending/approved/rejected) by `created_by` | Status shows correctly | [ ] |
+| N2.11 | Audit log for approve/reject | Audit row with admin and time | [ ] |
 
 ### N3 — Keep Passwords Out of the Public Repo
 `application-{dev,stage,prod}.yml` hold DB and admin passwords; the GitHub repo is public.
@@ -303,3 +308,24 @@ Depends on: before first release (Stage 18)
 | N3.1 | Decide how passwords reach the app and CI (env vars, GitHub Secrets, or a local untracked file) | User confirms approach | [ ] |
 | N3.2 | Remove real passwords from tracked yml files; load them per N3.1 | Repo has no real password; app still connects | [ ] |
 | N3.3 | GitHub Actions build works without passwords in the repo | Tag push builds release | [ ] |
+
+### N4 — App Icon ✅
+Replace the default Java icon in the title bar and taskbar with a BMS icon.
+Depends on: Stage 0 (N4.4 is used by 18.2)
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N4.1 | Decide icon design: blue rounded square, 3 white bars + "BMS" (16/32 px: bars only) | User approves design | ✅ |
+| N4.2 | Icon PNGs (16, 32, 48, 64, 128, 256) in `resources/icons/` | Files exist and look right at each size | ✅ |
+| N4.3 | Set icon on every window (title bar + taskbar) via `AppIcons.apply` | Title bar and taskbar show BMS icon, not Java | ✅ |
+| N4.4 | `packaging/bms.ico` (all sizes) for the installer | .ico opens with all sizes | ✅ |
+
+### N5 — Splash Screen ✅
+Show a splash screen before the login screen while the app starts.
+Depends on: N4.2
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N5.1 | Splash window: no title bar, centered, icon, app name, version, loading text | Splash shows on launch | ✅ |
+| N5.2 | DB connect + seeding run in background while splash shows each step | Splash text changes per step; window not frozen | ✅ |
+| N5.3 | On success close splash and open login; on failure close splash and show the error dialog | Both paths work (stop MySQL to test failure) | ✅ |

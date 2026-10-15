@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Accounts page (7.1-7.4): accounts with balances on the left (ledger, transfer),
+     account types on the right (own FXML + controller). -->
+<GridPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+          fx:controller="com.eh.bms.controller.AccountsController" hgap="24">
+    <columnConstraints>
+        <ColumnConstraints percentWidth="62"/>
+        <ColumnConstraints percentWidth="38"/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints vgrow="ALWAYS"/>
+    </rowConstraints>
+
+    <VBox spacing="12" GridPane.columnIndex="0">
+        <Label text="%accounts.section.accounts" styleClass="section-title"/>
+        <!-- FlowPane: buttons wrap to a second line when the column is narrow -->
+        <FlowPane styleClass="toolbar" hgap="8" vgap="8" alignment="CENTER_LEFT">
+            <Button fx:id="addButton" text="%accounts.add" styleClass="add-button" onAction="#onAdd"/>
+            <Button fx:id="editButton" text="%button.edit" styleClass="edit-button" onAction="#onEdit"/>
+            <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"/>
+            <Button fx:id="ledgerButton" text="%accounts.ledger" styleClass="view-button" onAction="#onLedger"/>
+            <Button fx:id="transferButton" text="%accounts.transfer" styleClass="add-button" onAction="#onTransfer"/>
+        </FlowPane>
+        <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
+    </VBox>
+
+    <fx:include fx:id="types" source="account-types.fxml" GridPane.columnIndex="1"/>
+</GridPane>
