@@ -11,6 +11,8 @@
   - All profiles use the same DB name; the user manages profiles.
 - Status/type columns: Java enums stored as VARCHAR. No status lookup tables.
   - Exception (user decision): account types are a user-managed table `account_types` (Bangla/English name + number rule), seeded with Cash, Bank, Mobile banking.
+- Accounts module: only admin and manager (user decision). Cashier, and any staff/employee login or new role added later (e.g. N2), gets no Accounts permission.
+- One-time fixes to existing data go in `DataSeeder.migrateData()`, numbered by `data_version` in app_config (never re-run, so admin edits stay).
 - Names the user enters for master data (accounts, account types, ...) have a Bangla and an English name, shown by language (`I18n.pick`).
 
 ## Build
@@ -19,10 +21,10 @@
 ## Forms and messages (every page)
 - Number fields: `InputFilters.digits` / `InputFilters.decimal` (no letters, Bangla digits → 0-9). Text: `InputFilters.maxLength`.
 - Validation: `FormValidator`. Check all fields, show every error (red box + message under the field), focus the first.
-- Every save/delete: `Dialogs.confirmSave()` / `Dialogs.confirm(...)` first.
+- Every save/delete: `Dialogs.confirmSave()` / `Dialogs.confirm(...)` first. Deletes use `Dialogs.confirmDelete(...)` (red Yes button).
 - Result and general errors: `Notifier.success` / `Notifier.error` (top bar, 5 s). No status labels on the page.
 - Layout: label column 200 px, labels top-aligned (`form-label`); every input fills the second column, same width everywhere.
-- Buttons: one class per action — `save-button`, `add-button`, `edit-button`, `delete-button`, `cancel-button` (also `login-button`, `page-button`). All are 140 x 36 px (Login: full card width); keep labels short enough to fit. Their look lives only in the "Buttons" block of `main.css`; change it there to change every such button. Never leave a button unstyled.
+- Buttons: one class per action — `save-button`, `add-button`, `edit-button`, `delete-button`, `cancel-button`, `view-button` (opens a read-only window, e.g. a ledger) (also `login-button`, `page-button`). All are 140 x 36 px (Login: full card width); keep labels short enough to fit. Their look lives only in the "Buttons" block of `main.css`; change it there to change every such button. Never leave a button unstyled.
 - Popup forms: 540 px wide, one field per row (`form-row` + `form-row-label`), Bangla and English names on separate rows. Optional rows hide with no gap.
 - Mobile number: exactly 11 digits, any start (no prefix rule), required where asked.
 - Dates: `DateUtil` only (Bangla digits in Bangla mode via `I18n.digits`). Files the user adds: under `AppPaths.storageDir()`, path stored relative (`AppPaths.toStored`).

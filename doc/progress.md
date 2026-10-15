@@ -84,7 +84,7 @@ Depends on: Stage 4
 | 5.2 | Auth service: BCrypt check, block inactive users | Right/wrong/inactive login behave correctly | ✅ |
 | 5.3 | Session object (user_id, role, permissions map) | Session holds data after login | ✅ |
 | 5.4 | Main layout with sidebar; each button loads its own FXML | Each button opens its view | ✅ |
-| 5.5 | Sidebar by role (cashier: no HR, reports, settings) | Cashier login shows limited sidebar | ✅ |
+| 5.5 | Sidebar by role (cashier: no HR, reports, settings, accounts) | Cashier login shows limited sidebar | ✅ |
 | 5.6 | Permission util hides create/edit/delete buttons | Button hidden without permission | ✅ |
 | 5.7 | Audit log service for data changes | Change creates audit row | ✅ |
 | 5.8 | Reusable paginated table (uses `items_per_page`) | Table pages correctly | ✅ |
@@ -99,15 +99,15 @@ Depends on: Stage 5
 | 6.3 | Language toggle (BN/EN above logout) saved to `app_config`, applies instantly | UI switches bn/en without restart | ✅ |
 | 6.4 | Date format util used across app | Dates follow selected format (sidebar clock) | ✅ |
 
-## Stage 7 — Accounts
+## Stage 7 — Accounts ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
 | 7.1 | Account CRUD (cash/bank/mobile banking) | Create/edit/delete works | ✅ |
-| 7.2 | Account transaction ledger view | Entries list correctly | [ ] |
-| 7.3 | Current balance per account | Balance matches ledger | [ ] |
-| 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | [ ] |
+| 7.2 | Account transaction ledger view | Entries list correctly | ✅ |
+| 7.3 | Current balance per account | Balance matches ledger | ✅ |
+| 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | ✅ |
 
 ## Stage 8 — Products
 Depends on: Stage 5

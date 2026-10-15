@@ -24,7 +24,8 @@ import java.util.logging.Logger;
 
 /**
  * Inserts default data on startup. Each step adds only what is missing,
- * so running it again never creates duplicates or changes existing rows.
+ * so running it again never creates duplicates. Existing rows change only through the
+ * one-time fixes in {@link #migrateData()}.
  * Call after {@link DatabaseConfig#init()}.
  */
 public final class DataSeeder {
@@ -53,9 +54,12 @@ public final class DataSeeder {
     /** Cashier may view and add, never edit or delete. */
     private static final Set<AppModule> CASHIER_CREATE =
             EnumSet.of(AppModule.PARTY, AppModule.SALE, AppModule.PURCHASE, AppModule.EXPENSE);
-    /** Cashier view only. No HR, reports, settings or users. */
+    /** Cashier view only. No HR, reports, settings, users or accounts (user decision). */
     private static final Set<AppModule> CASHIER_VIEW_ONLY =
-            EnumSet.of(AppModule.DASHBOARD, AppModule.PRODUCT, AppModule.STOCK, AppModule.ACCOUNT);
+            EnumSet.of(AppModule.DASHBOARD, AppModule.PRODUCT, AppModule.STOCK);
+
+    /** app_config key: number of one-time data fixes already applied (see {@link #migrateData()}). */
+    private static final String DATA_VERSION = "data_version";
 
     private static final AppConfigRepository APP_CONFIG_REPO = new AppConfigRepository();
     private static final BusinessProfileRepository PROFILE_REPO = new BusinessProfileRepository();
@@ -80,6 +84,40 @@ public final class DataSeeder {
         seedPermissions();
         seedAccountTypes();
         migrateAccountTypes();
+        migrateData();
+    }
+
+    /**
+     * One-time fixes to rows seeded by older versions. Each runs once, tracked by {@code data_version}
+     * in app_config, so a later change by the admin (e.g. the permission editor) is never undone.
+     */
+    static void migrateData() {
+        TransactionHelper.runInTransaction(session -> {
+            AppConfigEntry version = APP_CONFIG_REPO.findByKey(session, DATA_VERSION).orElse(null);
+            int done = version == null ? 0 : Integer.parseInt(version.getConfigValue().trim());
+
+            if (done < 1) {
+                // v1: cashier no longer sees the Accounts module
+                int changed = session.createMutationQuery("update Permission p set p.canView = false,"
+                                + " p.canCreate = false, p.canEdit = false, p.canDelete = false"
+                                + " where p.role = :role and p.module = :module")
+                        .setParameter("role", UserRole.CASHIER)
+                        .setParameter("module", AppModule.ACCOUNT)
+                        .executeUpdate();
+                LOG.info("Data fix v1: cashier Accounts permission removed (" + changed + " row)");
+                done = 1;
+            }
+
+            if (version == null) {
+                version = new AppConfigEntry();
+                version.setConfigKey(DATA_VERSION);
+                version.setDescription("One-time data fixes applied");
+                version.setConfigValue(String.valueOf(done));
+                APP_CONFIG_REPO.save(session, version);
+            } else {
+                version.setConfigValue(String.valueOf(done));
+            }
+        });
     }
 
     /** Cash, Bank and Mobile banking, only when the table is empty (the user may delete or rename them later). */

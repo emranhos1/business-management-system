@@ -10,10 +10,11 @@ import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
 
-/** Money accounts (7.1). Each has a Bangla and an English name and a user-managed type. */
+/** Money accounts (7.1). Each has a Bangla and an English name and a user-managed type. Balances: {@link AccountLedgerService}. */
 public class AccountService {
 
     public enum SaveResult {
@@ -36,6 +37,11 @@ public class AccountService {
     public PageResult<Account> page(int offset, int limit) {
         return TransactionHelper.inTransaction(session ->
                 new PageResult<>(repository.page(session, offset, limit), repository.count(session)));
+    }
+
+    /** Every account, sorted by name (e.g. for the transfer form). */
+    public List<Account> all() {
+        return TransactionHelper.inTransaction(repository::all);
     }
 
     /** True once the account has ledger entries; the opening balance can no longer change. */

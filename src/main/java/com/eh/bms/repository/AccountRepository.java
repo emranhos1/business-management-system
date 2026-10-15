@@ -17,6 +17,12 @@ public class AccountRepository {
                 .getResultList();
     }
 
+    /** Every account, sorted by name (for pick lists). */
+    public List<Account> all(Session session) {
+        return session.createSelectionQuery("from Account a left join fetch a.type order by a.name", Account.class)
+                .getResultList();
+    }
+
     public long count(Session session) {
         return session.createSelectionQuery("select count(a) from Account a", Long.class).getSingleResult();
     }

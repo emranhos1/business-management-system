@@ -13,14 +13,23 @@ public final class Dialogs {
 
     /** Yes/No question. True only if the user clicks Yes; closing the dialog counts as No. */
     public static boolean confirm(String message) {
+        return confirm(message, "save-button");
+    }
+
+    /** Yes/No before every delete; Yes is red (delete-button) so the user sees it removes something. */
+    public static boolean confirmDelete(String message) {
+        return confirm(message, "delete-button");
+    }
+
+    private static boolean confirm(String message, String yesStyle) {
         ButtonType yes = new ButtonType(I18n.get("button.yes"), ButtonBar.ButtonData.YES);
         ButtonType no = new ButtonType(I18n.get("button.no"), ButtonBar.ButtonData.NO);
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, yes, no);
         alert.setTitle(I18n.get("dialog.confirm.title"));
         alert.setHeaderText(null);
-        // Same button look as the rest of the app: Yes = save-button, No = cancel-button
+        // Same button look as the rest of the app: Yes = save-button (delete-button for deletes), No = cancel-button
         alert.getDialogPane().getStylesheets().add(WindowManager.stylesheet());
-        alert.getDialogPane().lookupButton(yes).getStyleClass().add("save-button");
+        alert.getDialogPane().lookupButton(yes).getStyleClass().add(yesStyle);
         alert.getDialogPane().lookupButton(no).getStyleClass().add("cancel-button");
         // Owner = the window in front (e.g. an add/edit popup), so the question never hides behind it
         Window owner = Window.getWindows().stream().filter(Window::isFocused).findFirst()

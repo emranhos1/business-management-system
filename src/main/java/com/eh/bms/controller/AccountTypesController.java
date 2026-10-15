@@ -87,7 +87,7 @@ public class AccountTypesController {
     private void onDelete() {
         AccountType selected = table.getTableView().getSelectionModel().getSelectedItem();
         if (selected == null
-                || !Dialogs.confirm(I18n.get("types.confirm_delete", AccountFormController.typeText(selected)))) {
+                || !Dialogs.confirmDelete(I18n.get("types.confirm_delete", AccountFormController.typeText(selected)))) {
             return;
         }
         try {

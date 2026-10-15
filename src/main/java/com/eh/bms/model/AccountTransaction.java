@@ -21,7 +21,8 @@ import java.time.LocalDate;
 
 /**
  * One entry in an account's ledger.
- * balance_after = previous balance + amount (CREDIT) or - amount (DEBIT).
+ * balance_after = balance when the entry was posted + amount (CREDIT) or - amount (DEBIT).
+ * Screens work the running balance out by date instead (an entry may be back-dated).
  */
 @Entity
 @Table(name = "account_transactions",
@@ -51,7 +52,13 @@ public class AccountTransaction {
     @Column(name = "balance_after", nullable = false, precision = 14, scale = 2)
     private BigDecimal balanceAfter;
 
-    /** Id of the source record (transaction, expense, salary, transfer, ...). */
+    /** What made this entry; null for none. Tells what {@code reference_id} points to. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "source", length = 20)
+    private AccountTransactionSource source;
+
+    /** Id of the source record (transaction, expense, salary, the other transfer entry, ...). */
     @Column(name = "reference_id")
     private Long referenceId;
 
@@ -100,6 +107,14 @@ public class AccountTransaction {
 
     public void setBalanceAfter(BigDecimal balanceAfter) {
         this.balanceAfter = balanceAfter;
+    }
+
+    public AccountTransactionSource getSource() {
+        return source;
+    }
+
+    public void setSource(AccountTransactionSource source) {
+        this.source = source;
     }
 
     public Long getReferenceId() {

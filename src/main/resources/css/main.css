@@ -254,6 +254,13 @@
     -fx-control-inner-background: #fff5f5;
 }
 
+/* Drop-downs and date pickers have no text border to recolour, so they get a red outline */
+.combo-box-base.field-invalid {
+    -fx-border-color: #d64545;
+    -fx-border-radius: 3;
+    -fx-background-color: #fff5f5;
+}
+
 .field-error {
     -fx-text-fill: #d64545;
     -fx-font-size: 12px;
@@ -278,6 +285,62 @@
 /* Money columns: right-aligned so amounts line up */
 .money-column {
     -fx-alignment: center-right;
+}
+
+/* Money in (green) / money out (red), in tables and figures */
+.money-in,
+.table-cell.money-in {
+    -fx-text-fill: #2f855a;
+}
+
+.money-out,
+.table-cell.money-out {
+    -fx-text-fill: #c53030;
+}
+
+/* Selected rows keep white text so it stays readable on the blue highlight */
+.table-row-cell:selected .table-cell.money-in,
+.table-row-cell:selected .table-cell.money-out {
+    -fx-text-fill: #ffffff;
+}
+
+/* Account ledger window: figures on top */
+.ledger-window {
+    -fx-padding: 20;
+    -fx-background-color: #f4f6f8;
+}
+
+.stat-tile {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 8;
+    -fx-padding: 12 16;
+    -fx-spacing: 4;
+    -fx-min-width: 200;
+}
+
+.stat-tile-main {
+    -fx-border-color: #2563eb;
+}
+
+.stat-label {
+    -fx-text-fill: #616e7c;
+    -fx-font-size: 12px;
+}
+
+.stat-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+.stat-value.money-in {
+    -fx-text-fill: #2f855a;
+}
+
+.stat-value.money-out {
+    -fx-text-fill: #c53030;
 }
 
 /* Add/edit popup forms */
@@ -325,12 +388,13 @@
      delete-button Delete                                           red
      cancel-button Cancel, No in confirm dialogs                    grey
      page-button   Previous / Next under tables                     grey
+     view-button   Open a read-only view (e.g. account ledger)      teal
    Normal: light background, coloured border and text, soft shadow.
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
 
 .save-button, .add-button, .login-button, .edit-button,
-.delete-button, .cancel-button, .page-button {
+.delete-button, .cancel-button, .page-button, .view-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
     -fx-border-radius: 4;
@@ -347,14 +411,14 @@
 
 /* Every button the same width (Login fills its card instead) */
 .save-button, .add-button, .edit-button,
-.delete-button, .cancel-button, .page-button {
+.delete-button, .cancel-button, .page-button, .view-button {
     -fx-min-width: 140;
     -fx-pref-width: 140;
     -fx-max-width: 140;
 }
 
 .save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
-.delete-button:hover, .cancel-button:hover, .page-button:hover {
+.delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover {
     -fx-text-fill: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
 }
@@ -398,4 +462,14 @@
 
 .cancel-button:hover, .page-button:hover {
     -fx-background-color: #6b7280;
+}
+
+/* Teal: View (read-only windows such as the account ledger) */
+.view-button {
+    -fx-border-color: #0d9488;
+    -fx-text-fill: #0d9488;
+}
+
+.view-button:hover {
+    -fx-background-color: #0d9488;
 }
