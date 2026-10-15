@@ -32,8 +32,13 @@ public class BusinessProfile {
     @Column(name = "email", length = 100)
     private String email;
 
+    /** Shown in Bangla mode, e.g. ৳. */
     @Column(name = "currency_symbol", nullable = false, length = 10)
     private String currencySymbol;
+
+    /** Shown in English mode, e.g. Tk. Nullable so the column can be added to an existing row. */
+    @Column(name = "currency_symbol_en", length = 10)
+    private String currencySymbolEn;
 
     @Column(name = "vat_percentage", nullable = false, precision = 5, scale = 2)
     private BigDecimal vatPercentage;
@@ -87,6 +92,14 @@ public class BusinessProfile {
 
     public void setCurrencySymbol(String currencySymbol) {
         this.currencySymbol = currencySymbol;
+    }
+
+    public String getCurrencySymbolEn() {
+        return currencySymbolEn;
+    }
+
+    public void setCurrencySymbolEn(String currencySymbolEn) {
+        this.currencySymbolEn = currencySymbolEn;
     }
 
     public BigDecimal getVatPercentage() {

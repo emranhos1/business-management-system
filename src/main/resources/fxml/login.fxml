@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Texts are bound in LoginController so they follow language changes. -->
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.eh.bms.controller.LoginController">
+    <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
+
+    <!-- Square card; window is square too, so the margin is equal on all sides -->
+    <VBox styleClass="login-card" spacing="10" alignment="CENTER_LEFT"
+          minWidth="360" prefWidth="360" maxWidth="360"
+          minHeight="360" prefHeight="360" maxHeight="360">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
+                <Image url="@../icons/bms-64.png"/>
+            </ImageView>
+            <Label fx:id="titleLabel" styleClass="login-title" wrapText="true"/>
+        </HBox>
+        <Label fx:id="subtitleLabel" styleClass="login-subtitle"/>
+
+        <Label fx:id="usernameLabel" labelFor="$usernameField"/>
+        <TextField fx:id="usernameField"/>
+
+        <Label fx:id="passwordLabel" labelFor="$passwordField"/>
+        <PasswordField fx:id="passwordField" onAction="#onLogin"/>
+
+        <Label fx:id="errorLabel" styleClass="error-label" wrapText="true" visible="false" managed="false"/>
+
+        <Button fx:id="loginButton" styleClass="login-button" maxWidth="Infinity"
+                defaultButton="true" onAction="#onLogin"/>
+    </VBox>
+</StackPane>

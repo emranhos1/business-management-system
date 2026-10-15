@@ -8,8 +8,10 @@ import javafx.beans.property.SimpleObjectProperty;
 
 import java.text.MessageFormat;
 import java.util.Locale;
+import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -28,11 +30,12 @@ public final class I18n {
     public static final Locale ENGLISH = Locale.ENGLISH;
 
     private static final ObjectProperty<Locale> LOCALE = new SimpleObjectProperty<>(BANGLA);
-    private static volatile ResourceBundle bundle = load(BANGLA);
 
-    static {
-        LOCALE.addListener((obs, oldLocale, newLocale) -> bundle = load(newLocale));
-    }
+    /**
+     * Bundles are picked by the current locale on every lookup, not swapped by a locale listener:
+     * bound labels may recompute before such a listener runs and would get the old language.
+     */
+    private static final Map<Locale, ResourceBundle> BUNDLES = new ConcurrentHashMap<>();
 
     private I18n() {
     }
@@ -60,19 +63,36 @@ public final class I18n {
 
     /** Bundle for FXMLLoader (%key). Values resolved this way do not update on language change. */
     public static ResourceBundle getBundle() {
-        return bundle;
+        return BUNDLES.computeIfAbsent(getLocale(), I18n::load);
     }
 
     /** Text for a key in the current language. Args fill {0}, {1}, ... placeholders. */
     public static String get(String key, Object... args) {
         String pattern;
         try {
-            pattern = bundle.getString(key);
+            pattern = getBundle().getString(key);
         } catch (MissingResourceException e) {
             LOG.warning("Missing i18n key: " + key + " (" + getLocale() + ")");
             return "!" + key + "!";
         }
         return args.length == 0 ? pattern : new MessageFormat(pattern, getLocale()).format(args);
+    }
+
+    /** The Bangla or English name for the current language; the Bangla one if the English one is empty. */
+    public static String pick(String bangla, String english) {
+        return ENGLISH.equals(getLocale()) && english != null && !english.isBlank() ? english : bangla;
+    }
+
+    /** Shows 0-9 as Bangla digits (০-৯) in Bangla mode; unchanged in English. For display only, never for saving. */
+    public static String digits(String text) {
+        if (text == null || !BANGLA.equals(getLocale())) {
+            return text;
+        }
+        StringBuilder sb = new StringBuilder(text.length());
+        for (char c : text.toCharArray()) {
+            sb.append(c >= '0' && c <= '9' ? (char) ('০' + (c - '0')) : c);
+        }
+        return sb.toString();
     }
 
     /** Text that follows the current language. Use with textProperty().bind(...). */
