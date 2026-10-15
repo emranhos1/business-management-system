@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Add / edit product category popup (8.1). One field per row (label 200 px, input fills the rest). -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ProductCategoryFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <HBox styleClass="form-row">
+        <Label text="%categories.name_bn" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameBnField" maxWidth="Infinity"/>
+            <Label fx:id="nameBnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%categories.name_en" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameEnField" maxWidth="Infinity"/>
+            <Label fx:id="nameEnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button text="%button.save" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>

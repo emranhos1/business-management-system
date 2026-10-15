@@ -20,6 +20,7 @@ import com.eh.bms.model.SalaryProcessing;
 import com.eh.bms.model.StockLedger;
 import com.eh.bms.model.TransactionItem;
 import com.eh.bms.model.TransactionPayment;
+import com.eh.bms.model.Unit;
 import com.eh.bms.model.User;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -47,6 +48,7 @@ public final class DatabaseConfig {
             BusinessProfile.class,
             AppConfigEntry.class,
             ProductCategory.class,
+            Unit.class,
             Product.class,
             StockLedger.class,
             Party.class,

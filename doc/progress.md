@@ -109,27 +109,30 @@ Depends on: Stage 5
 | 7.3 | Current balance per account | Balance matches ledger | ✅ |
 | 7.4 | Transfer between accounts (atomic) | Both balances update; failure rolls back | ✅ |
 
-## Stage 8 — Products
+## Stage 8 — Products ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 8.1 | Product category CRUD | Create/edit/delete works | [ ] |
-| 8.2 | Product CRUD (name, sku, unit, secondary unit, conversion, min stock) | Create/edit/delete works | [ ] |
-| 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | [ ] |
+| 8.1 | Product category CRUD | Create/edit/delete works | ✅ |
+| 8.2 | Product CRUD (name, sku, unit, secondary unit, conversion, min stock) | Create/edit/delete works | ✅ |
+| 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | ✅ |
+| 8.4 | Units list (`units` table, Bangla + English name, ~30 common units seeded) with add/edit/delete in a "একক" tab next to categories; product unit / secondary unit picked from it (FK) | Units CRUD works; product form uses the list; old text units migrated | ✅ |
+| 8.5 | Copy button on each product row (opens add form filled in); min stock prefilled with the default (0 = no alert); same name allowed with another pack size | Copy works; same name + other conversion saves | ✅ |
 
-## Stage 9 — Stock
+## Stage 9 — Stock ✅
 Depends on: Stage 8
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 9.1 | Stock ledger service (entry + running balance) | Balance correct after entries | [ ] |
-| 9.2 | Weighted average cost calculation | Matches manual calculation | [ ] |
-| 9.3 | Current stock per product view | Matches ledger | [ ] |
-| 9.4 | Stock ledger view per product | Full history shows | [ ] |
-| 9.5 | Stock adjustment with reason (damage/loss/correction) | Stock and ledger update | [ ] |
-| 9.6 | Low stock alert list | Products below threshold listed | [ ] |
-| 9.7 | Stock valuation view (stock × average cost) | Values match calculation | [ ] |
+| 9.1 | Stock ledger service (entry + running balance) | Balance correct after entries | ✅ |
+| 9.2 | Weighted average cost calculation | Matches manual calculation | ✅ |
+| 9.3 | Current stock per product view | Matches ledger | ✅ |
+| 9.4 | Stock ledger view per product | Full history shows | ✅ |
+| 9.5 | Stock adjustment with reason (damage/loss/correction) | Stock and ledger update | ✅ |
+| 9.6 | Low stock alert list | Products below threshold listed | ✅ |
+| 9.7 | Stock valuation view (stock × average cost) | Values match calculation | ✅ |
+| 9.8 | Popups: no window title bar, full title turned 90° on a dark left strip (drag to move), shadow, open centered right of the sidebar; Yes/No uses the same popup; long ledger details show in a tooltip | Popups look and sit right; tooltip shows full note | ✅ |
 
 ## Stage 10 — Parties
 Depends on: Stage 5 (10.5 also needs Stage 7)

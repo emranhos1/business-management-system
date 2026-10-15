@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Stock adjustment (9.5): damage / loss / correction. One field per row (label 200 px, input fills the rest). -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.StockAdjustmentFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <!-- Product: read-only; conversion and current stock under it -->
+    <HBox styleClass="form-row">
+        <Label text="%stock.adjust.product" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="productField" maxWidth="Infinity" editable="false" focusTraversable="false"/>
+            <Label fx:id="conversionLabel" styleClass="field-hint" wrapText="true" visible="false" managed="false"/>
+            <Label fx:id="stockLabel" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%stock.adjust.reason" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="reasonBox" maxWidth="Infinity"/>
+            <Label fx:id="reasonError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%stock.adjust.direction" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="directionBox" maxWidth="Infinity"/>
+            <Label fx:id="directionError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="directionHint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.quantity" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="quantityField" maxWidth="Infinity"/>
+            <Label fx:id="quantityError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="afterLabel" styleClass="field-hint" wrapText="true" visible="false" managed="false"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.date" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <DatePicker fx:id="datePicker" maxWidth="Infinity"/>
+            <Label fx:id="dateError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label fx:id="noteLabel" text="%label.note" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextArea fx:id="noteField" maxWidth="Infinity" prefRowCount="3" wrapText="true"/>
+            <Label fx:id="noteError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button fx:id="saveButton" text="%button.save" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>

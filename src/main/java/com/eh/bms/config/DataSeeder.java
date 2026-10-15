@@ -6,6 +6,7 @@ import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.Permission;
+import com.eh.bms.model.Unit;
 import com.eh.bms.model.User;
 import com.eh.bms.model.UserRole;
 import com.eh.bms.model.UserStatus;
@@ -13,6 +14,9 @@ import com.eh.bms.repository.AccountTypeRepository;
 import com.eh.bms.repository.AppConfigRepository;
 import com.eh.bms.repository.BusinessProfileRepository;
 import com.eh.bms.repository.PermissionRepository;
+import com.eh.bms.repository.ProductRepository;
+import com.eh.bms.repository.StockLedgerRepository;
+import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.repository.UserRepository;
 import com.eh.bms.util.TransactionHelper;
 import org.mindrot.jbcrypt.BCrypt;
@@ -66,12 +70,49 @@ public final class DataSeeder {
     private static final UserRepository USER_REPO = new UserRepository();
     private static final PermissionRepository PERMISSION_REPO = new PermissionRepository();
     private static final AccountTypeRepository ACCOUNT_TYPE_REPO = new AccountTypeRepository();
+    private static final ProductRepository PRODUCT_REPO = new ProductRepository();
+    private static final UnitRepository UNIT_REPO = new UnitRepository();
+    private static final StockLedgerRepository STOCK_LEDGER_REPO = new StockLedgerRepository();
 
     /** Bangla name, English name, number rule. */
     private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
             {"ক্যাশ", "Cash", AccountNumberRule.NONE},
             {"ব্যাংক", "Bank", AccountNumberRule.BANK},
             {"মোবাইল ব্যাংকিং", "Mobile banking", AccountNumberRule.MOBILE}
+    };
+
+    /** Common units: Bangla name, English name. */
+    private static final String[][] DEFAULT_UNITS = {
+            {"পিস", "pcs"},
+            {"কেজি", "kg"},
+            {"গ্রাম", "g"},
+            {"টন", "ton"},
+            {"মণ", "maund"},
+            {"লিটার", "L"},
+            {"মিলিলিটার", "ml"},
+            {"মিটার", "m"},
+            {"সেন্টিমিটার", "cm"},
+            {"ফুট", "ft"},
+            {"ইঞ্চি", "inch"},
+            {"গজ", "yard"},
+            {"বর্গফুট", "sq ft"},
+            {"ঘনফুট", "cft"},
+            {"বস্তা", "bag"},
+            {"কার্টন", "carton"},
+            {"বক্স", "box"},
+            {"ডজন", "dozen"},
+            {"হালি", "hali"},
+            {"প্যাকেট", "packet"},
+            {"বোতল", "bottle"},
+            {"ক্যান", "can"},
+            {"রোল", "roll"},
+            {"বান্ডেল", "bundle"},
+            {"সেট", "set"},
+            {"জোড়া", "pair"},
+            {"গ্যালন", "gallon"},
+            {"পাউন্ড", "lb"},
+            {"কয়েল", "coil"},
+            {"শিট", "sheet"}
     };
 
     private DataSeeder() {
@@ -84,7 +125,47 @@ public final class DataSeeder {
         seedPermissions();
         seedAccountTypes();
         migrateAccountTypes();
+        seedUnits();
+        migrateProductUnits();
+        migrateStockLedger();
         migrateData();
+    }
+
+    /** Lets stock_ledger.type take the newer types (OPENING, SALE_RETURN, PURCHASE_RETURN). */
+    static void migrateStockLedger() {
+        TransactionHelper.runInTransaction(session -> {
+            if (STOCK_LEDGER_REPO.dropOldTypeCheck(session)) {
+                LOG.info("Dropped old CHECK on stock_ledger.type");
+            }
+        });
+    }
+
+    /** Common units, only when the table is empty (the user may delete or rename them later). */
+    static void seedUnits() {
+        TransactionHelper.runInTransaction(session -> {
+            if (UNIT_REPO.count(session) == 0) {
+                for (String[] row : DEFAULT_UNITS) {
+                    Unit u = new Unit();
+                    u.setNameBn(row[0]);
+                    u.setNameEn(row[1]);
+                    UNIT_REPO.save(session, u);
+                }
+                LOG.info("Seeded units");
+            }
+        });
+    }
+
+    /** Moves products from the old text unit columns to units (first product version only). */
+    static void migrateProductUnits() {
+        TransactionHelper.runInTransaction(session -> {
+            if (UNIT_REPO.migrateOldUnitColumns(session)) {
+                LOG.info("Migrated products.unit / secondary_unit to unit_id / secondary_unit_id");
+            }
+            // Product names may repeat with another pack size, so the old unique name indexes go
+            if (PRODUCT_REPO.dropOldNameIndexes(session)) {
+                LOG.info("Dropped unique indexes on products.name / name_en");
+            }
+        });
     }
 
     /**
@@ -106,6 +187,25 @@ public final class DataSeeder {
                         .executeUpdate();
                 LOG.info("Data fix v1: cashier Accounts permission removed (" + changed + " row)");
                 done = 1;
+            }
+
+            if (done < 2) {
+                // v2: every product keeps its own minimum stock; older rows left blank get the app default
+                BigDecimal lowStockDefault = APP_CONFIG_REPO.findValue(session, "low_stock_default")
+                        .map(v -> {
+                            try {
+                                return new BigDecimal(v.trim());
+                            } catch (NumberFormatException e) {
+                                return null;
+                            }
+                        })
+                        .orElse(BigDecimal.TEN);
+                int changed = session.createMutationQuery(
+                                "update Product p set p.minStockAlert = :value where p.minStockAlert is null")
+                        .setParameter("value", lowStockDefault == null ? BigDecimal.TEN : lowStockDefault)
+                        .executeUpdate();
+                LOG.info("Data fix v2: minimum stock filled for " + changed + " product(s)");
+                done = 2;
             }
 
             if (version == null) {

@@ -45,7 +45,7 @@ public class AccountLedgerController {
         table = new PaginatedTable<>(this::loadPage);
         TableView<LedgerRow> view = table.getTableView();
         view.getColumns().add(TableHelper.column("label.date", r -> DateUtil.format(r.date())));
-        TableColumn<LedgerRow, String> details = TableHelper.column("ledger.col.details", AccountLedgerController::details);
+        TableColumn<LedgerRow, String> details = TableHelper.longTextColumn("ledger.col.details", AccountLedgerController::details);
         details.setPrefWidth(320);
         view.getColumns().add(details);
         view.getColumns().add(styled(TableHelper.moneyColumn("ledger.col.in", r -> MoneyUtil.format(r.moneyIn())), "money-in"));

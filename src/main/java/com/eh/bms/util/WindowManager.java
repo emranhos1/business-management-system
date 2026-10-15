@@ -3,13 +3,25 @@ package com.eh.bms.util;
 import com.eh.bms.config.AppConfig;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Bounds;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
 import java.io.IOException;
@@ -79,17 +91,82 @@ public final class WindowManager {
      * until it closes. Call {@code showAndWait()} on the result.
      */
     public static Stage dialog(Parent root, String title) {
-        Stage stage = new Stage();
+        return dialog(root, title, current);
+    }
+
+    /**
+     * A popup over {@code owner}. It has no window title bar (every popup closes with its own button or Esc);
+     * the title stands turned 90° on a strip down the left side, which also drags the popup. The popup
+     * casts a shadow, and over the main window it opens centered on the part right of the sidebar.
+     */
+    public static Stage dialog(Parent root, String title, Window owner) {
+        Stage stage = new Stage(StageStyle.TRANSPARENT);
         stage.setTitle(title);
         AppIcons.apply(stage);
-        if (current != null) {
-            stage.initOwner(current);
+        if (owner != null) {
+            stage.initOwner(owner);
         }
         stage.initModality(Modality.WINDOW_MODAL);
         stage.setResizable(false);
-        stage.setScene(scene(root));
+
+        HBox.setHgrow(root, Priority.ALWAYS);
+        HBox frame = new HBox(titleStrip(stage, title), root);
+        frame.getStyleClass().add("popup-frame");
+        // Transparent margin around the popup, so its shadow has room to show
+        StackPane shadowHost = new StackPane(frame);
+        shadowHost.getStyleClass().add("popup-shadow-host");
+        Scene scene = scene(shadowHost);
+        scene.setFill(Color.TRANSPARENT);
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                stage.close();
+            }
+        });
+        stage.setScene(scene);
         stage.getProperties().put(AUTO_SIZE, Boolean.TRUE);
+        stage.setOnShown(e -> {
+            // CSS (fonts, padding) is in place only now; size again so no edge is cut off
+            if (Boolean.TRUE.equals(stage.getProperties().get(AUTO_SIZE))) {
+                stage.sizeToScene();
+            }
+            centerOnWorkArea(stage, owner);
+        });
         return stage;
+    }
+
+    /** Centers the popup on the main window's work area (right of the sidebar); other owners keep JavaFX's centering. */
+    private static void centerOnWorkArea(Stage stage, Window owner) {
+        if (owner == null || owner != current || owner.getScene() == null) {
+            return;
+        }
+        Node work = owner.getScene().lookup("#workArea");
+        Bounds area = work == null ? null : work.localToScreen(work.getLayoutBounds());
+        if (area == null) {
+            return;
+        }
+        stage.setX(area.getMinX() + Math.max(0, (area.getWidth() - stage.getWidth()) / 2));
+        stage.setY(area.getMinY() + Math.max(0, (area.getHeight() - stage.getHeight()) / 2));
+    }
+
+    /** Left strip with the whole title turned 90° (read bottom to top); dragging it moves the popup. */
+    private static Node titleStrip(Stage stage, String title) {
+        Label label = new Label(title);
+        label.getStyleClass().add("popup-title");
+        label.setRotate(-90);
+        // A Group lays out the turned label by its turned size, so the strip is as tall as the full title
+        VBox strip = new VBox(new Group(label));
+        strip.getStyleClass().add("popup-title-strip");
+        strip.setAlignment(Pos.CENTER);
+        double[] grab = new double[2];
+        strip.setOnMousePressed(e -> {
+            grab[0] = stage.getX() - e.getScreenX();
+            grab[1] = stage.getY() - e.getScreenY();
+        });
+        strip.setOnMouseDragged(e -> {
+            stage.setX(e.getScreenX() + grab[0]);
+            stage.setY(e.getScreenY() + grab[1]);
+        });
+        return strip;
     }
 
     /** Resizes the popup holding this node to its content (after rows or error lines appear or hide). */

@@ -47,7 +47,8 @@
     </left>
 
     <center>
-        <BorderPane>
+        <!-- id: popups open centered on this part (everything right of the sidebar) -->
+        <BorderPane id="workArea">
             <top>
                 <VBox>
                     <HBox styleClass="header" spacing="12" alignment="CENTER_LEFT">
