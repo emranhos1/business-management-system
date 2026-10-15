@@ -72,6 +72,11 @@ public class AccountTypeService {
         });
     }
 
+    /** True if no account uses the type, so {@link #delete} would delete it. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
+    }
+
     /** Deletes only a type no account uses. */
     public DeleteResult delete(long id) {
         return TransactionHelper.inTransaction(session -> {

@@ -5,13 +5,14 @@ import com.eh.bms.model.ProductCategory;
 import com.eh.bms.service.ProductCategoryService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
-import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.Icons;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
 import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.TableHelper;
+import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -24,15 +25,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Product categories list (right side of the Products page, 8.1): add, edit (button or double-click), delete. */
+/** Product categories list (right side of the Products page, 8.1): add; edit by the row button or double-click; delete in the edit form. */
 public class ProductCategoriesController {
 
     private static final Logger LOG = Logger.getLogger(ProductCategoriesController.class.getName());
     private static final String FORM_FXML = "/fxml/views/product-category-form.fxml";
 
     @FXML private Button addButton;
-    @FXML private Button editButton;
-    @FXML private Button deleteButton;
     @FXML private StackPane tableHolder;
 
     private final ProductCategoryService service = new ProductCategoryService();
@@ -44,7 +43,7 @@ public class ProductCategoriesController {
 
     @FXML
     private void initialize() {
-        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, editButton, deleteButton);
+        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, null, null);
 
         table = new PaginatedTable<>(this::loadPage);
         TableView<ProductCategory> view = table.getTableView();
@@ -52,8 +51,11 @@ public class ProductCategoriesController {
         view.getColumns().add(TableHelper.column("categories.col.products",
                 c -> I18n.digits(String.valueOf(productCounts.getOrDefault(c.getId(), 0L)))));
 
-        TableHelper.needSelection(view, editButton, deleteButton);
         boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.EDIT);
+        if (canEdit) {
+            view.getColumns().add(TableHelper.actionsColumn("label.actions",
+                    new RowAction<>(Icons.EDIT, "button.edit", "categories.form.edit_title", "icon-edit", this::openForm)));
+        }
         TableHelper.onDoubleClick(view, canEdit, this::openForm);
 
         tableHolder.getChildren().setAll(table);
@@ -91,38 +93,7 @@ public class ProductCategoriesController {
         openForm(null);
     }
 
-    @FXML
-    private void onEdit() {
-        ProductCategory selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            openForm(selected);
-        }
-    }
-
-    @FXML
-    private void onDelete() {
-        ProductCategory selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected == null
-                || !Dialogs.confirmDelete(I18n.get("categories.confirm_delete", nameText(selected)))) {
-            return;
-        }
-        try {
-            switch (service.delete(selected.getId())) {
-                case DELETED -> {
-                    Notifier.success(I18n.get("msg.deleted"));
-                    onChange.run();
-                }
-                case IN_USE -> Notifier.error(I18n.get("categories.error.in_use"));
-                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
-            }
-            table.refresh();
-        } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not delete product category", e);
-            Notifier.error(I18n.get("msg.error"));
-        }
-    }
-
-    /** Add (category = null) or edit popup; the lists reload after a save. */
+    /** Add (category = null) or edit popup; the lists reload after a save or delete. */
     private void openForm(ProductCategory category) {
         FXMLLoader loader = WindowManager.loader(FORM_FXML);
         Parent root = WindowManager.load(loader, FORM_FXML);

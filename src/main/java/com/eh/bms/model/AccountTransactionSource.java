@@ -6,5 +6,7 @@ package com.eh.bms.model;
  */
 public enum AccountTransactionSource {
     /** Money moved between two accounts; {@code reference_id} is the other side's entry. */
-    TRANSFER
+    TRANSFER,
+    /** Money paid to or received from a party (10.5); {@code reference_id} is the party ledger entry. */
+    PARTY
 }

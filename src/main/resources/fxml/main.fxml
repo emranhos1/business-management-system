@@ -62,7 +62,11 @@
                 </VBox>
             </top>
             <center>
-                <StackPane fx:id="contentArea" styleClass="content-area"/>
+                <!-- The page fills the space; on a small window (or stacked parts) it scrolls instead of being cut -->
+                <!-- min 0: the scroll never gets wider/taller than the window (its content scrolls instead) -->
+                <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="page-scroll" minWidth="0" minHeight="0">
+                    <StackPane fx:id="contentArea" styleClass="content-area"/>
+                </ScrollPane>
             </center>
         </BorderPane>
     </center>

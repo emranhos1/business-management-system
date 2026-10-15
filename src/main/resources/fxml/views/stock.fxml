@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -15,11 +14,9 @@
          tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
     <Tab text="%stock.tab.current">
         <VBox spacing="12">
-            <!-- FlowPane: the button wraps to a second line when the page is narrow -->
-            <FlowPane styleClass="toolbar" hgap="8" vgap="8" alignment="CENTER_LEFT">
-                <TextField fx:id="searchField" promptText="%stock.search.prompt" prefWidth="320"/>
-                <Button fx:id="adjustButton" text="%stock.adjust" styleClass="add-button" onAction="#onAdjust"/>
-            </FlowPane>
+            <HBox styleClass="toolbar" alignment="CENTER_LEFT">
+                <TextField fx:id="searchField" promptText="%stock.search.prompt" prefWidth="320" minWidth="160"/>
+            </HBox>
             <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
     </Tab>

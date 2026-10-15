@@ -103,6 +103,11 @@ public class ProductService {
         });
     }
 
+    /** True if the product has no stock entries and no transaction items, so {@link #delete} would delete it. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
+    }
+
     /** Deletes only a product with no stock entries and no transaction items. */
     public DeleteResult delete(long id) {
         return TransactionHelper.inTransaction(session -> {

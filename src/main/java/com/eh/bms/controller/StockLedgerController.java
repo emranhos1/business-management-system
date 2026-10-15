@@ -41,8 +41,6 @@ public class StockLedgerController {
     private static final String FXML_PATH = "/fxml/views/stock-ledger.fxml";
     private static final double WINDOW_WIDTH = 1040;
     private static final double WINDOW_HEIGHT = 640;
-    private static final double DETAILS_WIDTH = 300;
-
     @FXML private Label currentStockLabel;
     @FXML private Label averageCostLabel;
     @FXML private Label totalInLabel;
@@ -80,7 +78,6 @@ public class StockLedgerController {
         TableView<StockRow> view = table.getTableView();
         view.getColumns().add(TableHelper.column("label.date", r -> DateUtil.format(r.date())));
         TableColumn<StockRow, String> details = TableHelper.longTextColumn("stock.ledger.col.details", StockLedgerController::details);
-        details.setPrefWidth(DETAILS_WIDTH);
         view.getColumns().add(details);
         view.getColumns().add(styled(TableHelper.moneyColumn("stock.ledger.col.in", r -> quantity(r.quantityIn())), "money-in"));
         view.getColumns().add(styled(TableHelper.moneyColumn("stock.ledger.col.out", r -> quantity(r.quantityOut())), "money-out"));

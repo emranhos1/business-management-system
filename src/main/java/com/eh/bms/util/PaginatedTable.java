@@ -47,7 +47,13 @@ public class PaginatedTable<T> extends VBox {
         Label empty = new Label();
         empty.textProperty().bind(I18n.bind("msg.no_data"));
         tableView.setPlaceholder(empty);
-        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        // Column widths are set by TableHelper.fitColumns / fillWidth (fit the text, share the spare width,
+        // never past the table's edge); they follow the table when its width changes
+        tableView.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        tableView.widthProperty().addListener(o -> TableHelper.fillWidth(tableView));
+        // Otherwise the table's min width follows its columns, which fillWidth stretched on a wide window,
+        // so it would never get narrower again; narrower than its columns, it scrolls sideways instead
+        tableView.setMinWidth(0);
         VBox.setVgrow(tableView, Priority.ALWAYS);
 
         previousButton.textProperty().bind(I18n.bind("pagination.previous"));
@@ -103,6 +109,7 @@ public class PaginatedTable<T> extends VBox {
         }
         page = Math.max(1, Math.min(target, totalPages));
         tableView.getItems().setAll(result.items());
+        TableHelper.fitColumns(tableView);
         updateBar();
     }
 

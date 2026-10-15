@@ -140,6 +140,14 @@
     -fx-text-fill: #616e7c;
 }
 
+/* Page scroll (main.fxml). -fx-background is inherited by every control on the page (text colours, tab
+   headers are worked out from it), so it must stay the page colour, never transparent. */
+.page-scroll,
+.page-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: #f4f6f8;
+}
+
 .content-area {
     -fx-padding: 24;
 }
@@ -182,7 +190,7 @@
 .form-scroll,
 .form-scroll > .viewport {
     -fx-background-color: transparent;
-    -fx-background: transparent;
+    -fx-background: #f4f6f8;
 }
 
 .form-card {
@@ -444,7 +452,7 @@
      no-button     No in confirm dialogs                            grey
      page-button   Previous / Next under tables                     grey
      view-button   Open a read-only view (e.g. account ledger)      teal
-     row-button    Small action inside a table row (e.g. Copy)      blue, row height
+     icon-button   Action on a table row (edit, view, copy, ...)    icon (+ word), colour per action
    Normal: light background, coloured border and text, soft shadow.
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
@@ -530,24 +538,84 @@
     -fx-background-color: #6b7280;
 }
 
-/* Small button inside a table row (e.g. Copy): fits the row height, blue like Add */
-.row-button {
+/* Icon buttons inside a table row (TableHelper.actionsColumn): a square with the action's colour,
+   the icon in that colour; hover fills it and turns the icon white. What it does shows in a tooltip. */
+.icon-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
     -fx-border-radius: 4;
     -fx-border-width: 1;
-    -fx-border-color: #2563eb;
-    -fx-text-fill: #2563eb;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 1 12;
+    -fx-padding: 0;
     -fx-cursor: hand;
+    -fx-min-width: 30;
+    -fx-pref-width: 30;
+    -fx-max-width: 30;
+    -fx-min-height: 26;
+    -fx-pref-height: 26;
+    -fx-max-height: 26;
 }
 
-.row-button:hover {
-    -fx-background-color: #2563eb;
+.icon-button:hover .icon {
+    -fx-background-color: #ffffff;
+}
+
+/* Icon + a short word (e.g. "দেখুন", "পেলাম"): as wide as its text */
+.icon-text-button {
+    -fx-min-width: -1;
+    -fx-pref-width: -1;
+    -fx-max-width: -1;
+    -fx-padding: 0 8 0 6;
+    -fx-graphic-text-gap: 4;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.icon-text-button:hover {
     -fx-text-fill: #ffffff;
 }
+
+.icon-view.icon-text-button { -fx-text-fill: #0d9488; }
+.icon-in.icon-text-button, .icon-on.icon-text-button { -fx-text-fill: #2f855a; }
+.icon-out.icon-text-button { -fx-text-fill: #c53030; }
+.icon-off.icon-text-button { -fx-text-fill: #6b7280; }
+.icon-view.icon-text-button:hover, .icon-in.icon-text-button:hover, .icon-on.icon-text-button:hover,
+.icon-out.icon-text-button:hover, .icon-off.icon-text-button:hover {
+    -fx-text-fill: #ffffff;
+}
+
+/* Teal: view (ledger) */
+.icon-view { -fx-border-color: #0d9488; }
+.icon-view .icon { -fx-background-color: #0d9488; }
+.icon-view:hover { -fx-background-color: #0d9488; }
+
+/* Green: money in / make active */
+.icon-in, .icon-on { -fx-border-color: #2f855a; }
+.icon-in .icon, .icon-on .icon { -fx-background-color: #2f855a; }
+.icon-in:hover, .icon-on:hover { -fx-background-color: #2f855a; }
+
+/* Red: money out */
+.icon-out { -fx-border-color: #c53030; }
+.icon-out .icon { -fx-background-color: #c53030; }
+.icon-out:hover { -fx-background-color: #c53030; }
+
+/* Orange: edit */
+.icon-edit { -fx-border-color: #d97706; }
+.icon-edit .icon { -fx-background-color: #d97706; }
+.icon-edit:hover { -fx-background-color: #d97706; }
+.icon-edit.icon-text-button { -fx-text-fill: #d97706; }
+.icon-edit.icon-text-button:hover { -fx-text-fill: #ffffff; }
+
+/* Blue: copy */
+.icon-copy { -fx-border-color: #2563eb; }
+.icon-copy .icon { -fx-background-color: #2563eb; }
+.icon-copy:hover { -fx-background-color: #2563eb; }
+.icon-copy.icon-text-button { -fx-text-fill: #2563eb; }
+.icon-copy.icon-text-button:hover { -fx-text-fill: #ffffff; }
+
+/* Grey: make inactive */
+.icon-off { -fx-border-color: #6b7280; }
+.icon-off .icon { -fx-background-color: #6b7280; }
+.icon-off:hover { -fx-background-color: #6b7280; }
 
 .button-column {
     -fx-alignment: center;

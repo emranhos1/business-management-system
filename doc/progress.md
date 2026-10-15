@@ -134,16 +134,16 @@ Depends on: Stage 8
 | 9.7 | Stock valuation view (stock × average cost) | Values match calculation | ✅ |
 | 9.8 | Popups: no window title bar, full title turned 90° on a dark left strip (drag to move), shadow, open centered right of the sidebar; Yes/No uses the same popup; long ledger details show in a tooltip | Popups look and sit right; tooltip shows full note | ✅ |
 
-## Stage 10 — Parties
+## Stage 10 — Parties ✅
 Depends on: Stage 5 (10.5 also needs Stage 7)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 10.1 | Party CRUD with opening balance; phone required (red error if empty or duplicate) | Create/edit/delete works; empty/duplicate phone shows red error | [ ] |
-| 10.2 | Party ledger service (debit/credit/balance) | Balance correct after entries | [ ] |
-| 10.3 | Party ledger view in plain words: columns দিলাম / পেলাম, balance as "৳X পাবো" (green) or "৳X দেবো" (red); never show debit, credit or minus sign | Full history shows; a non-accountant understands it | [ ] |
-| 10.4 | Party list with current balance as "পাবো" (green) / "দেবো" (red) | Balances match ledger | [ ] |
-| 10.5 | Payment/receipt against party (atomic, account linked) | Party and account both update | [ ] |
+| 10.1 | Party CRUD with opening balance; phone required (red error if empty or duplicate) | Create/edit/delete works; empty/duplicate phone shows red error | ✅ |
+| 10.2 | Party ledger service (debit/credit/balance) | Balance correct after entries | ✅ |
+| 10.3 | Party ledger view in plain words: columns দিলাম / পেলাম, balance as "৳X পাবো" (green) or "৳X দেবো" (red); never show debit, credit or minus sign | Full history shows; a non-accountant understands it | ✅ |
+| 10.4 | Party list with current balance as "পাবো" (green) / "দেবো" (red) | Balances match ledger | ✅ |
+| 10.5 | Payment/receipt against party (atomic, account linked) | Party and account both update | ✅ |
 
 ## Stage 11 — Sales
 Depends on: Stages 7, 9, 10

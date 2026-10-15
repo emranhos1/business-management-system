@@ -4,8 +4,11 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
+import com.eh.bms.model.Party;
+import com.eh.bms.model.PartyLedger;
 import com.eh.bms.repository.AccountTransactionRepository;
 import com.eh.bms.repository.AccountTransactionRepository.Totals;
+import com.eh.bms.repository.PartyLedgerRepository;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
 import jakarta.persistence.LockModeType;
@@ -27,10 +30,13 @@ import java.util.Objects;
  */
 public class AccountLedgerService {
 
-    /** One ledger line. {@code otherAccount} is set for transfers (the account on the other side). */
+    /**
+     * One ledger line. {@code otherAccount} is set for transfers (the account on the other side),
+     * {@code party} for money paid to or received from a party.
+     */
     public record LedgerRow(long id, LocalDate date, AccountTransactionType type, BigDecimal amount,
                             BigDecimal balance, AccountTransactionSource source, Account otherAccount,
-                            String note) {
+                            Party party, String note) {
         public BigDecimal moneyIn() {
             return type == AccountTransactionType.CREDIT ? amount : null;
         }
@@ -45,6 +51,7 @@ public class AccountLedgerService {
     }
 
     private final AccountTransactionRepository repository = new AccountTransactionRepository();
+    private final PartyLedgerRepository partyLedgerRepository = new PartyLedgerRepository();
 
     public BigDecimal balance(long accountId) {
         return TransactionHelper.inTransaction(session -> balance(session, accountId));
@@ -96,6 +103,12 @@ public class AccountLedgerService {
                     .map(AccountTransaction::getReferenceId)
                     .toList();
             Map<Long, AccountTransaction> others = repository.findByIds(session, otherIds);
+            // Party payments: the party ledger entry names the party
+            List<Long> partyEntryIds = entries.stream()
+                    .filter(t -> t.getSource() == AccountTransactionSource.PARTY && t.getReferenceId() != null)
+                    .map(AccountTransaction::getReferenceId)
+                    .toList();
+            Map<Long, PartyLedger> partyEntries = partyLedgerRepository.findByIds(session, partyEntryIds);
 
             AccountTransaction first = entries.get(0);
             BigDecimal balance = balance(session, accountId)
@@ -103,9 +116,14 @@ public class AccountLedgerService {
 
             List<LedgerRow> rows = new ArrayList<>(entries.size());
             for (AccountTransaction t : entries) {
-                AccountTransaction other = t.getReferenceId() == null ? null : others.get(t.getReferenceId());
+                boolean linked = t.getReferenceId() != null;
+                AccountTransaction other = linked && t.getSource() == AccountTransactionSource.TRANSFER
+                        ? others.get(t.getReferenceId()) : null;
+                PartyLedger partyEntry = linked && t.getSource() == AccountTransactionSource.PARTY
+                        ? partyEntries.get(t.getReferenceId()) : null;
                 rows.add(new LedgerRow(t.getId(), t.getDate(), t.getType(), t.getAmount(), balance,
-                        t.getSource(), other == null ? null : other.getAccount(), t.getNote()));
+                        t.getSource(), other == null ? null : other.getAccount(),
+                        partyEntry == null ? null : partyEntry.getParty(), t.getNote()));
                 balance = balance.subtract(signed(t));
             }
             return new PageResult<>(rows, total);

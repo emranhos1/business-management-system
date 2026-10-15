@@ -103,25 +103,6 @@ public class StockLedgerRepository {
         return net == null ? BigDecimal.ZERO : net;
     }
 
-    /**
-     * Drops the CHECK constraint Hibernate made on {@code type} for the first enum version (it rejects the
-     * newer types such as OPENING); hbm2ddl update never changes it. Safe every startup.
-     */
-    public boolean dropOldTypeCheck(Session session) {
-        List<String> names = session.createNativeQuery(
-                        "SELECT tc.constraint_name FROM information_schema.table_constraints tc"
-                                + " JOIN information_schema.check_constraints cc"
-                                + " ON cc.constraint_schema = tc.constraint_schema AND cc.constraint_name = tc.constraint_name"
-                                + " WHERE tc.table_schema = DATABASE() AND tc.table_name = 'stock_ledger'"
-                                + " AND tc.constraint_type = 'CHECK' AND cc.check_clause LIKE '%`type`%'"
-                                + " AND cc.check_clause NOT LIKE '%PURCHASE_RETURN%'", String.class)
-                .getResultList();
-        for (String name : names) {
-            session.createNativeMutationQuery("ALTER TABLE stock_ledger DROP CHECK `" + name + "`").executeUpdate();
-        }
-        return !names.isEmpty();
-    }
-
     public void save(Session session, StockLedger entry) {
         session.persist(entry);
     }

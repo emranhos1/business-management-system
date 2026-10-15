@@ -7,16 +7,16 @@ import com.eh.bms.service.StockLedgerService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.Icons;
 import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
-import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.TableHelper;
+import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.UnitUtil;
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
@@ -26,6 +26,7 @@ import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
 /**
  * Stock page, "Current stock" tab (9.3): products with their current stock from the stock ledger,
  * searchable and paginated. Rows below their minimum stock are marked. Each row opens its stock
- * ledger (9.4); the toolbar adjusts the selected product's stock (9.5). The low stock (9.6) and
+ * ledger (9.4) and adjusts its stock (9.5) with its row buttons. The low stock (9.6) and
  * stock value (9.7) tabs are included FXML files with their own controllers.
  */
 public class StockController {
@@ -47,7 +48,6 @@ public class StockController {
     private static final Duration SEARCH_DELAY = Duration.millis(300);
 
     @FXML private TextField searchField;
-    @FXML private Button adjustButton;
     @FXML private StackPane tableHolder;
 
     private final StockLedgerService stockService = new StockLedgerService();
@@ -58,8 +58,6 @@ public class StockController {
 
     @FXML
     private void initialize() {
-        // An adjustment adds stock ledger entries, so it needs the create permission
-        PermissionUtil.require(adjustButton, AppModule.STOCK, Action.CREATE);
         InputFilters.maxLength(searchField, SEARCH_MAX);
 
         table = new PaginatedTable<>(this::loadPage);
@@ -72,12 +70,20 @@ public class StockController {
         view.getColumns().add(TableHelper.moneyColumn("products.col.min_stock",
                 p -> hasMinimum(p) ? UnitUtil.number(p.getMinStockAlert()) : "—"));
         boolean canView = UserSession.isLoggedIn() && UserSession.get().can(AppModule.STOCK, Action.VIEW);
+        // An adjustment adds stock ledger entries, so it needs the create permission
+        boolean canAdjust = UserSession.isLoggedIn() && UserSession.get().can(AppModule.STOCK, Action.CREATE);
+        List<RowAction<Product>> actions = new ArrayList<>();
         if (canView) {
-            view.getColumns().add(TableHelper.buttonColumn("stock.col.ledger", "stock.ledger",
-                    StockLedgerController::open));
+            actions.add(new RowAction<>(Icons.LEDGER, "button.view", "stock.ledger", "icon-view", StockLedgerController::open));
+        }
+        if (canAdjust) {
+            actions.add(new RowAction<>(Icons.ADJUST, "stock.action.adjust", "stock.adjust", "icon-edit",
+                    p -> StockAdjustmentFormController.open(p, this::reload)));
+        }
+        if (!actions.isEmpty()) {
+            view.getColumns().add(actionsColumn(actions));
         }
 
-        TableHelper.needSelection(view, adjustButton);
         // Marks low rows; double-click opens the product's stock ledger
         view.setRowFactory(tv -> {
             TableRow<Product> row = new TableRow<>() {
@@ -151,13 +157,9 @@ public class StockController {
         }
     }
 
-    /** Adjustment popup for the selected product (9.5); stock reloads after a save. */
-    @FXML
-    private void onAdjust() {
-        Product selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            StockAdjustmentFormController.open(selected, this::reload);
-        }
+    @SuppressWarnings("unchecked")
+    private static TableColumn<Product, Product> actionsColumn(List<RowAction<Product>> actions) {
+        return TableHelper.actionsColumn("label.actions", actions.toArray(new RowAction[0]));
     }
 
     /** Reloads the shown page (e.g. after a stock adjustment). */

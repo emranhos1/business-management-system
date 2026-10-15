@@ -7,28 +7,32 @@ import com.eh.bms.service.ProductService;
 import com.eh.bms.service.UnitService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
-import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.Icons;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
 import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.TableHelper;
+import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.UnitUtil;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Products page: products list on the left (8.2: add, edit (button or double-click), delete),
+ * Products page: products list on the left (8.2: add; row buttons edit and copy; delete in the edit form),
  * tabs on the right for product categories (8.1) and units (8.4), each with its own FXML + controller.
  */
 public class ProductsController {
@@ -39,8 +43,6 @@ public class ProductsController {
     static final int LOW_STOCK_FALLBACK = 10;
 
     @FXML private Button addButton;
-    @FXML private Button editButton;
-    @FXML private Button deleteButton;
     /** Products list goes here. */
     @FXML private StackPane productsHolder;
     /** Controller of the included categories list (fx:id="categories"). */
@@ -55,14 +57,14 @@ public class ProductsController {
 
     @FXML
     private void initialize() {
-        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, editButton, deleteButton);
+        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, null, null);
 
         table = new PaginatedTable<>(this::loadPage);
         TableView<Product> view = table.getTableView();
-        view.getColumns().add(TableHelper.column("products.name", ProductsController::nameText));
+        view.getColumns().add(TableHelper.column("products.col.name", ProductsController::nameText));
         view.getColumns().add(TableHelper.column("products.category",
                 p -> p.getCategory() == null ? "—" : ProductCategoriesController.nameText(p.getCategory())));
-        view.getColumns().add(TableHelper.column("products.sku", p -> p.getSku() == null ? "—" : p.getSku()));
+        view.getColumns().add(TableHelper.column("products.col.sku", p -> p.getSku() == null ? "—" : p.getSku()));
         view.getColumns().add(TableHelper.column("products.unit", p -> UnitUtil.name(p.getUnit())));
         view.getColumns().add(TableHelper.column("products.col.conversion", p -> {
             String conversion = UnitUtil.conversionText(p);
@@ -70,14 +72,21 @@ public class ProductsController {
         }));
         view.getColumns().add(TableHelper.column("products.col.min_stock",
                 p -> p.getMinStockAlert() == null ? "—" : quantityText(p.getMinStockAlert())));
-        // A copy button on each row opens the add form filled with that product (needs the add permission)
-        if (UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.CREATE)) {
-            view.getColumns().add(TableHelper.buttonColumn("products.col.copy", "products.copy",
+        // Row buttons: edit (delete is inside the edit form); copy opens the add form filled with that product
+        boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.EDIT);
+        boolean canCreate = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.CREATE);
+        List<RowAction<Product>> actions = new ArrayList<>();
+        if (canEdit) {
+            actions.add(new RowAction<>(Icons.EDIT, "button.edit", "products.form.edit_title", "icon-edit",
+                    product -> openForm(product, false)));
+        }
+        if (canCreate) {
+            actions.add(new RowAction<>(Icons.COPY, "products.copy", "products.form.copy_title", "icon-copy",
                     product -> openForm(product, true)));
         }
-
-        TableHelper.needSelection(view, editButton, deleteButton);
-        boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.EDIT);
+        if (!actions.isEmpty()) {
+            view.getColumns().add(actionsColumn(actions));
+        }
         TableHelper.onDoubleClick(view, canEdit, product -> openForm(product, false));
 
         productsHolder.getChildren().setAll(table);
@@ -127,38 +136,15 @@ public class ProductsController {
         openForm(null, false);
     }
 
-    @FXML
-    private void onEdit() {
-        Product selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            openForm(selected, false);
-        }
+    @SuppressWarnings("unchecked")
+    private static TableColumn<Product, Product> actionsColumn(List<RowAction<Product>> actions) {
+        return TableHelper.actionsColumn("label.actions", actions.toArray(new RowAction[0]));
     }
 
-    @FXML
-    private void onDelete() {
-        Product selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected == null
-                || !Dialogs.confirmDelete(I18n.get("products.confirm_delete", nameText(selected)))) {
-            return;
-        }
-        try {
-            switch (service.delete(selected.getId())) {
-                case DELETED -> Notifier.success(I18n.get("msg.deleted"));
-                case IN_USE -> Notifier.error(I18n.get("products.error.in_use"));
-                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
-            }
-            table.refresh();
-            // The categories and units lists show how many products use each
-            categoriesController.refresh();
-            unitsController.refresh();
-        } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not delete product", e);
-            Notifier.error(I18n.get("msg.error"));
-        }
-    }
-
-    /** Add (product = null), edit, or add-as-copy (copy = true) popup; the lists reload after a save. */
+    /**
+     * Add (product = null), edit, or add-as-copy (copy = true) popup; the lists reload after a save or delete
+     * (the categories and units lists show how many products use each).
+     */
     private void openForm(Product product, boolean copy) {
         FXMLLoader loader = WindowManager.loader(FORM_FXML);
         Parent root = WindowManager.load(loader, FORM_FXML);

@@ -3,6 +3,9 @@ package com.eh.bms.controller;
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.AccountType;
+import com.eh.bms.model.AppModule;
+import com.eh.bms.service.UserSession;
+import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.service.AccountService;
 import com.eh.bms.service.AccountService.AccountData;
 import com.eh.bms.service.AccountTypeService;
@@ -13,6 +16,7 @@ import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -47,6 +51,7 @@ public class AccountFormController {
     @FXML private TextField openingField;
     @FXML private Label openingError;
     @FXML private Label openingLockedLabel;
+    @FXML private Button deleteButton;
 
     private final AccountService service = new AccountService();
     private final AccountTypeService typeService = new AccountTypeService();
@@ -110,6 +115,11 @@ public class AccountFormController {
         openingField.setDisable(locked);
         openingLockedLabel.setVisible(locked);
         openingLockedLabel.setManaged(locked);
+        // Delete only an account added by mistake: no history and opening balance 0 (and the user may delete)
+        boolean deletable = UserSession.isLoggedIn() && UserSession.get().can(AppModule.ACCOUNT, Action.DELETE)
+                && service.canDelete(accountId);
+        deleteButton.setVisible(deletable);
+        deleteButton.setManaged(deletable);
     }
 
     /** True if the user saved; the list then reloads. */
@@ -189,6 +199,28 @@ public class AccountFormController {
             }
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save account", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+    }
+
+    @FXML
+    private void onDelete() {
+        if (accountId == null || !Dialogs.confirmDelete(I18n.get("accounts.confirm_delete",
+                I18n.pick(text(nameField), text(nameEnField))))) {
+            return;
+        }
+        try {
+            switch (service.delete(accountId)) {
+                case DELETED -> {
+                    saved = true;
+                    close();
+                    Notifier.success(I18n.get("msg.deleted"));
+                }
+                case IN_USE -> Notifier.error(I18n.get("accounts.error.in_use"));
+                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not delete account", e);
             Notifier.error(I18n.get("msg.error"));
         }
     }

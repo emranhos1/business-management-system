@@ -75,6 +75,11 @@ public class UnitService {
         });
     }
 
+    /** True if no product uses the unit, so {@link #delete} would delete it. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
+    }
+
     /** Deletes only a unit no product uses (as unit or secondary unit). */
     public DeleteResult delete(long id) {
         return TransactionHelper.inTransaction(session -> {

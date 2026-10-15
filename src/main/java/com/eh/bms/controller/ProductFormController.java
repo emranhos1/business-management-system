@@ -8,6 +8,9 @@ import com.eh.bms.service.ProductCategoryService;
 import com.eh.bms.service.ProductService;
 import com.eh.bms.service.ProductService.ProductData;
 import com.eh.bms.service.UnitService;
+import com.eh.bms.model.AppModule;
+import com.eh.bms.service.UserSession;
+import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
@@ -17,6 +20,7 @@ import com.eh.bms.util.UnitUtil;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.TextField;
@@ -55,6 +59,7 @@ public class ProductFormController {
     private static final int QTY_INT_DIGITS = 11;
     private static final int QTY_DECIMALS = 3;
 
+    @FXML private Button deleteButton;
     @FXML private TextField nameBnField;
     @FXML private Label nameBnError;
     @FXML private TextField nameEnField;
@@ -147,6 +152,11 @@ public class ProductFormController {
     /** Fills the form for editing; call before showing. Leave it uncalled to add a new product. */
     public void edit(Product product) {
         productId = product.getId();
+        // Delete only a record nothing uses (and the user may delete)
+        boolean deletable = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.DELETE)
+                && service.canDelete(productId);
+        deleteButton.setVisible(deletable);
+        deleteButton.setManaged(deletable);
         nameBnField.setText(product.getName());
         nameEnField.setText(product.getNameEn());
         if (product.getCategory() != null) {
@@ -294,6 +304,28 @@ public class ProductFormController {
             }
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save product", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+    }
+
+    @FXML
+    private void onDelete() {
+        if (productId == null || !Dialogs.confirmDelete(I18n.get("products.confirm_delete",
+                I18n.pick(text(nameBnField), text(nameEnField))))) {
+            return;
+        }
+        try {
+            switch (service.delete(productId)) {
+                case DELETED -> {
+                    saved = true;
+                    close();
+                    Notifier.success(I18n.get("msg.deleted"));
+                }
+                case IN_USE -> Notifier.error(I18n.get("products.error.in_use"));
+                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not delete product", e);
             Notifier.error(I18n.get("msg.error"));
         }
     }

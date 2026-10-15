@@ -12,6 +12,7 @@ import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
+import com.eh.bms.util.PartyText;
 import com.eh.bms.util.TableHelper;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -46,7 +47,6 @@ public class AccountLedgerController {
         TableView<LedgerRow> view = table.getTableView();
         view.getColumns().add(TableHelper.column("label.date", r -> DateUtil.format(r.date())));
         TableColumn<LedgerRow, String> details = TableHelper.longTextColumn("ledger.col.details", AccountLedgerController::details);
-        details.setPrefWidth(320);
         view.getColumns().add(details);
         view.getColumns().add(styled(TableHelper.moneyColumn("ledger.col.in", r -> MoneyUtil.format(r.moneyIn())), "money-in"));
         view.getColumns().add(styled(TableHelper.moneyColumn("ledger.col.out", r -> MoneyUtil.format(r.moneyOut())), "money-out"));
@@ -91,6 +91,9 @@ public class AccountLedgerController {
         if (r.source() == AccountTransactionSource.TRANSFER && r.otherAccount() != null) {
             String other = I18n.pick(r.otherAccount().getName(), r.otherAccount().getNameEn());
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.transfer_to" : "ledger.transfer_from", other);
+        } else if (r.source() == AccountTransactionSource.PARTY && r.party() != null) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.party_paid" : "ledger.party_received",
+                    PartyText.name(r.party()));
         }
         String note = r.note();
         if (what == null) {

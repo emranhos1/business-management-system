@@ -1,39 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.eh.bms.util.TwoColumnLayout?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <!-- Products page: products on the left (8.2); on the right, tabs for product categories (8.1) and
-     units (8.4), each with its own FXML + controller. -->
-<GridPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-          fx:controller="com.eh.bms.controller.ProductsController" hgap="24">
-    <columnConstraints>
-        <ColumnConstraints percentWidth="62"/>
-        <ColumnConstraints percentWidth="38"/>
-    </columnConstraints>
-    <rowConstraints>
-        <RowConstraints vgrow="ALWAYS"/>
-    </rowConstraints>
+     units (8.4), each with its own FXML + controller; stacked on a narrow window. -->
+<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                 fx:controller="com.eh.bms.controller.ProductsController">
 
-    <VBox spacing="12" GridPane.columnIndex="0">
-        <Label text="%products.section.products" styleClass="section-title"/>
+    <VBox spacing="12">
+        <!-- One line: title on the left, button pushed to the right -->
         <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+            <Label text="%products.section.products" styleClass="section-title" minWidth="-Infinity"/>
+            <Region HBox.hgrow="ALWAYS" minWidth="8"/>
             <Button fx:id="addButton" text="%products.add" styleClass="add-button" onAction="#onAdd"/>
-            <Button fx:id="editButton" text="%button.edit" styleClass="edit-button" onAction="#onEdit"/>
-            <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"/>
         </HBox>
         <StackPane fx:id="productsHolder" VBox.vgrow="ALWAYS"/>
     </VBox>
 
-    <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs" GridPane.columnIndex="1">
+    <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
         <Tab text="%products.tab.categories">
             <fx:include fx:id="categories" source="product-categories.fxml"/>
         </Tab>
@@ -41,4 +33,4 @@
             <fx:include fx:id="units" source="units.fxml"/>
         </Tab>
     </TabPane>
-</GridPane>
+</TwoColumnLayout>

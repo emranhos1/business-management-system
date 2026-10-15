@@ -5,13 +5,14 @@ import com.eh.bms.model.AppModule;
 import com.eh.bms.service.AccountTypeService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
-import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.Icons;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
 import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.TableHelper;
+import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -23,15 +24,16 @@ import javafx.scene.layout.StackPane;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Account types list (right side of the Accounts page): add, edit (button or double-click), delete. */
+/**
+ * Account types list (right side of the Accounts page): add; edit by the row button or double-click;
+ * delete is in the edit form (only for a type no account uses).
+ */
 public class AccountTypesController {
 
     private static final Logger LOG = Logger.getLogger(AccountTypesController.class.getName());
     private static final String FORM_FXML = "/fxml/views/account-type-form.fxml";
 
     @FXML private Button addButton;
-    @FXML private Button editButton;
-    @FXML private Button deleteButton;
     @FXML private StackPane tableHolder;
 
     private final AccountTypeService service = new AccountTypeService();
@@ -41,15 +43,18 @@ public class AccountTypesController {
 
     @FXML
     private void initialize() {
-        PermissionUtil.applyCrud(AppModule.ACCOUNT, addButton, editButton, deleteButton);
+        PermissionUtil.applyCrud(AppModule.ACCOUNT, addButton, null, null);
 
         table = new PaginatedTable<>(this::loadPage);
         TableView<AccountType> view = table.getTableView();
         view.getColumns().add(TableHelper.column("types.name", AccountFormController::typeText));
         view.getColumns().add(TableHelper.column("types.rule", t -> AccountTypeFormController.ruleText(t.getNumberRule())));
 
-        TableHelper.needSelection(view, editButton, deleteButton);
         boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.ACCOUNT, Action.EDIT);
+        if (canEdit) {
+            view.getColumns().add(TableHelper.actionsColumn("label.actions",
+                    new RowAction<>(Icons.EDIT, "button.edit", "types.form.edit_title", "icon-edit", this::openForm)));
+        }
         TableHelper.onDoubleClick(view, canEdit, this::openForm);
 
         tableHolder.getChildren().setAll(table);
@@ -75,38 +80,7 @@ public class AccountTypesController {
         openForm(null);
     }
 
-    @FXML
-    private void onEdit() {
-        AccountType selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            openForm(selected);
-        }
-    }
-
-    @FXML
-    private void onDelete() {
-        AccountType selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected == null
-                || !Dialogs.confirmDelete(I18n.get("types.confirm_delete", AccountFormController.typeText(selected)))) {
-            return;
-        }
-        try {
-            switch (service.delete(selected.getId())) {
-                case DELETED -> {
-                    Notifier.success(I18n.get("msg.deleted"));
-                    onChange.run();
-                }
-                case IN_USE -> Notifier.error(I18n.get("types.error.in_use"));
-                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
-            }
-            table.refresh();
-        } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not delete account type", e);
-            Notifier.error(I18n.get("msg.error"));
-        }
-    }
-
-    /** Add (type = null) or edit popup; the lists reload after a save. */
+    /** Add (type = null) or edit popup; the lists reload after a save or delete. */
     private void openForm(AccountType type) {
         FXMLLoader loader = WindowManager.loader(FORM_FXML);
         Parent root = WindowManager.load(loader, FORM_FXML);

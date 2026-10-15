@@ -3,17 +3,18 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Account types list (right side of the Accounts page): add / edit / delete. -->
+<!-- Account types list (right side of the Accounts page): add; edit on each row; delete in the edit form. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.AccountTypesController" spacing="12">
-    <Label text="%accounts.section.types" styleClass="section-title"/>
+    <!-- One line: title on the left, button pushed to the right -->
     <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+        <Label text="%accounts.section.types" styleClass="section-title" minWidth="-Infinity"/>
+        <Region HBox.hgrow="ALWAYS" minWidth="8"/>
         <Button fx:id="addButton" text="%types.add" styleClass="add-button" onAction="#onAdd"/>
-        <Button fx:id="editButton" text="%button.edit" styleClass="edit-button" onAction="#onEdit"/>
-        <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"/>
     </HBox>
     <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
 </VBox>

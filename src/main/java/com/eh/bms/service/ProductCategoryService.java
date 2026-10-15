@@ -75,6 +75,11 @@ public class ProductCategoryService {
         });
     }
 
+    /** True if no product uses the category, so {@link #delete} would delete it. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
+    }
+
     /** Deletes only a category no product uses. */
     public DeleteResult delete(long id) {
         return TransactionHelper.inTransaction(session -> {

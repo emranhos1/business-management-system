@@ -3,6 +3,7 @@ package com.eh.bms.util;
 import com.eh.bms.config.AppConfig;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -134,18 +135,25 @@ public final class WindowManager {
         return stage;
     }
 
-    /** Centers the popup on the main window's work area (right of the sidebar); other owners keep JavaFX's centering. */
+    /**
+     * Centers the popup on the main window's work area (right of the sidebar), or on its owner popup
+     * (e.g. a Yes/No question over a form). Done after the final size is known; JavaFX's own centering
+     * uses the size before {@code sizeToScene}, so it lands off-centre.
+     */
     private static void centerOnWorkArea(Stage stage, Window owner) {
-        if (owner == null || owner != current || owner.getScene() == null) {
+        if (owner == null) {
             return;
         }
-        Node work = owner.getScene().lookup("#workArea");
-        Bounds area = work == null ? null : work.localToScreen(work.getLayoutBounds());
+        Bounds area = null;
+        if (owner == current && owner.getScene() != null) {
+            Node work = owner.getScene().lookup("#workArea");
+            area = work == null ? null : work.localToScreen(work.getLayoutBounds());
+        }
         if (area == null) {
-            return;
+            area = new BoundingBox(owner.getX(), owner.getY(), owner.getWidth(), owner.getHeight());
         }
-        stage.setX(area.getMinX() + Math.max(0, (area.getWidth() - stage.getWidth()) / 2));
-        stage.setY(area.getMinY() + Math.max(0, (area.getHeight() - stage.getHeight()) / 2));
+        stage.setX(area.getMinX() + (area.getWidth() - stage.getWidth()) / 2);
+        stage.setY(area.getMinY() + (area.getHeight() - stage.getHeight()) / 2);
     }
 
     /** Left strip with the whole title turned 90° (read bottom to top); dragging it moves the popup. */

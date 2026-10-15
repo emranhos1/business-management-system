@@ -1,11 +1,27 @@
 package com.eh.bms.config;
 
 import com.eh.bms.model.AccountNumberRule;
+import com.eh.bms.model.AccountTransactionSource;
+import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.AppModule;
+import com.eh.bms.model.AttendanceStatus;
+import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.BusinessProfile;
+import com.eh.bms.model.EmployeeStatus;
+import com.eh.bms.model.ExpenseCategoryType;
+import com.eh.bms.model.PartyLedgerType;
+import com.eh.bms.model.PartyStatus;
+import com.eh.bms.model.PartyTradeType;
+import com.eh.bms.model.PartyType;
+import com.eh.bms.model.PaymentMethod;
 import com.eh.bms.model.Permission;
+import com.eh.bms.model.SalaryType;
+import com.eh.bms.model.StockAdjustmentReason;
+import com.eh.bms.model.StockLedgerType;
+import com.eh.bms.model.TransactionStatus;
+import com.eh.bms.model.TransactionType;
 import com.eh.bms.model.Unit;
 import com.eh.bms.model.User;
 import com.eh.bms.model.UserRole;
@@ -15,7 +31,7 @@ import com.eh.bms.repository.AppConfigRepository;
 import com.eh.bms.repository.BusinessProfileRepository;
 import com.eh.bms.repository.PermissionRepository;
 import com.eh.bms.repository.ProductRepository;
-import com.eh.bms.repository.StockLedgerRepository;
+import com.eh.bms.repository.SchemaRepository;
 import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.repository.UserRepository;
 import com.eh.bms.util.TransactionHelper;
@@ -72,7 +88,7 @@ public final class DataSeeder {
     private static final AccountTypeRepository ACCOUNT_TYPE_REPO = new AccountTypeRepository();
     private static final ProductRepository PRODUCT_REPO = new ProductRepository();
     private static final UnitRepository UNIT_REPO = new UnitRepository();
-    private static final StockLedgerRepository STOCK_LEDGER_REPO = new StockLedgerRepository();
+    private static final SchemaRepository SCHEMA_REPO = new SchemaRepository();
 
     /** Bangla name, English name, number rule. */
     private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
@@ -127,15 +143,49 @@ public final class DataSeeder {
         migrateAccountTypes();
         seedUnits();
         migrateProductUnits();
-        migrateStockLedger();
+        migrateEnumChecks();
         migrateData();
     }
 
-    /** Lets stock_ledger.type take the newer types (OPENING, SALE_RETURN, PURCHASE_RETURN). */
-    static void migrateStockLedger() {
+    /**
+     * Every enum column: table, column, enum. A value added to an enum later would be rejected by the
+     * CHECK Hibernate made when the table was created (see {@link SchemaRepository#dropOutdatedEnumCheck}).
+     * Add new enum columns here.
+     */
+    private static final Object[][] ENUM_COLUMNS = {
+            {"account_types", "number_rule", AccountNumberRule.class},
+            {"account_transactions", "type", AccountTransactionType.class},
+            {"account_transactions", "source", AccountTransactionSource.class},
+            {"attendance", "status", AttendanceStatus.class},
+            {"employees", "salary_type", SalaryType.class},
+            {"employees", "status", EmployeeStatus.class},
+            {"expense_categories", "type", ExpenseCategoryType.class},
+            {"parties", "type", PartyType.class},
+            {"parties", "party_type", PartyTradeType.class},
+            {"parties", "balance_type", BalanceType.class},
+            {"parties", "status", PartyStatus.class},
+            {"party_ledger", "type", PartyLedgerType.class},
+            {"permissions", "role", UserRole.class},
+            {"permissions", "module", AppModule.class},
+            {"stock_ledger", "type", StockLedgerType.class},
+            {"stock_ledger", "reason", StockAdjustmentReason.class},
+            {"transactions", "type", TransactionType.class},
+            {"transactions", "payment_method", PaymentMethod.class},
+            {"transactions", "status", TransactionStatus.class},
+            {"transaction_payments", "payment_method", PaymentMethod.class},
+            {"users", "role", UserRole.class},
+            {"users", "status", UserStatus.class}
+    };
+
+    /** Drops enum CHECKs that miss a newer enum value (e.g. account_transactions.source PARTY). Safe every startup. */
+    @SuppressWarnings("unchecked")
+    static void migrateEnumChecks() {
         TransactionHelper.runInTransaction(session -> {
-            if (STOCK_LEDGER_REPO.dropOldTypeCheck(session)) {
-                LOG.info("Dropped old CHECK on stock_ledger.type");
+            for (Object[] c : ENUM_COLUMNS) {
+                if (SCHEMA_REPO.dropOutdatedEnumCheck(session, (String) c[0], (String) c[1],
+                        (Class<? extends Enum<?>>) c[2])) {
+                    LOG.info("Dropped outdated CHECK on " + c[0] + "." + c[1]);
+                }
             }
         });
     }
@@ -206,6 +256,15 @@ public final class DataSeeder {
                         .executeUpdate();
                 LOG.info("Data fix v2: minimum stock filled for " + changed + " product(s)");
                 done = 2;
+            }
+
+            if (done < 3) {
+                // v3: parties.status added later; parties saved before it are active
+                int changed = session.createMutationQuery("update Party p set p.status = :active where p.status is null")
+                        .setParameter("active", PartyStatus.ACTIVE)
+                        .executeUpdate();
+                LOG.info("Data fix v3: " + changed + " party(ies) set active");
+                done = 3;
             }
 
             if (version == null) {
