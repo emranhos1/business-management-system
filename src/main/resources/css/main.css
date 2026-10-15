@@ -4,3 +4,561 @@
     -fx-font-size: 13px;
     -fx-background-color: #f4f6f8;
 }
+
+/* Splash (transparent stage; only the card is visible) */
+.splash-root {
+    -fx-background-color: transparent;
+}
+
+.splash-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-padding: 24;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 18, 0, 0, 4);
+}
+
+.splash-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+.splash-version {
+    -fx-text-fill: #9aa5b1;
+    -fx-font-size: 12px;
+}
+
+.splash-progress .bar {
+    -fx-background-color: #2563eb;
+}
+
+.splash-status {
+    -fx-text-fill: #616e7c;
+}
+
+/* Main layout: sidebar */
+.sidebar {
+    -fx-background-color: #1f2937;
+}
+
+.sidebar-brand {
+    -fx-padding: 18 16 18 16;
+    -fx-border-color: transparent transparent #374151 transparent;
+}
+
+.sidebar-brand-text {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.sidebar-scroll,
+.sidebar-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.sidebar-menu {
+    -fx-padding: 10 8 10 8;
+}
+
+.sidebar-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d1d5db;
+    -fx-alignment: center-left;
+    -fx-padding: 10 14;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.sidebar-button:hover {
+    -fx-background-color: #374151;
+    -fx-text-fill: #ffffff;
+}
+
+.sidebar-button.active {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+}
+
+/* Sidebar footer: BN/EN + time, then logout + date */
+.sidebar-footer,
+.sidebar-bottom {
+    -fx-padding: 10 16 10 16;
+    -fx-border-color: #374151 transparent transparent transparent;
+}
+
+/* Time and date boxes; they take the width of their text (minWidth in FXML), never cut */
+.clock-box {
+    -fx-text-fill: #e5e7eb;
+    -fx-padding: 4 8;
+    -fx-alignment: center;
+    -fx-border-color: #4b5563;
+    -fx-border-radius: 4;
+    -fx-background-color: #111827;
+    -fx-background-radius: 4;
+}
+
+.lang-button {
+    -fx-background-color: #374151;
+    -fx-text-fill: #d1d5db;
+    -fx-padding: 4 10;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+}
+
+.lang-button:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.lang-button.active {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+}
+
+.sidebar-logout {
+    -fx-text-fill: #fca5a5;
+    -fx-padding: 4 8;
+}
+
+/* Main layout: header and content */
+.header {
+    -fx-background-color: #ffffff;
+    -fx-padding: 14 24;
+    -fx-border-color: transparent transparent #e5e7eb transparent;
+}
+
+.header-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+.header-user {
+    -fx-text-fill: #616e7c;
+}
+
+.content-area {
+    -fx-padding: 24;
+}
+
+/* Message bar under the header (Notifier): hidden when empty; a message pushes the page down for 5 s */
+.message-bar {
+    -fx-padding: 16 24 0 24;
+}
+
+.toast {
+    -fx-padding: 8 14;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-font-weight: bold;
+}
+
+.toast-success {
+    -fx-background-color: #e6f4ea;
+    -fx-border-color: #9fd5b0;
+    -fx-text-fill: #1e6b3a;
+}
+
+.toast-error {
+    -fx-background-color: #fdecec;
+    -fx-border-color: #f5b5b0;
+    -fx-text-fill: #b42318;
+}
+
+.placeholder-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9aa5b1;
+}
+
+.placeholder-text {
+    -fx-text-fill: #9aa5b1;
+}
+
+/* Forms */
+.form-scroll,
+.form-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.form-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-padding: 24;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 8;
+}
+
+.settings-tabs .tab-content-area {
+    -fx-padding: 16 0 0 0;
+}
+
+/* Tabs beside a page's main list (e.g. Products page: categories / units) */
+.side-tabs .tab-content-area {
+    -fx-padding: 12 0 0 0;
+}
+
+.form-label {
+    -fx-text-fill: #374151;
+    /* Labels sit at the top of their row; this lines their text up with the input text */
+    -fx-padding: 6 0 0 0;
+}
+
+.form-label.required {
+    -fx-font-weight: bold;
+}
+
+.logo-box {
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-background-color: #f9fafb;
+    -fx-background-radius: 6;
+}
+
+.success-label {
+    -fx-text-fill: #2f855a;
+}
+
+/* Login */
+.login-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-padding: 28;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 16, 0, 0, 4);
+}
+
+.login-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+.login-subtitle {
+    -fx-text-fill: #616e7c;
+    -fx-padding: 0 0 8 0;
+}
+
+.error-label {
+    -fx-text-fill: #d64545;
+}
+
+
+/* Form errors (FormValidator): red box, message under it */
+.field-box {
+    -fx-spacing: 4;
+}
+
+.text-input.field-invalid {
+    -fx-text-box-border: #d64545;
+    -fx-focus-color: #d64545;
+    -fx-faint-focus-color: #d6454522;
+    -fx-control-inner-background: #fff5f5;
+}
+
+/* Drop-downs and date pickers have no text border to recolour, so they get a red outline */
+.combo-box-base.field-invalid {
+    -fx-border-color: #d64545;
+    -fx-border-radius: 3;
+    -fx-background-color: #fff5f5;
+}
+
+.field-error {
+    -fx-text-fill: #d64545;
+    -fx-font-size: 12px;
+}
+
+.field-hint {
+    -fx-text-fill: #7b8794;
+    -fx-font-size: 12px;
+}
+
+/* Checkbox row: same height as a text field so its label lines up */
+.check-row {
+    -fx-min-height: 30;
+}
+
+/* List pages: toolbar above a table */
+.toolbar {
+    -fx-padding: 0 0 4 0;
+}
+
+
+/* Money columns: right-aligned so amounts line up */
+.money-column {
+    -fx-alignment: center-right;
+}
+
+/* Money in (green) / money out (red), in tables and figures */
+.money-in,
+.table-cell.money-in {
+    -fx-text-fill: #2f855a;
+}
+
+.money-out,
+.table-cell.money-out {
+    -fx-text-fill: #c53030;
+}
+
+/* Selected rows keep white text so it stays readable on the blue highlight */
+.table-row-cell:selected .table-cell.money-in,
+.table-row-cell:selected .table-cell.money-out {
+    -fx-text-fill: #ffffff;
+}
+
+/* Stock page: a product below its minimum stock */
+.table-row-cell.low-stock-row {
+    -fx-background-color: #fbd5d5;
+}
+
+.table-row-cell.low-stock-row:selected {
+    -fx-background-color: -fx-selection-bar;
+}
+
+/* Account ledger window: figures on top */
+.ledger-window {
+    -fx-padding: 20;
+    -fx-background-color: #f4f6f8;
+}
+
+.stat-tile {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 8;
+    -fx-padding: 12 16;
+    -fx-spacing: 4;
+    -fx-min-width: 200;
+}
+
+.stat-tile-main {
+    -fx-border-color: #2563eb;
+}
+
+.stat-label {
+    -fx-text-fill: #616e7c;
+    -fx-font-size: 12px;
+}
+
+.stat-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+.stat-value.money-in {
+    -fx-text-fill: #2f855a;
+}
+
+.stat-value.money-out {
+    -fx-text-fill: #c53030;
+}
+
+/* Add/edit popup forms */
+.dialog-form {
+    -fx-padding: 24;
+    -fx-background-color: #ffffff;
+}
+
+/* Small caption inside a field row, e.g. "বাংলা [ ৳ ]  ইংরেজি [ Tk. ]" */
+.inline-caption {
+    -fx-text-fill: #616e7c;
+}
+
+/* Heading of a section on a page (e.g. Accounts / Account types) */
+.section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+/* Popup form rows: label (200 px, top-aligned) + input filling the rest; a hidden row takes no space */
+.form-row {
+    -fx-spacing: 16;
+    -fx-alignment: top-left;
+}
+
+.form-row-label {
+    -fx-min-width: 200;
+    -fx-pref-width: 200;
+    -fx-max-width: 200;
+}
+
+.dialog-buttons {
+    -fx-padding: 4 0 0 0;
+}
+
+/* Every popup (WindowManager.dialog): no window title bar; the title stands turned on a dark strip on the left */
+.popup-shadow-host {
+    -fx-background-color: transparent;
+    -fx-padding: 14;
+}
+
+.popup-frame {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #1f2937;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.40), 18, 0.15, 0, 5);
+}
+
+.popup-title-strip {
+    -fx-background-color: #1f2937;
+    -fx-padding: 16 10;
+    -fx-cursor: move;
+}
+
+.popup-title {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
+/* Yes/No question (Dialogs.confirm) */
+.confirm-dialog {
+    -fx-padding: 24;
+    -fx-spacing: 20;
+    -fx-background-color: #ffffff;
+}
+
+.confirm-dialog .dialog-buttons {
+    -fx-spacing: 12;
+}
+
+.confirm-message {
+    -fx-font-size: 15px;
+}
+
+/* =====================================================================
+   Buttons — the ONLY place their look is defined. Give each button one
+   class by what it does; changing a rule here changes that button
+   everywhere in the app.
+     save-button   Save (forms, Settings), Yes in confirm dialogs   blue
+     add-button    New ... (toolbars)                               blue
+     login-button  Login                                            blue
+     edit-button   Edit                                             orange
+     delete-button Delete                                           red
+     cancel-button Cancel in forms                                  red
+     no-button     No in confirm dialogs                            grey
+     page-button   Previous / Next under tables                     grey
+     view-button   Open a read-only view (e.g. account ledger)      teal
+     row-button    Small action inside a table row (e.g. Copy)      blue, row height
+   Normal: light background, coloured border and text, soft shadow.
+   Hover: filled with the colour, white text, deeper shadow.
+   ===================================================================== */
+
+.save-button, .add-button, .login-button, .edit-button,
+.delete-button, .cancel-button, .page-button, .view-button, .no-button {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-width: 1.5;
+    -fx-padding: 0 12;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 4, 0, 0, 1);
+    /* Every button the same height */
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+
+/* Every button the same width (Login fills its card instead) */
+.save-button, .add-button, .edit-button,
+.delete-button, .cancel-button, .page-button, .view-button, .no-button {
+    -fx-min-width: 140;
+    -fx-pref-width: 140;
+    -fx-max-width: 140;
+}
+
+.save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
+.delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
+}
+
+/* Blue: Save / Add / Login */
+.save-button, .add-button, .login-button {
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #2563eb;
+}
+
+.save-button:hover, .add-button:hover, .login-button:hover {
+    -fx-background-color: #2563eb;
+}
+
+/* Orange: Edit */
+.edit-button {
+    -fx-border-color: #d97706;
+    -fx-text-fill: #d97706;
+}
+
+.edit-button:hover {
+    -fx-background-color: #d97706;
+}
+
+/* Red: Delete */
+.delete-button {
+    -fx-border-color: #dc2626;
+    -fx-text-fill: #dc2626;
+}
+
+.delete-button:hover {
+    -fx-background-color: #dc2626;
+}
+
+/* Red: Cancel (closes a form without saving) */
+.cancel-button {
+    -fx-border-color: #dc2626;
+    -fx-text-fill: #dc2626;
+}
+
+.cancel-button:hover {
+    -fx-background-color: #dc2626;
+}
+
+/* Grey: Previous / Next, No in confirm dialogs (light grey background) */
+.page-button, .no-button {
+    -fx-background-color: #f3f4f6;
+    -fx-border-color: #6b7280;
+    -fx-text-fill: #374151;
+}
+
+.page-button:hover, .no-button:hover {
+    -fx-background-color: #6b7280;
+}
+
+/* Small button inside a table row (e.g. Copy): fits the row height, blue like Add */
+.row-button {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #2563eb;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 12;
+    -fx-cursor: hand;
+}
+
+.row-button:hover {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
+.button-column {
+    -fx-alignment: center;
+}
+
+/* Teal: View (read-only windows such as the account ledger) */
+.view-button {
+    -fx-border-color: #0d9488;
+    -fx-text-fill: #0d9488;
+}
+
+.view-button:hover {
+    -fx-background-color: #0d9488;
+}

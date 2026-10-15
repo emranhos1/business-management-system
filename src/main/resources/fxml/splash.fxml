@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Shown on a transparent, undecorated stage; the outer padding leaves room for the card shadow. -->
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.eh.bms.controller.SplashController" styleClass="splash-root">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+    <VBox styleClass="splash-card" spacing="10" alignment="CENTER"
+          minWidth="420" prefWidth="420" maxWidth="420"
+          minHeight="280" prefHeight="280" maxHeight="280">
+        <ImageView fitWidth="72" fitHeight="72" preserveRatio="true" smooth="true">
+            <Image url="@../icons/bms-256.png"/>
+        </ImageView>
+        <Label fx:id="titleLabel" styleClass="splash-title"/>
+        <Label fx:id="versionLabel" styleClass="splash-version"/>
+        <ProgressBar prefWidth="260" styleClass="splash-progress">
+            <VBox.margin><Insets top="8"/></VBox.margin>
+        </ProgressBar>
+        <Label fx:id="statusLabel" styleClass="splash-status"/>
+    </VBox>
+</StackPane>

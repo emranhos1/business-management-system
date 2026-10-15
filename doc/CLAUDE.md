@@ -10,9 +10,28 @@
   - `application-{dev,stage,prod}.yml`: DB, pool, admin.
   - All profiles use the same DB name; the user manages profiles.
 - Status/type columns: Java enums stored as VARCHAR. No status lookup tables.
+  - Exception (user decision): account types are a user-managed table `account_types` (Bangla/English name + number rule), seeded with Cash, Bank, Mobile banking.
+- Accounts module: only admin and manager (user decision). Cashier, and any staff/employee login or new role added later (e.g. N2), gets no Accounts permission.
+- One-time fixes to existing data go in `DataSeeder.migrateData()`, numbered by `data_version` in app_config (never re-run, so admin edits stay).
+- Pack sizes (user decision): the same goods in different pack sizes (e.g. rice in 50 / 25 / 20 kg bags) are separate products, each with its own stock, price and conversion. No product variants / multiple packs per product. Product names may repeat; only the same name + same unit, secondary unit and conversion is a duplicate. Wherever a product is picked or listed (stock, sales, purchases), show its conversion next to the name so same-name products can be told apart.
+- Names the user enters for master data (accounts, account types, ...) have a Bangla and an English name, shown by language (`I18n.pick`).
 
 ## Build
 - Before every build, show a big warning with the current `app.profile` value. Never change the profile.
+
+## Forms and messages (every page)
+- Number fields: `InputFilters.digits` / `InputFilters.decimal` (no letters, Bangla digits → 0-9). Text: `InputFilters.maxLength`.
+- Validation: `FormValidator`. Check all fields, show every error (red box + message under the field), focus the first.
+- Every save/delete: `Dialogs.confirmSave()` / `Dialogs.confirm(...)` first. Deletes use `Dialogs.confirmDelete(...)` (red Yes button).
+- Result and general errors: `Notifier.success` / `Notifier.error` (top bar, 5 s). No status labels on the page.
+- Layout: label column 200 px, labels top-aligned (`form-label`); every input fills the second column, same width everywhere.
+- Buttons: one class per action — `save-button`, `add-button`, `edit-button`, `delete-button`, `cancel-button` (red), `view-button` (opens a read-only window, e.g. a ledger) (also `login-button`, `page-button`, `no-button` = grey No in confirm dialogs, `row-button` = small button inside a table row via `TableHelper.buttonColumn`, exempt from 140 x 36). All are 140 x 36 px (Login: full card width); keep labels short enough to fit. Their look lives only in the "Buttons" block of `main.css`; change it there to change every such button. Never leave a button unstyled.
+- Popup forms: 540 px wide, one field per row (`form-row` + `form-row-label`), Bangla and English names on separate rows. Optional rows hide with no gap.
+- Every popup (forms, ledgers, Yes/No) opens through `WindowManager.dialog`: no window title bar (user decision); the full title stands turned 90° on a dark strip on the left (drag it to move). Every popup needs its own close/cancel button; Esc also closes. Yes/No questions go through `Dialogs`, never `Alert`.
+- Table columns whose text can be long (ledger details, notes): `TableHelper.longTextColumn`, which shows the full text in a tooltip on hover.
+- Mobile number: exactly 11 digits, any start (no prefix rule), required where asked.
+- Dates: `DateUtil` only (Bangla digits in Bangla mode via `I18n.digits`). Files the user adds: under `AppPaths.storageDir()`, path stored relative (`AppPaths.toStored`).
+- Every new text key goes into both `messages_bn` and `messages_en`.
 
 ## Database indexes
 - Index only columns important for reports.

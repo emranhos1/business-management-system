@@ -17,10 +17,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * A product. Example: unit = বস্তা, secondaryUnit = kg, conversionFactor = 50 (১ বস্তা = ৫০ kg).
+ * A product, with a Bangla and an English name.
+ * Example: unit = বস্তা, secondaryUnit = কেজি, conversionFactor = 50 (১ বস্তা = ৫০ কেজি).
+ * Units come from the user-managed {@link Unit} list.
  */
 @Entity
 @Table(name = "products",
+        // Names are not unique: the same goods come in different pack sizes (same name, other conversion).
+        // ProductService rejects only a full duplicate (same name, units and conversion).
         uniqueConstraints = @UniqueConstraint(name = "uk_products_sku", columnNames = "sku"))
 public class Product {
 
@@ -33,18 +37,30 @@ public class Product {
             foreignKey = @ForeignKey(name = "fk_products_category"))
     private ProductCategory category;
 
+    /** Bangla name (column kept as "name" from the first version). */
     @Column(name = "name", nullable = false, length = 150)
     private String name;
+
+    /** English name. Nullable only so the column can be added to existing rows; the form requires it. */
+    @Column(name = "name_en", length = 150)
+    private String nameEn;
 
     /** Optional. Unique when set. */
     @Column(name = "sku", length = 50)
     private String sku;
 
-    @Column(name = "unit", nullable = false, length = 30)
-    private String unit;
+    /**
+     * Required. Nullable in the database only so rows from the first version (text unit column) can get it
+     * from the startup migration; the form requires it.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", foreignKey = @ForeignKey(name = "fk_products_unit"))
+    private Unit unit;
 
-    @Column(name = "secondary_unit", length = 30)
-    private String secondaryUnit;
+    /** Optional. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "secondary_unit_id", foreignKey = @ForeignKey(name = "fk_products_secondary_unit"))
+    private Unit secondaryUnit;
 
     /** How many secondary units make one unit. */
     @Column(name = "conversion_factor", precision = 14, scale = 3)
@@ -78,6 +94,14 @@ public class Product {
         this.name = name;
     }
 
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
+    }
+
     public String getSku() {
         return sku;
     }
@@ -86,19 +110,19 @@ public class Product {
         this.sku = sku;
     }
 
-    public String getUnit() {
+    public Unit getUnit() {
         return unit;
     }
 
-    public void setUnit(String unit) {
+    public void setUnit(Unit unit) {
         this.unit = unit;
     }
 
-    public String getSecondaryUnit() {
+    public Unit getSecondaryUnit() {
         return secondaryUnit;
     }
 
-    public void setSecondaryUnit(String secondaryUnit) {
+    public void setSecondaryUnit(Unit secondaryUnit) {
         this.secondaryUnit = secondaryUnit;
     }
 
