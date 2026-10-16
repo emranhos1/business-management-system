@@ -12,3 +12,8 @@ admin:
   name: Administrator
   username: admin
   password: admin123
+
+# Development only: skip the login screen and open the app as this user.
+# Works only with the dev profile; leave blank to see the login screen.
+dev:
+  auto-login: admin

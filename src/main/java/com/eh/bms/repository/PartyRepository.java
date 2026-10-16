@@ -43,6 +43,12 @@ public class PartyRepository {
         return Optional.ofNullable(session.find(Party.class, id));
     }
 
+    public Optional<Party> findByPhone(Session session, String phone) {
+        return session.createSelectionQuery("from Party p where p.phone = :phone", Party.class)
+                .setParameter("phone", phone)
+                .uniqueResultOptional();
+    }
+
     /** True if another party (not {@code excludeId}) has this phone number. */
     public boolean existsByPhone(Session session, String phone, Long excludeId) {
         String hql = "select count(p) from Party p where p.phone = :phone" + (excludeId == null ? "" : " and p.id <> :id");

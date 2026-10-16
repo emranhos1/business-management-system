@@ -33,6 +33,7 @@ public class PartyLedgerController {
 
     @FXML private Label balanceLabel;
     @FXML private Label openingLabel;
+    @FXML private javafx.scene.layout.VBox openingTile;
     @FXML private Label totalGaveLabel;
     @FXML private Label totalGotLabel;
     @FXML private StackPane tableHolder;
@@ -61,6 +62,10 @@ public class PartyLedgerController {
             Summary s = service.summary(partyId);
             setBalance(balanceLabel, s.balance());
             setBalance(openingLabel, s.opening());
+            // Only when there was a due before the app; "no due" here read like it contradicts the balance
+            boolean hasOpening = s.opening() != null && s.opening().signum() != 0;
+            openingTile.setVisible(hasOpening);
+            openingTile.setManaged(hasOpening);
             totalGaveLabel.setText(MoneyUtil.format(s.totalGave()));
             totalGotLabel.setText(MoneyUtil.format(s.totalGot()));
         } catch (RuntimeException e) {

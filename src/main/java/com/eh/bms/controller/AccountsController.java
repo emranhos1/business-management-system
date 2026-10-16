@@ -81,7 +81,7 @@ public class AccountsController {
         }
         actions.add(new RowAction<>(Icons.LEDGER, "button.view", "accounts.ledger", "icon-view", this::openLedger));
         view.getColumns().add(actionsColumn(actions));
-        TableHelper.onDoubleClick(view, canEdit, this::openForm);
+        TableHelper.onDoubleClick(view, true, this::openLedger);
 
         tableHolder.getChildren().setAll(table);
         table.reload();

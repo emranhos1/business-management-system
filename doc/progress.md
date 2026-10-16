@@ -119,6 +119,7 @@ Depends on: Stage 5
 | 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | ✅ |
 | 8.4 | Units list (`units` table, Bangla + English name, ~30 common units seeded) with add/edit/delete in a "একক" tab next to categories; product unit / secondary unit picked from it (FK) | Units CRUD works; product form uses the list; old text units migrated | ✅ |
 | 8.5 | Copy button on each product row (opens add form filled in); min stock prefilled with the default (0 = no alert); same name allowed with another pack size | Copy works; same name + other conversion saves | ✅ |
+| 8.6 | Sale prices on each product: retail and wholesale per main unit, optional per secondary unit (blank = main price ÷ conversion); sale screen fills the price by the customer's wholesale/retail type | Prices save and reload; list shows them | ✅ |
 
 ## Stage 9 — Stock ✅
 Depends on: Stage 8
@@ -145,18 +146,19 @@ Depends on: Stage 5 (10.5 also needs Stage 7)
 | 10.4 | Party list with current balance as "পাবো" (green) / "দেবো" (red) | Balances match ledger | ✅ |
 | 10.5 | Payment/receipt against party (atomic, account linked) | Party and account both update | ✅ |
 
-## Stage 11 — Sales
+## Stage 11 — Sales ✅
 Depends on: Stages 7, 9, 10
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 11.1 | Sale screen: customer + item rows (qty, unit, price, discount) | Rows add/remove correctly | [ ] |
-| 11.2 | Totals: subtotal, VAT, grand total, due | Matches manual calculation | [ ] |
-| 11.3 | Mixed payment entries (e.g. cash + mobile) | Multiple payments saved | [ ] |
-| 11.4 | Confirm sale (atomic): stock, party, account ledgers | All update; failure rolls back | [ ] |
-| 11.5 | Installment payment on existing sale | Due reduces correctly | [ ] |
-| 11.6 | Sales history with filters (date/party/product) | Filters return right rows | [ ] |
-| 11.7 | Sales return (restores stock, adjusts party ledger) | Stock and balance correct | [ ] |
+| 11.1 | Sale screen: customer + item rows (qty, unit, price, discount) | Rows add/remove correctly | ✅ |
+| 11.2 | Totals: subtotal, VAT, grand total, due | Matches manual calculation | ✅ |
+| 11.3 | Mixed payment entries (e.g. cash + mobile) | Multiple payments saved | ✅ |
+| 11.4 | Confirm sale (atomic): stock, party, account ledgers | All update; failure rolls back | ✅ |
+| 11.5 | Installment payment on existing sale | Due reduces correctly | ✅ |
+| 11.6 | Sales history with filters (date/party/product) | Filters return right rows | ✅ |
+| 11.7 | Sales return (restores stock, adjusts party ledger) | Stock and balance correct | ✅ |
+| 11.8 | Memo serial number saved with each sale (`transactions.memo_no`, never reused); sales list searchable by it | Each sale gets the next number; search by number finds it | ✅ |
 
 ## Stage 12 — Purchases
 Depends on: Stages 7, 9, 10
@@ -239,6 +241,7 @@ Depends on: Stage 0
 | 18.3 | Generate `version.json` | File has correct fields | [ ] |
 | 18.4 | Generate `RELEASE_NOTES.md` from commits since last tag | Notes list right commits | [ ] |
 | 18.5 | Create GitHub Release with .exe and `version.json` | Release shows both files | [ ] |
+| 18.6 | Release build fails unless `app.profile` is `prod` (so dev-only login skip never ships) | Tag with dev profile → build fails | [ ] |
 
 ## Stage 19 — Auto-Update: In-App
 Depends on: Stage 5, Stage 18
@@ -329,3 +332,13 @@ Depends on: N4.2
 | N5.1 | Splash window: no title bar, centered, icon, app name, version, loading text | Splash shows on launch | ✅ |
 | N5.2 | DB connect + seeding run in background while splash shows each step | Splash text changes per step; window not frozen | ✅ |
 | N5.3 | On success close splash and open login; on failure close splash and show the error dialog | Both paths work (stop MySQL to test failure) | ✅ |
+
+### N6 — Memo Print
+Print a memo (invoice) for a sale, showing its memo number.
+Depends on: Stage 11 (memo number saved with each sale)
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N6.1 | Decide memo layout and paper size (A4 / A5 / thermal roll) | User confirms layout | [ ] |
+| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [ ] |
+| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [ ] |

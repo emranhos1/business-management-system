@@ -56,7 +56,6 @@ public class ProductCategoriesController {
             view.getColumns().add(TableHelper.actionsColumn("label.actions",
                     new RowAction<>(Icons.EDIT, "button.edit", "categories.form.edit_title", "icon-edit", this::openForm)));
         }
-        TableHelper.onDoubleClick(view, canEdit, this::openForm);
 
         tableHolder.getChildren().setAll(table);
         table.reload();

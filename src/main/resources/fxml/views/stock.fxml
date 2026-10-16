@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Tab?>
-<?import javafx.scene.control.TabPane?>
+<?import com.eh.bms.util.PageTabs?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -9,7 +9,7 @@
 
 <!-- Stock page: current stock per product (9.3: ledger, adjustment), low stock list (9.6) and
      stock value (9.7); the last two have their own FXML + controller. -->
-<TabPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
          fx:controller="com.eh.bms.controller.StockController"
          tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
     <Tab text="%stock.tab.current">
@@ -26,4 +26,4 @@
     <Tab text="%stock.tab.value">
         <fx:include source="stock-valuation.fxml"/>
     </Tab>
-</TabPane>
+</PageTabs>

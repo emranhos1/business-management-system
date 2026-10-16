@@ -48,6 +48,19 @@ public class TransactionPayment {
     @Column(name = "note", length = 255)
     private String note;
 
+    /** The account the money went into (or came out of, for a refund). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", foreignKey = @ForeignKey(name = "fk_transaction_payments_account"))
+    private Account account;
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
+    }
+
     public Long getId() {
         return id;
     }

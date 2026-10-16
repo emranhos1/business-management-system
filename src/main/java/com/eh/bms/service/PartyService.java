@@ -12,6 +12,7 @@ import com.eh.bms.util.TransactionHelper;
 
 import java.math.BigDecimal;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.StringJoiner;
 
 /** Customers and suppliers (10.1). Phone is required and unique. Balances: {@link PartyLedgerService}. */
@@ -65,6 +66,11 @@ public class PartyService {
             }
             return StatusResult.DONE;
         });
+    }
+
+    /** The party with this mobile number (unique), e.g. one just added. */
+    public Optional<Party> findByPhone(String phone) {
+        return TransactionHelper.inTransaction(session -> repository.findByPhone(session, phone.trim()));
     }
 
     /** True once the party has ledger entries; the opening balance can no longer change. */

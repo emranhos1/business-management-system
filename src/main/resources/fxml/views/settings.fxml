@@ -6,7 +6,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Tab?>
-<?import javafx.scene.control.TabPane?>
+<?import com.eh.bms.util.PageTabs?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
@@ -19,7 +19,7 @@
 <!-- Settings: business profile (6.1) and app settings (6.2). Language is in the sidebar (6.3).
      Layout rule: label column 200, every input fills the second column (same width), labels top-aligned.
      Each checked field sits in a VBox with its error label under it (FormValidator). -->
-<TabPane fx:id="tabPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<PageTabs fx:id="tabPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
          fx:controller="com.eh.bms.controller.SettingsController"
          tabClosingPolicy="UNAVAILABLE" styleClass="settings-tabs">
 
@@ -168,4 +168,4 @@
             </VBox>
         </ScrollPane>
     </Tab>
-</TabPane>
+</PageTabs>

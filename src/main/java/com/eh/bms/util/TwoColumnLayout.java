@@ -1,12 +1,15 @@
 package com.eh.bms.util;
 
+import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
+
+import java.util.List;
 
 /**
  * Page with a main part on the left (62%) and a side part on the right (38%), e.g. Accounts + Account types.
@@ -58,12 +61,34 @@ public class TwoColumnLayout extends GridPane {
             getRowConstraints().add(row());
         }
         for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
-            GridPane.setConstraints(child, stack ? 0 : i, stack ? i : 0);
-            if (child instanceof Region region) {
-                region.setMinHeight(stack ? PART_MIN_HEIGHT : Region.USE_COMPUTED_SIZE);
-            }
+            GridPane.setConstraints(getChildren().get(i), stack ? 0 : i, stack ? i : 0);
         }
+        // The new minimum height must reach the page's ScrollPane. This runs inside a layout pass, where
+        // JavaFX does not pass a layout request up to parents that are already marked, so their remembered
+        // (side-by-side) minimum stays and the page cannot scroll to the side part. Ask every parent again
+        // after this pass.
+        Platform.runLater(() -> {
+            for (Parent p = this; p != null; p = p.getParent()) {
+                p.requestLayout();
+            }
+        });
+    }
+
+    /**
+     * Stacked, each part needs at least {@link #PART_MIN_HEIGHT} or its own content's minimum, whichever is
+     * more (a fixed minimum would cut off a tall part, e.g. the sale totals, instead of letting the page scroll).
+     */
+    @Override
+    protected double computeMinHeight(double width) {
+        if (!Boolean.TRUE.equals(stacked)) {
+            return super.computeMinHeight(width);
+        }
+        double height = snappedTopInset() + snappedBottomInset();
+        List<Node> parts = getManagedChildren();
+        for (Node part : parts) {
+            height += Math.max(PART_MIN_HEIGHT, part.minHeight(-1));
+        }
+        return height + Math.max(0, parts.size() - 1) * getVgap();
     }
 
     private static ColumnConstraints column(double percent) {

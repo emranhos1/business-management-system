@@ -4,7 +4,11 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Labeled;
@@ -19,6 +23,8 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -39,8 +45,33 @@ public final class TableHelper {
     private static final String FIT_WIDTH = "bms.fitWidth";
     /** Pixels kept free at the table's right edge so rounding never pushes the last column past it. */
     private static final double EDGE_GAP = 2;
+    /** Table properties read by the rows: the double-click action and the tooltip text. */
+    private static final String ROW_DOUBLE_CLICK = "bms.rowDoubleClick";
+    private static final String ROW_TOOLTIP = "bms.rowTooltip";
+    private static final String ROW_STYLE = "bms.rowStyle";
+    /** Row property: the row tooltip, set aside while the mouse is on the buttons column. */
+    private static final String HIDDEN_ROW_TIP = "bms.hiddenRowTip";
+    /** Tooltip values longer than this (characters) wrap at {@link #TOOLTIP_WIDTH}. */
+    private static final int LONG_TIP_VALUE = 50;
 
     private TableHelper() {
+    }
+
+    /**
+     * What every table gets (PaginatedTable calls it; call it for a plain table, then {@link #fitColumns} after
+     * its rows change): "no data" text, column widths that fit their text and follow the table's width (never
+     * past its edge), and the row tooltip.
+     */
+    public static void setUp(TableView<?> table) {
+        Label empty = new Label();
+        empty.textProperty().bind(I18n.bind("msg.no_data"));
+        table.setPlaceholder(empty);
+        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.widthProperty().addListener(o -> fillWidth(table));
+        // Otherwise the table's min width follows its columns, which fillWidth stretched on a wide window,
+        // so it would never get narrower again; narrower than its columns, it scrolls sideways instead
+        table.setMinWidth(0);
+        installRows(table);
     }
 
     /** Text column with a translated title; values come from {@code value}. */
@@ -51,27 +82,12 @@ public final class TableHelper {
         return c;
     }
 
-    /** Text column whose full text shows in a tooltip on hover (e.g. ledger details, cut off when long). */
+    /**
+     * Text column whose text can be long (e.g. ledger details, address). The cell cuts it with "...";
+     * the row tooltip (every table has one) shows it in full.
+     */
     public static <T> TableColumn<T, String> longTextColumn(String titleKey, Function<T, String> value) {
-        TableColumn<T, String> c = column(titleKey, value);
-        c.setCellFactory(col -> new TableCell<>() {
-            private final Tooltip tooltip = new Tooltip();
-
-            {
-                tooltip.setWrapText(true);
-                tooltip.setMaxWidth(TOOLTIP_WIDTH);
-                tooltip.setShowDelay(Duration.millis(300));
-            }
-
-            @Override
-            protected void updateItem(String text, boolean empty) {
-                super.updateItem(text, empty);
-                setText(empty ? null : text);
-                tooltip.setText(text);
-                setTooltip(empty || text == null || text.isBlank() ? null : tooltip);
-            }
-        });
-        return c;
+        return column(titleKey, value);
     }
 
     /** Money column: right-aligned so amounts line up. */
@@ -146,6 +162,20 @@ public final class TableHelper {
             private final HBox box = new HBox(4);
 
             {
+                // Over the buttons column only each button's own tooltip shows, not the row's full details
+                setOnMouseEntered(e -> {
+                    TableRow<T> row = getTableRow();
+                    if (row != null && row.getTooltip() != null) {
+                        row.getProperties().put(HIDDEN_ROW_TIP, row.getTooltip());
+                        row.setTooltip(null);
+                    }
+                });
+                setOnMouseExited(e -> {
+                    TableRow<T> row = getTableRow();
+                    if (row != null && row.getProperties().remove(HIDDEN_ROW_TIP) instanceof Tooltip tip) {
+                        row.setTooltip(tip);
+                    }
+                });
                 box.setAlignment(Pos.CENTER);
                 for (RowAction<T> a : actions) {
                     Button b = new Button();
@@ -239,7 +269,9 @@ public final class TableHelper {
         }
     }
 
+    /** Width the column needs; before {@link #fitColumns} ran, its first width (kept, so filling never makes it grow for good). */
     private static double fittedWidth(TableColumn<?, ?> c) {
+        c.getProperties().putIfAbsent(FIT_WIDTH, c.getPrefWidth());
         return c.getProperties().get(FIT_WIDTH) instanceof Double d ? d : c.getPrefWidth();
     }
 
@@ -277,6 +309,71 @@ public final class TableHelper {
         return measure.getLayoutBounds().getWidth();
     }
 
+    /** One line of a row tooltip: "label : value"; {@code bold} for amounts. */
+    public record TipLine(String label, String value, boolean bold) {
+    }
+
+    /** A row tooltip: a big title (e.g. the product name), then its lines. */
+    public record RowTip(String title, List<TipLine> lines) {
+    }
+
+    /**
+     * The default row tooltip: the first column's value as the title, then "heading : value" for the other
+     * columns (button columns left out; money columns bold).
+     */
+    @SuppressWarnings("unchecked")
+    static <T> RowTip columnsTip(TableView<T> table, T item) {
+        String title = null;
+        List<TipLine> lines = new ArrayList<>();
+        for (TableColumn<T, ?> c : table.getColumns()) {
+            if (c.getStyleClass().contains("button-column")) {
+                continue;
+            }
+            Function<T, String> fitText = (Function<T, String>) c.getProperties().get(FIT_TEXT);
+            String value = fitText != null ? fitText.apply(item) : Objects.toString(c.getCellData(item), "");
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            if (title == null) {
+                title = value;
+            } else {
+                lines.add(new TipLine(c.getText(), value, c.getStyleClass().contains("money-column")));
+            }
+        }
+        return new RowTip(title, lines);
+    }
+
+    /** Lays a tooltip out: big title on top, then label and value columns (main.css "row-tip"). */
+    private static Node tipNode(RowTip tip) {
+        VBox box = new VBox(6);
+        box.getStyleClass().add("row-tip");
+        if (tip.title() != null) {
+            Label title = new Label(tip.title());
+            title.getStyleClass().add("tip-title");
+            box.getChildren().add(title);
+        }
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(3);
+        int r = 0;
+        for (TipLine line : tip.lines()) {
+            Label label = new Label(line.label());
+            label.getStyleClass().add("tip-label");
+            Label value = new Label(line.value());
+            value.getStyleClass().add(line.bold() ? "tip-amount" : "tip-value");
+            // Only a long value wraps, and then at a fixed width: a wrapping label with no width makes the
+            // tooltip as tall as the screen
+            if (line.value().length() > LONG_TIP_VALUE) {
+                value.setWrapText(true);
+                value.setPrefWidth(TOOLTIP_WIDTH);
+                value.setMinHeight(Region.USE_PREF_SIZE);
+            }
+            grid.addRow(r++, label, new Label(":"), value);
+        }
+        box.getChildren().add(grid);
+        return box;
+    }
+
     /** Edit and delete buttons work only while a row is selected. */
     public static void needSelection(TableView<?> table, Button... buttons) {
         for (Button b : buttons) {
@@ -286,10 +383,75 @@ public final class TableHelper {
 
     /** Double-click on a row runs {@code action} with that row (e.g. open the edit form), if allowed. */
     public static <T> void onDoubleClick(TableView<T> table, boolean allowed, Consumer<T> action) {
+        if (allowed) {
+            table.getProperties().put(ROW_DOUBLE_CLICK, action);
+        }
+        installRows(table);
+    }
+
+    /**
+     * Hovering a row shows {@code text} for it in a tooltip, e.g. every detail of a product when the table
+     * shows only a few columns. Without this, the tooltip lists every column ({@link #columnsTip}).
+     */
+    public static <T> void rowTooltip(TableView<T> table, Function<T, RowTip> text) {
+        table.getProperties().put(ROW_TOOLTIP, text);
+        installRows(table);
+    }
+
+    /** Gives a row a style class (e.g. a red row below minimum stock); {@code style} may return null. */
+    public static <T> void rowStyle(TableView<T> table, Function<T, String> style) {
+        table.getProperties().put(ROW_STYLE, style);
+        installRows(table);
+    }
+
+    /**
+     * The rows every table gets (PaginatedTable calls it): a tooltip with the row's full data, shown while the
+     * mouse stays on the row; the double-click action and row style if set.
+     */
+    @SuppressWarnings("unchecked")
+    static <T> void installRows(TableView<T> table) {
         table.setRowFactory(tv -> {
-            TableRow<T> row = new TableRow<>();
+            Tooltip tooltip = new Tooltip();
+            tooltip.setShowDelay(Duration.millis(400));
+            // Stays while the mouse is on the row (JavaFX would hide it after 5 s); goes when it leaves
+            tooltip.setShowDuration(Duration.INDEFINITE);
+            TableRow<T> row = new TableRow<>() {
+                private String styled;
+
+                @Override
+                protected void updateItem(T item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (styled != null) {
+                        getStyleClass().remove(styled);
+                        styled = null;
+                    }
+                    if (empty || item == null) {
+                        setTooltip(null);
+                        return;
+                    }
+                    Function<T, String> style = (Function<T, String>) table.getProperties().get(ROW_STYLE);
+                    styled = style == null ? null : style.apply(item);
+                    if (styled != null) {
+                        getStyleClass().add(styled);
+                    }
+                    Function<T, RowTip> text = (Function<T, RowTip>) table.getProperties().get(ROW_TOOLTIP);
+                    RowTip tip = text != null ? text.apply(item) : columnsTip(table, item);
+                    if (tip == null || (tip.title() == null && tip.lines().isEmpty())) {
+                        setTooltip(null);
+                    } else {
+                        tooltip.setGraphic(tipNode(tip));
+                        if (getProperties().containsKey(HIDDEN_ROW_TIP)) {
+                            // The mouse is on the buttons column: keep it aside until the mouse leaves
+                            getProperties().put(HIDDEN_ROW_TIP, tooltip);
+                        } else {
+                            setTooltip(tooltip);
+                        }
+                    }
+                }
+            };
             row.setOnMouseClicked(e -> {
-                if (allowed && e.getClickCount() == 2 && !row.isEmpty()) {
+                Consumer<T> action = (Consumer<T>) table.getProperties().get(ROW_DOUBLE_CLICK);
+                if (action != null && e.getClickCount() == 2 && !row.isEmpty()) {
                     action.accept(row.getItem());
                 }
             });

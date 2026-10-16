@@ -29,10 +29,13 @@ public class ProductService {
     /**
      * Values from the form. {@code id} is null for a new product. Blank SKU is saved as null; null
      * {@code secondaryUnitId} = no secondary unit, and then the conversion factor is dropped.
-     * Min stock 0 = no low-stock alert for the product.
+     * Min stock 0 = no low-stock alert for the product. Prices may be null (not set); the secondary-unit
+     * prices are dropped when there is no secondary unit.
      */
     public record ProductData(Long id, String nameBn, String nameEn, long categoryId, String sku, long unitId,
-                              Long secondaryUnitId, BigDecimal conversionFactor, BigDecimal minStockAlert) {
+                              Long secondaryUnitId, BigDecimal conversionFactor, BigDecimal minStockAlert,
+                              BigDecimal retailPrice, BigDecimal wholesalePrice,
+                              BigDecimal retailPriceSecondary, BigDecimal wholesalePriceSecondary) {
     }
 
     private final ProductRepository repository = new ProductRepository();
@@ -89,6 +92,10 @@ public class ProductService {
             p.setSecondaryUnit(secondaryUnit);
             p.setConversionFactor(secondaryUnit == null ? null : data.conversionFactor());
             p.setMinStockAlert(data.minStockAlert());
+            p.setRetailPrice(data.retailPrice());
+            p.setWholesalePrice(data.wholesalePrice());
+            p.setRetailPriceSecondary(secondaryUnit == null ? null : data.retailPriceSecondary());
+            p.setWholesalePriceSecondary(secondaryUnit == null ? null : data.wholesalePriceSecondary());
 
             if (data.id() == null) {
                 repository.save(session, p);
@@ -152,6 +159,10 @@ public class ProductService {
                 .add("secondaryUnit=" + unitName(p.getSecondaryUnit()))
                 .add("conversion=" + plain(p.getConversionFactor()))
                 .add("minStock=" + plain(p.getMinStockAlert()))
+                .add("retail=" + plain(p.getRetailPrice()))
+                .add("wholesale=" + plain(p.getWholesalePrice()))
+                .add("retailSecondary=" + plain(p.getRetailPriceSecondary()))
+                .add("wholesaleSecondary=" + plain(p.getWholesalePriceSecondary()))
                 .toString();
     }
 }

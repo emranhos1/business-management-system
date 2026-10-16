@@ -72,6 +72,42 @@
         </VBox>
     </HBox>
 
+    <!-- Sale prices (8.6); the labels name the unit, e.g. "খুচরা দাম (প্রতি বস্তা)" -->
+    <HBox styleClass="form-row">
+        <Label fx:id="retailCaption" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="retailField" maxWidth="Infinity"/>
+            <Label fx:id="retailError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label fx:id="wholesaleCaption" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="wholesaleField" maxWidth="Infinity"/>
+            <Label fx:id="wholesaleError" styleClass="field-error" wrapText="true"/>
+            <Label text="%products.price.hint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <!-- Shown only with a secondary unit; blank = main price ÷ conversion -->
+    <HBox fx:id="retailSecondaryRow" styleClass="form-row" visible="false" managed="false">
+        <Label fx:id="retailSecondaryCaption" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="retailSecondaryField" maxWidth="Infinity"/>
+            <Label fx:id="retailSecondaryError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox fx:id="wholesaleSecondaryRow" styleClass="form-row" visible="false" managed="false">
+        <Label fx:id="wholesaleSecondaryCaption" styleClass="form-label, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="wholesaleSecondaryField" maxWidth="Infinity"/>
+            <Label fx:id="wholesaleSecondaryError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="secondaryPriceHint" styleClass="field-hint" wrapText="true"/>
+        </VBox>
+    </HBox>
+
     <HBox styleClass="form-row">
         <Label text="%products.min_stock" styleClass="form-label, form-row-label" wrapText="true"/>
         <VBox styleClass="field-box" HBox.hgrow="ALWAYS">

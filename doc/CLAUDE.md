@@ -15,8 +15,13 @@
 - Accounts module: only admin and manager (user decision). Cashier, and any staff/employee login or new role added later (e.g. N2), gets no Accounts permission.
 - One-time fixes to existing data go in `DataSeeder.migrateData()`, numbered by `data_version` in app_config (never re-run, so admin edits stay).
 - Pack sizes (user decision): the same goods in different pack sizes (e.g. rice in 50 / 25 / 20 kg bags) are separate products, each with its own stock, price and conversion. No product variants / multiple packs per product. Product names may repeat; only the same name + same unit, secondary unit and conversion is a duplicate. Wherever a product is picked or listed (stock, sales, purchases), show its conversion next to the name so same-name products can be told apart.
-- Ledgers: party balance = opening (+ receivable / - payable) + debit - credit; debit = what we gave (goods sold, money paid), credit = what we got. Screens say দিলাম / পেলাম and "৳X পাবো" / "৳X দেবো" (`PartyText`). Money moves write through `AccountLedgerService.post` / `PartyLedgerService.post`; lock order: party row first, then account rows (by id).
+- Ledgers: party balance = opening (+ receivable / - payable) + debit - credit; debit = what we gave (goods sold, money paid), credit = what we got. Screens say দিলাম / পেলাম and "৳X পাবো" / "৳X দেবো" (`PartyText`). Money moves write through `AccountLedgerService.post` / `PartyLedgerService.post`; lock order: party row, then the sale/transaction row, then product rows (by id), then account rows (by id).
+- Sales (`SaleService`): memo no. per type from `MAX(memo_no) FOR UPDATE` + unique index; items keep `main_quantity` (stock unit) so later conversion edits never change past sales; a walk-in customer (no party) cannot owe; returns credit the party, refunds optional. Wholesale / retail price is chosen per sale ("দামের ধরন", starts at retail); parties have no wholesale/retail field (user decision; `parties.party_type` is left unused). A party may pay more than the bill: the sale gets only the bill, the extra is a plain party receipt (source PARTY); a walk-in cannot overpay. One payment row per account.
+- Date range filters use `DateRangePicker` (one field, first and last day on one calendar), never two DatePickers. Every filter bar has a clear button.
 - Names the user enters for master data (accounts, account types, ...) have a Bangla and an English name, shown by language (`I18n.pick`).
+
+## Dev login skip
+- `dev.auto-login: <username>` in `application-dev.yml` opens the app logged in as that user (`AuthService.devAutoLogin`). Works only when `app.profile` is `dev`; blank = login screen. Releases must use `prod` (18.6).
 
 ## Build
 - Before every build, show a big warning with the current `app.profile` value. Never change the profile.
@@ -34,7 +39,10 @@
 - Per-row actions (ledger, money in/out, inactive, ...): icon buttons in one column via `TableHelper.actionsColumn` (`icon-button` + colour class, SVG icons from `Icons`, tooltip says what it does), edit first. The toolbar keeps only "New ...". Delete sits in the edit form, shown only when the record can be deleted (e.g. a party with no history and earlier balance 0).
 - Parties are never deleted once used; they are made inactive (`parties.status`) and listed in a second table below. Pickers (sale, purchase, ...) show active parties only. A party with money due cannot be made inactive.
 - Table column widths fit their text (`TableHelper.fitColumns`, run by `PaginatedTable`); never set column widths by hand.
-- Table columns whose text can be long (ledger details, notes): `TableHelper.longTextColumn`, which shows the full text in a tooltip on hover.
+- Double-click on a row opens its view (ledger / details, same as the "দেখুন" button), never the edit form; a table with no view button has no double-click.
+- Every table row shows its full data in a tooltip while hovered (`PaginatedTable` → `TableHelper.installRows`; default "heading: value" per column, or `TableHelper.rowTooltip` for more, e.g. products). So lists show only the main columns. Row colours via `TableHelper.rowStyle`, never a custom row factory.
+- Popups taller than the screen scroll (`WindowManager.dialog`); forms are never squeezed. A form's `dialog-buttons` row is moved under the scroll, so it is always in sight; a round down-arrow shows while more is hidden below.
+- A page whose root is tabs uses `PageTabs`, not `TabPane` (a TabPane hides its tab's min height, so the page is cut off instead of scrolling).
 - Mobile number: exactly 11 digits, any start (no prefix rule), required where asked.
 - Dates: `DateUtil` only (Bangla digits in Bangla mode via `I18n.digits`). Files the user adds: under `AppPaths.storageDir()`, path stored relative (`AppPaths.toStored`).
 - Every new text key goes into both `messages_bn` and `messages_en`.

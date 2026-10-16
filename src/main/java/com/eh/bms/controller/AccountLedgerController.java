@@ -91,6 +91,8 @@ public class AccountLedgerController {
         if (r.source() == AccountTransactionSource.TRANSFER && r.otherAccount() != null) {
             String other = I18n.pick(r.otherAccount().getName(), r.otherAccount().getNameEn());
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.transfer_to" : "ledger.transfer_from", other);
+        } else if (r.source() == AccountTransactionSource.SALE) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.sale_refund" : "ledger.sale_in");
         } else if (r.source() == AccountTransactionSource.PARTY && r.party() != null) {
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.party_paid" : "ledger.party_received",
                     PartyText.name(r.party()));

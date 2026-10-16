@@ -5,6 +5,7 @@ import com.eh.bms.config.DataSeeder;
 import com.eh.bms.config.DatabaseConfig;
 import com.eh.bms.controller.SplashController;
 import com.eh.bms.service.AppConfigService;
+import com.eh.bms.service.AuthService;
 import com.eh.bms.util.AppIcons;
 import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.I18n;
@@ -73,7 +74,19 @@ public class BmsApplication extends Application {
             } catch (IllegalArgumentException e) {
                 LOG.warning("Unknown default_language in app_config: " + startup.getValue());
             }
-            WindowManager.showLogin();
+            // dev profile only (dev.auto-login): straight to the dashboard; otherwise the login screen
+            boolean autoLoggedIn;
+            try {
+                autoLoggedIn = new AuthService().devAutoLogin();
+            } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "dev auto-login failed; showing the login screen", e);
+                autoLoggedIn = false;
+            }
+            if (autoLoggedIn) {
+                WindowManager.showMain();
+            } else {
+                WindowManager.showLogin();
+            }
             splashStage.close();
         });
         startup.setOnFailed(event -> {

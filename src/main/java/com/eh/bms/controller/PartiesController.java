@@ -90,7 +90,7 @@ public class PartiesController {
             actions.add(new RowAction<>(Icons.DEACTIVATE, "party.deactivate", "icon-off", this::deactivate));
         }
         view.getColumns().add(actionsColumn(actions));
-        TableHelper.onDoubleClick(view, canEdit, this::openForm);
+        TableHelper.onDoubleClick(view, true, this::openLedger);
 
         inactiveTable = new PaginatedTable<>((offset, limit) -> loadPage(PartyStatus.INACTIVE, offset, limit));
         TableView<Party> inactiveView = inactiveTable.getTableView();
@@ -104,7 +104,7 @@ public class PartiesController {
             inactiveActions.add(new RowAction<>(Icons.ACTIVATE, "party.activate", "icon-on", this::activate));
         }
         inactiveView.getColumns().add(actionsColumn(inactiveActions));
-        TableHelper.onDoubleClick(inactiveView, canEdit, this::openForm);
+        TableHelper.onDoubleClick(inactiveView, true, this::openLedger);
 
         // Search (both lists) while typing, after a short pause
         PauseTransition pause = new PauseTransition(Duration.millis(300));
@@ -120,7 +120,6 @@ public class PartiesController {
         view.getColumns().add(TableHelper.column("party.name", PartyText::name));
         view.getColumns().add(TableHelper.column("party.phone", Party::getPhone));
         view.getColumns().add(TableHelper.column("party.type", p -> PartyText.type(p.getType())));
-        view.getColumns().add(TableHelper.column("party.trade", p -> PartyText.trade(p.getPartyType())));
         view.getColumns().add(TableHelper.longTextColumn("label.address",
                 p -> p.getAddress() == null ? "—" : p.getAddress()));
     }

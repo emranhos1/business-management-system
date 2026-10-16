@@ -19,7 +19,6 @@ import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
@@ -84,25 +83,9 @@ public class StockController {
             view.getColumns().add(actionsColumn(actions));
         }
 
-        // Marks low rows; double-click opens the product's stock ledger
-        view.setRowFactory(tv -> {
-            TableRow<Product> row = new TableRow<>() {
-                @Override
-                protected void updateItem(Product item, boolean empty) {
-                    super.updateItem(item, empty);
-                    getStyleClass().remove(LOW_ROW);
-                    if (!empty && item != null && isLow(item)) {
-                        getStyleClass().add(LOW_ROW);
-                    }
-                }
-            };
-            row.setOnMouseClicked(e -> {
-                if (canView && e.getClickCount() == 2 && !row.isEmpty()) {
-                    StockLedgerController.open(row.getItem());
-                }
-            });
-            return row;
-        });
+        // Marks low rows; double-click opens the product's stock ledger (rows keep the shared tooltip)
+        TableHelper.rowStyle(view, p -> isLow(p) ? LOW_ROW : null);
+        TableHelper.onDoubleClick(view, canView, StockLedgerController::open);
 
         PauseTransition searchPause = new PauseTransition(SEARCH_DELAY);
         searchPause.setOnFinished(e -> table.reload());

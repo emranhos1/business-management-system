@@ -8,5 +8,7 @@ public enum AccountTransactionSource {
     /** Money moved between two accounts; {@code reference_id} is the other side's entry. */
     TRANSFER,
     /** Money paid to or received from a party (10.5); {@code reference_id} is the party ledger entry. */
-    PARTY
+    PARTY,
+    /** Money for a sale (paid at the sale, installment, or refund on a return); {@code reference_id} is the sale. */
+    SALE
 }

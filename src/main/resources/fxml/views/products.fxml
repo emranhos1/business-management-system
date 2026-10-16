@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
@@ -20,6 +21,7 @@
         <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
             <Label text="%products.section.products" styleClass="section-title" minWidth="-Infinity"/>
             <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+            <TextField fx:id="searchField" promptText="%products.search" prefWidth="300" minWidth="140"/>
             <Button fx:id="addButton" text="%products.add" styleClass="add-button" onAction="#onAdd"/>
         </HBox>
         <StackPane fx:id="productsHolder" VBox.vgrow="ALWAYS"/>

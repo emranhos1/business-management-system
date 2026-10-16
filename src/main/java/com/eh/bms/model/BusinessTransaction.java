@@ -13,6 +13,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -25,7 +26,9 @@ import java.time.LocalDate;
  */
 @Entity
 @Table(name = "transactions",
-        indexes = @Index(name = "idx_transactions_type_date", columnList = "type, date"))
+        indexes = @Index(name = "idx_transactions_type_date", columnList = "type, date"),
+        // Memo numbers never repeat within a type (sale 1, 2, 3 ...; purchase has its own); also speeds search by memo no.
+        uniqueConstraints = @UniqueConstraint(name = "uk_transactions_type_memo", columnNames = {"type", "memo_no"}))
 public class BusinessTransaction {
 
     @Id
@@ -76,6 +79,14 @@ public class BusinessTransaction {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    /** Memo (invoice) number shown to the customer: 1, 2, 3 ... per type, never reused (11.8). */
+    @Column(name = "memo_no")
+    private Long memoNo;
+
+    /** Value of the goods that came back (sales return, 11.7); null = nothing returned. */
+    @Column(name = "returned_amount", precision = 14, scale = 2)
+    private BigDecimal returnedAmount;
 
     public Long getId() {
         return id;
@@ -175,5 +186,22 @@ public class BusinessTransaction {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public Long getMemoNo() {
+        return memoNo;
+    }
+
+    public void setMemoNo(Long memoNo) {
+        this.memoNo = memoNo;
+    }
+
+    /** Never null: 0 when nothing came back. */
+    public BigDecimal getReturnedAmount() {
+        return returnedAmount == null ? BigDecimal.ZERO : returnedAmount;
+    }
+
+    public void setReturnedAmount(BigDecimal returnedAmount) {
+        this.returnedAmount = returnedAmount;
     }
 }

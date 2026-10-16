@@ -17,7 +17,7 @@
             <Label text="%party.ledger.current" styleClass="stat-label"/>
             <Label fx:id="balanceLabel" styleClass="stat-value"/>
         </VBox>
-        <VBox styleClass="stat-tile">
+        <VBox fx:id="openingTile" styleClass="stat-tile" visible="false" managed="false">
             <Label text="%party.ledger.opening" styleClass="stat-label"/>
             <Label fx:id="openingLabel" styleClass="stat-value"/>
         </VBox>

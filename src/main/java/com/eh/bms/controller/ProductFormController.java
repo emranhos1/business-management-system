@@ -15,6 +15,7 @@ import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.InputFilters;
+import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.UnitUtil;
 import com.eh.bms.util.WindowManager;
@@ -29,6 +30,7 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,6 +60,9 @@ public class ProductFormController {
     /** DECIMAL(14,3): 11 digits before the point, 3 after. */
     private static final int QTY_INT_DIGITS = 11;
     private static final int QTY_DECIMALS = 3;
+    /** DECIMAL(14,2): 12 digits before the point, 2 after. */
+    private static final int PRICE_INT_DIGITS = 12;
+    private static final int PRICE_DECIMALS = 2;
 
     @FXML private Button deleteButton;
     @FXML private TextField nameBnField;
@@ -77,6 +82,21 @@ public class ProductFormController {
     @FXML private TextField conversionField;
     @FXML private Label conversionError;
     @FXML private Label conversionHint;
+    @FXML private Label retailCaption;
+    @FXML private TextField retailField;
+    @FXML private Label retailError;
+    @FXML private Label wholesaleCaption;
+    @FXML private TextField wholesaleField;
+    @FXML private Label wholesaleError;
+    @FXML private HBox retailSecondaryRow;
+    @FXML private Label retailSecondaryCaption;
+    @FXML private TextField retailSecondaryField;
+    @FXML private Label retailSecondaryError;
+    @FXML private HBox wholesaleSecondaryRow;
+    @FXML private Label wholesaleSecondaryCaption;
+    @FXML private TextField wholesaleSecondaryField;
+    @FXML private Label wholesaleSecondaryError;
+    @FXML private Label secondaryPriceHint;
     @FXML private TextField minStockField;
     @FXML private Label minStockError;
     @FXML private Label minStockHint;
@@ -98,6 +118,9 @@ public class ProductFormController {
         InputFilters.maxLength(skuField, SKU_MAX);
         InputFilters.decimal(conversionField, QTY_INT_DIGITS, QTY_DECIMALS);
         InputFilters.decimal(minStockField, QTY_INT_DIGITS, QTY_DECIMALS);
+        for (TextField price : List.of(retailField, wholesaleField, retailSecondaryField, wholesaleSecondaryField)) {
+            InputFilters.decimal(price, PRICE_INT_DIGITS, PRICE_DECIMALS);
+        }
 
         categoryBox.getItems().setAll(categoryService.all());
         categoryBox.setConverter(new StringConverter<>() {
@@ -131,6 +154,10 @@ public class ProductFormController {
         secondaryUnitBox.valueProperty().addListener((obs, old, now) -> applySecondaryUnit());
         unitBox.valueProperty().addListener((obs, old, now) -> updateConversionHint());
         conversionField.textProperty().addListener((obs, old, now) -> updateConversionHint());
+        // Price labels name the units; the secondary hint shows the worked-out price per secondary unit
+        retailField.textProperty().addListener((obs, old, now) -> updatePriceLabels());
+        wholesaleField.textProperty().addListener((obs, old, now) -> updatePriceLabels());
+        updatePriceLabels();
 
         // A new product starts with the app default; each product keeps its own value (0 = no alert)
         int lowStockDefault = configService.getInt(AppConfigService.LOW_STOCK_DEFAULT,
@@ -146,6 +173,10 @@ public class ProductFormController {
                 .add(unitBox, unitError)
                 .add(secondaryUnitBox, secondaryUnitError)
                 .add(conversionField, conversionError)
+                .add(retailField, retailError)
+                .add(wholesaleField, wholesaleError)
+                .add(retailSecondaryField, retailSecondaryError)
+                .add(wholesaleSecondaryField, wholesaleSecondaryError)
                 .add(minStockField, minStockError);
     }
 
@@ -171,6 +202,10 @@ public class ProductFormController {
         selectUnit(secondaryUnitBox, product.getSecondaryUnit());
         conversionField.setText(plain(product.getConversionFactor()));
         minStockField.setText(plain(product.getMinStockAlert()));
+        retailField.setText(plain(product.getRetailPrice()));
+        wholesaleField.setText(plain(product.getWholesalePrice()));
+        retailSecondaryField.setText(plain(product.getRetailPriceSecondary()));
+        wholesaleSecondaryField.setText(plain(product.getWholesalePriceSecondary()));
     }
 
     /**
@@ -206,10 +241,14 @@ public class ProductFormController {
             updateConversionHint();
             return;
         }
-        conversionRow.setVisible(show);
-        conversionRow.setManaged(show);
+        for (HBox row : List.of(conversionRow, retailSecondaryRow, wholesaleSecondaryRow)) {
+            row.setVisible(show);
+            row.setManaged(show);
+        }
         if (!show) {
             conversionField.clear();
+            retailSecondaryField.clear();
+            wholesaleSecondaryField.clear();
         }
         updateConversionHint();
         WindowManager.fitPopup(conversionField);
@@ -229,6 +268,36 @@ public class ProductFormController {
         String preview = factor.isEmpty() || sameUnit ? "" : UnitUtil.conversionText(unit, secondaryUnit, parse(factor));
         conversionHint.setText(!preview.isEmpty() ? preview : I18n.get("products.conversion.hint",
                 unit.isEmpty() ? I18n.get("products.unit") : unit, secondaryUnit));
+        updatePriceLabels();
+    }
+
+    /**
+     * Price labels name their unit ("খুচরা দাম (প্রতি বস্তা)"). The hint under the secondary prices shows
+     * what a blank one becomes: the main price ÷ conversion (e.g. "খুচরা ৳৫০.০০, পাইকারি ৳৪৮.০০ (প্রতি কেজি)").
+     */
+    private void updatePriceLabels() {
+        String unit = unitBox.getValue() == null ? I18n.get("products.unit") : UnitUtil.name(unitBox.getValue());
+        retailCaption.setText(I18n.get("products.price.retail", unit));
+        wholesaleCaption.setText(I18n.get("products.price.wholesale", unit));
+        Unit secondary = secondaryUnitBox.getValue();
+        if (secondary == null) {
+            return;
+        }
+        String secondaryName = UnitUtil.name(secondary);
+        retailSecondaryCaption.setText(I18n.get("products.price.retail", secondaryName));
+        wholesaleSecondaryCaption.setText(I18n.get("products.price.wholesale", secondaryName));
+        String factorText = text(conversionField);
+        BigDecimal factor = factorText.isEmpty() ? null : parse(factorText);
+        String retail = text(retailField);
+        String wholesale = text(wholesaleField);
+        if (factor == null || factor.signum() <= 0 || (retail.isEmpty() && wholesale.isEmpty())) {
+            secondaryPriceHint.setText(I18n.get("products.price.secondary_hint_plain"));
+            return;
+        }
+        secondaryPriceHint.setText(I18n.get("products.price.secondary_hint",
+                retail.isEmpty() ? "—" : MoneyUtil.format(parse(retail).divide(factor, 2, RoundingMode.HALF_UP)),
+                wholesale.isEmpty() ? "—" : MoneyUtil.format(parse(wholesale).divide(factor, 2, RoundingMode.HALF_UP)),
+                secondaryName));
     }
 
     @FXML
@@ -271,6 +340,11 @@ public class ProductFormController {
         }
         // The input filter allows only non-negative numbers, so any value here is >= 0; blank = 0 (no alert)
         BigDecimal minStock = minStockText.isEmpty() ? BigDecimal.ZERO : parse(minStockText);
+        // Prices are optional (blank = not set); the input filter allows only numbers of 0 or more
+        BigDecimal retail = price(retailField);
+        BigDecimal wholesale = price(wholesaleField);
+        BigDecimal retailSecondary = secondaryUnit == null ? null : price(retailSecondaryField);
+        BigDecimal wholesaleSecondary = secondaryUnit == null ? null : price(wholesaleSecondaryField);
         if (form.hasErrors()) {
             form.focusFirstError();
             return;
@@ -282,7 +356,7 @@ public class ProductFormController {
         try {
             ProductService.SaveResult result = service.save(new ProductData(productId, nameBn, nameEn,
                     category.getId(), sku, unit.getId(), secondaryUnit == null ? null : secondaryUnit.getId(),
-                    conversion, minStock));
+                    conversion, minStock, retail, wholesale, retailSecondary, wholesaleSecondary));
             switch (result) {
                 case DUPLICATE_NAME_BN -> {
                     form.error(nameBnField, I18n.get("products.error.duplicate"));
@@ -343,6 +417,12 @@ public class ProductFormController {
     private static BigDecimal parse(String text) {
         String t = text.startsWith(".") ? "0" + text : text;
         return new BigDecimal(t.endsWith(".") ? t + "0" : t);
+    }
+
+    /** A typed price, or null when blank. */
+    private static BigDecimal price(TextField field) {
+        String t = text(field);
+        return t.isEmpty() ? null : parse(t);
     }
 
     private static String plain(BigDecimal value) {

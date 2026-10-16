@@ -35,9 +35,50 @@ public class TransactionItem {
     @Column(name = "quantity", nullable = false, precision = 14, scale = 3)
     private BigDecimal quantity;
 
-    /** Unit used on this line (product's unit or secondary unit). */
+    /** Name (English) of the unit used on this line, kept as text from the first version; see {@link #unitRef}. */
     @Column(name = "unit", nullable = false, length = 30)
     private String unit;
+
+    /** Unit used on this line: the product's unit or its secondary unit. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", foreignKey = @ForeignKey(name = "fk_transaction_items_unit"))
+    private Unit unitRef;
+
+    /**
+     * {@link #quantity} in the product's main unit (what stock moved by), saved at sale time so a later change
+     * of the product's conversion does not change past sales.
+     */
+    @Column(name = "main_quantity", precision = 14, scale = 3)
+    private BigDecimal mainQuantity;
+
+    /** How much of {@link #quantity} came back (sales return, 11.7), in the line's unit. */
+    @Column(name = "returned_quantity", precision = 14, scale = 3)
+    private BigDecimal returnedQuantity;
+
+    public Unit getUnitRef() {
+        return unitRef;
+    }
+
+    public void setUnitRef(Unit unitRef) {
+        this.unitRef = unitRef;
+    }
+
+    public BigDecimal getMainQuantity() {
+        return mainQuantity;
+    }
+
+    public void setMainQuantity(BigDecimal mainQuantity) {
+        this.mainQuantity = mainQuantity;
+    }
+
+    /** Never null: 0 when nothing came back. */
+    public BigDecimal getReturnedQuantity() {
+        return returnedQuantity == null ? BigDecimal.ZERO : returnedQuantity;
+    }
+
+    public void setReturnedQuantity(BigDecimal returnedQuantity) {
+        this.returnedQuantity = returnedQuantity;
+    }
 
     @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitPrice;

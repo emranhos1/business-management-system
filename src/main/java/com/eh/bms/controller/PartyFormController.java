@@ -2,7 +2,6 @@ package com.eh.bms.controller;
 
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.Party;
-import com.eh.bms.model.PartyTradeType;
 import com.eh.bms.model.PartyType;
 import com.eh.bms.service.PartyService;
 import com.eh.bms.service.PartyService.PartyData;
@@ -52,8 +51,6 @@ public class PartyFormController {
     @FXML private Label addressError;
     @FXML private ComboBox<PartyType> typeBox;
     @FXML private Label typeError;
-    @FXML private ComboBox<PartyTradeType> tradeBox;
-    @FXML private Label tradeError;
     @FXML private TextField openingField;
     @FXML private Label openingError;
     @FXML private HBox directionRow;
@@ -80,8 +77,6 @@ public class PartyFormController {
         typeBox.getItems().setAll(PartyType.values());
         typeBox.setConverter(converter(PartyText::typeLong));
         typeBox.setValue(PartyType.CUSTOMER);
-        tradeBox.getItems().setAll(PartyTradeType.values());
-        tradeBox.setConverter(converter(PartyText::trade));
         directionBox.getItems().setAll(BalanceType.values());
         directionBox.setConverter(converter(b -> I18n.get("party.opening.direction." + b.name())));
         directionBox.setValue(BalanceType.RECEIVABLE);
@@ -94,7 +89,6 @@ public class PartyFormController {
                 .add(phoneField, phoneError)
                 .add(addressField, addressError)
                 .add(typeBox, typeError)
-                .add(tradeBox, tradeError)
                 .add(openingField, openingError)
                 .add(directionBox, directionError);
 
@@ -109,7 +103,6 @@ public class PartyFormController {
         phoneField.setText(party.getPhone());
         addressField.setText(party.getAddress());
         typeBox.setValue(party.getType());
-        tradeBox.setValue(party.getPartyType());
         directionBox.setValue(party.getBalanceType());
         openingField.setText(party.getOpeningBalance().stripTrailingZeros().toPlainString());
         boolean locked = service.hasLedger(partyId);
@@ -122,6 +115,18 @@ public class PartyFormController {
                 && service.canDelete(partyId);
         deleteButton.setVisible(deletable);
         deleteButton.setManaged(deletable);
+    }
+
+    /** Fills a new party's name and mobile, e.g. from a walk-in customer on the sale screen; type = customer. */
+    public void prefill(String name, String phone) {
+        nameField.setText(name == null ? "" : name.trim());
+        phoneField.setText(phone == null ? "" : phone.trim());
+        typeBox.setValue(PartyType.CUSTOMER);
+    }
+
+    /** The mobile number as saved (identifies the party just added). */
+    public String savedPhone() {
+        return text(phoneField);
     }
 
     /** True if the user saved; the list then reloads. */
@@ -181,7 +186,7 @@ public class PartyFormController {
             // 0 has no direction; store it as receivable
             BalanceType balanceType = opening.signum() == 0 ? BalanceType.RECEIVABLE : direction;
             PartyService.SaveResult result = service.save(new PartyData(partyId, name, nameEn, phone, text(addressField),
-                    type, tradeBox.getValue(), opening, balanceType));
+                    type, null, opening, balanceType));
             switch (result) {
                 case DUPLICATE_PHONE -> {
                     form.error(phoneField, I18n.get("party.error.duplicate_phone"));

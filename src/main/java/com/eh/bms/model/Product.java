@@ -70,9 +70,57 @@ public class Product {
     @Column(name = "min_stock_alert", precision = 14, scale = 3)
     private BigDecimal minStockAlert;
 
+    /** Retail (খুচরা) sale price per unit; null = not set (typed on the sale screen). */
+    @Column(name = "retail_price", precision = 14, scale = 2)
+    private BigDecimal retailPrice;
+
+    /** Wholesale (পাইকারি) sale price per unit; null = not set. */
+    @Column(name = "wholesale_price", precision = 14, scale = 2)
+    private BigDecimal wholesalePrice;
+
+    /** Retail price per secondary unit; null = retail price ÷ conversion factor. */
+    @Column(name = "retail_price_secondary", precision = 14, scale = 2)
+    private BigDecimal retailPriceSecondary;
+
+    /** Wholesale price per secondary unit; null = wholesale price ÷ conversion factor. */
+    @Column(name = "wholesale_price_secondary", precision = 14, scale = 2)
+    private BigDecimal wholesalePriceSecondary;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public BigDecimal getRetailPrice() {
+        return retailPrice;
+    }
+
+    public void setRetailPrice(BigDecimal retailPrice) {
+        this.retailPrice = retailPrice;
+    }
+
+    public BigDecimal getWholesalePrice() {
+        return wholesalePrice;
+    }
+
+    public void setWholesalePrice(BigDecimal wholesalePrice) {
+        this.wholesalePrice = wholesalePrice;
+    }
+
+    public BigDecimal getRetailPriceSecondary() {
+        return retailPriceSecondary;
+    }
+
+    public void setRetailPriceSecondary(BigDecimal retailPriceSecondary) {
+        this.retailPriceSecondary = retailPriceSecondary;
+    }
+
+    public BigDecimal getWholesalePriceSecondary() {
+        return wholesalePriceSecondary;
+    }
+
+    public void setWholesalePriceSecondary(BigDecimal wholesalePriceSecondary) {
+        this.wholesalePriceSecondary = wholesalePriceSecondary;
+    }
 
     public Long getId() {
         return id;

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- One sale (11.6): figures, customer, its lines and the money received. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.SaleViewController"
+      styleClass="ledger-window" spacing="12">
+
+    <FlowPane hgap="12" vgap="12">
+        <VBox styleClass="stat-tile, stat-tile-main">
+            <Label text="%sale.grand_total" styleClass="stat-label"/>
+            <Label fx:id="grandLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile">
+            <Label text="%sale.paid" styleClass="stat-label"/>
+            <Label fx:id="paidLabel" styleClass="stat-value, money-in"/>
+        </VBox>
+        <VBox styleClass="stat-tile">
+            <Label text="%sale.due" styleClass="stat-label"/>
+            <Label fx:id="dueLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile">
+            <Label text="%sale.col.returned" styleClass="stat-label"/>
+            <Label fx:id="returnedLabel" styleClass="stat-value"/>
+        </VBox>
+    </FlowPane>
+
+    <Label fx:id="infoLabel" wrapText="true"/>
+    <Label fx:id="sumsLabel" styleClass="field-hint" wrapText="true"/>
+
+    <Label text="%sale.view.items" styleClass="section-title"/>
+    <TableView fx:id="itemsTable" VBox.vgrow="ALWAYS" minHeight="140"/>
+
+    <Label text="%sale.view.payments" styleClass="section-title"/>
+    <TableView fx:id="paymentsTable" prefHeight="150" minHeight="100"/>
+
+    <HBox alignment="CENTER_RIGHT">
+        <Button text="%button.close" styleClass="cancel-button" cancelButton="true" onAction="#onClose"/>
+    </HBox>
+</VBox>
