@@ -14,11 +14,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Database access for sales: {@code transactions} of type SALE with their items and payments. */
-public class SaleRepository {
+/**
+ * Database access for one type of {@code transactions} (sales or purchases) with their items and payments.
+ */
+public class TransactionRepository {
 
-    /** Filters of the sales list (11.6); any may be null. {@code text}: memo no., customer name/mobile or note. */
+    /**
+     * Filters of the sales / purchases list; any may be null. {@code text}: memo no., party name/mobile, note or
+     * the supplier's memo no.
+     */
     public record Filter(String text, LocalDate from, LocalDate to, Long productId) {
+    }
+
+    private final TransactionType type;
+
+    public TransactionRepository(TransactionType type) {
+        this.type = type;
     }
 
     /**
@@ -26,7 +37,7 @@ public class SaleRepository {
      * locked (FOR UPDATE) until the transaction ends, so two sales saved at the same time cannot get the same
      * number; the unique index uk_transactions_type_memo backs this up.
      */
-    public long nextMemoNo(Session session, TransactionType type) {
+    public long nextMemoNo(Session session) {
         Number max = session.createNativeQuery(
                         "SELECT COALESCE(MAX(memo_no), 0) FROM transactions WHERE type = :type FOR UPDATE", Long.class)
                 .setParameter("type", type.name())
@@ -38,12 +49,12 @@ public class SaleRepository {
         session.persist(entity);
     }
 
-    /** A sale with its party loaded. */
-    public Optional<BusinessTransaction> findSale(Session session, long id) {
+    /** A sale / purchase of this type with its party loaded. */
+    public Optional<BusinessTransaction> find(Session session, long id) {
         return session.createSelectionQuery("from BusinessTransaction t left join fetch t.party"
                         + " where t.id = :id and t.type = :type", BusinessTransaction.class)
                 .setParameter("id", id)
-                .setParameter("type", TransactionType.SALE)
+                .setParameter("type", type)
                 .uniqueResultOptional();
     }
 
@@ -54,6 +65,17 @@ public class SaleRepository {
                         + " where i.transaction.id = :id order by i.id", TransactionItem.class)
                 .setParameter("id", saleId)
                 .getResultList();
+    }
+
+    /** The newest line of this type for a product (e.g. the last time it was bought). */
+    public Optional<TransactionItem> lastItem(Session session, long productId) {
+        return session.createSelectionQuery("from TransactionItem i where i.product.id = :product"
+                        + " and i.transaction.type = :type order by i.id desc", TransactionItem.class)
+                .setParameter("product", productId)
+                .setParameter("type", type)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 
     /** Payments of a sale with their account loaded, oldest first. */
@@ -94,7 +116,8 @@ public class SaleRepository {
     private static String where(Filter f) {
         StringBuilder w = new StringBuilder(" where t.type = :type");
         if (hasText(f)) {
-            w.append(" and (pa.name like :text or pa.nameEn like :text or pa.phone like :text or t.note like :text");
+            w.append(" and (pa.name like :text or pa.nameEn like :text or pa.phone like :text or t.note like :text"
+                    + " or t.supplierMemoNo like :text");
             if (memoNumber(f) != null) {
                 w.append(" or t.memoNo = :memo");
             }
@@ -112,8 +135,8 @@ public class SaleRepository {
         return w.toString();
     }
 
-    private static <R> SelectionQuery<R> where(SelectionQuery<R> q, Filter f) {
-        q.setParameter("type", TransactionType.SALE);
+    private <R> SelectionQuery<R> where(SelectionQuery<R> q, Filter f) {
+        q.setParameter("type", type);
         if (hasText(f)) {
             q.setParameter("text", "%" + f.text().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
             Long memo = memoNumber(f);

@@ -1,8 +1,6 @@
 package com.eh.bms.util;
 
-import com.eh.bms.config.AppConfig;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -55,6 +53,10 @@ public final class WindowManager {
 
     /** Window property: the popup resizes to its content when form errors appear or go (FormValidator). */
     public static final String AUTO_SIZE = "bms.autoSize";
+    /** Height of the strip under a popup's scrolling part that holds the "more below" arrow. */
+    private static final double MORE_STRIP_HEIGHT = 44;
+    /** Window property: the popup's scrolling part. */
+    private static final String SCROLL = "bms.scroll";
 
     private static Stage current;
 
@@ -121,6 +123,7 @@ public final class WindowManager {
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.getStyleClass().add("dialog-scroll");
+        stage.getProperties().put(SCROLL, scroll);
         // A form's button row (Save / Cancel / Delete) stays fixed under the scrolling part, always in sight
         Node body = withMoreArrow(scroll, root);
         if (root.getStyleClass().contains("dialog-form") && root instanceof Pane pane) {
@@ -189,8 +192,9 @@ public final class WindowManager {
     }
 
     /**
-     * The popup's scrolling part with a round down-arrow at its bottom while more is hidden below
-     * (gone at the bottom); clicking it scrolls down.
+     * The popup's scrolling part with a round down-arrow under it while more is hidden below (gone at the
+     * bottom); clicking it scrolls down. The arrow sits in its own strip, shown only while the content is
+     * taller than the popup, so it never covers the content.
      */
     private static Node withMoreArrow(ScrollPane scroll, Parent content) {
         Region arrow = new Region();
@@ -198,14 +202,48 @@ public final class WindowManager {
         StackPane more = new StackPane(arrow);
         more.getStyleClass().add("scroll-more");
         more.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        StackPane.setAlignment(more, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(more, new Insets(0, 0, 10, 0));
-        more.visibleProperty().bind(Bindings.createBooleanBinding(
-                () -> content.getLayoutBounds().getHeight() > scroll.getViewportBounds().getHeight() + 1
-                        && scroll.getVvalue() < scroll.getVmax() - 0.001,
-                scroll.vvalueProperty(), scroll.viewportBoundsProperty(), content.layoutBoundsProperty()));
         more.setOnMouseClicked(e -> scroll.setVvalue(scroll.getVmax()));
-        return new StackPane(scroll, more);
+        StackPane strip = new StackPane(more);
+        strip.setPadding(new Insets(4, 0, 4, 0));
+        strip.setMinHeight(MORE_STRIP_HEIGHT);
+        strip.setPrefHeight(MORE_STRIP_HEIGHT);
+        strip.setMaxHeight(MORE_STRIP_HEIGHT);
+        // Is the content taller than the room the scroll part would have without the strip?
+        Runnable update = () -> {
+            double room = scroll.getViewportBounds().getHeight() + (strip.isManaged() ? MORE_STRIP_HEIGHT : 0);
+            boolean needed = content.getLayoutBounds().getHeight() > room + 1;
+            if (needed != strip.isManaged()) {
+                strip.setManaged(needed);
+                strip.setVisible(needed);
+            }
+        };
+        strip.setManaged(false);
+        strip.setVisible(false);
+        scroll.viewportBoundsProperty().addListener(o -> update.run());
+        content.layoutBoundsProperty().addListener(o -> update.run());
+        more.visibleProperty().bind(scroll.vvalueProperty().lessThan(scroll.vmaxProperty().subtract(0.001)));
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return new VBox(scroll, strip);
+    }
+
+    /**
+     * A list popup (ledger, sale details): a fixed size instead of fitting its content, never bigger than the
+     * screen the app is on (e.g. 1040 px on a 1024 px screen). Its content fills that height (the table
+     * grows or shrinks), so the buttons under the table are never pushed out of the window; content that
+     * cannot shrink that far scrolls instead (with the scroll bar). Call before showing.
+     */
+    public static void sizeListWindow(Stage stage, double width, double height) {
+        stage.getProperties().remove(AUTO_SIZE);
+        if (stage.getProperties().get(SCROLL) instanceof ScrollPane scroll
+                && scroll.getContent() instanceof Region content) {
+            // Filling the height while the content is taller than the window would hide the scroll bar
+            scroll.viewportBoundsProperty().addListener((obs, old, view) ->
+                    scroll.setFitToHeight(content.minHeight(view.getWidth()) <= view.getHeight()));
+        }
+        Window owner = stage.getOwner() != null ? stage.getOwner() : current;
+        Rectangle2D screen = owner == null ? Screen.getPrimary().getVisualBounds() : screenOf(owner);
+        stage.setWidth(Math.min(width, screen.getWidth()));
+        stage.setHeight(Math.min(height, screen.getHeight()));
     }
 
     /** Caps a popup's height at the screen's visible height; its content then scrolls. */
@@ -305,7 +343,8 @@ public final class WindowManager {
 
     private static Stage newStage() {
         Stage stage = new Stage();
-        stage.setTitle(AppConfig.get().getString("app.name"));
+        // Follows the language (taskbar and title bar)
+        stage.titleProperty().bind(I18n.bind("app.title"));
         AppIcons.apply(stage);
         return stage;
     }

@@ -21,31 +21,28 @@
                  fx:controller="com.eh.bms.controller.SaleEntryController">
 
     <VBox spacing="12">
-        <!-- Customer and date -->
+        <!-- Customer, date and price type on one row; the walk-in tick under it -->
         <VBox styleClass="sale-card" spacing="8">
             <HBox spacing="12" alignment="CENTER_LEFT">
                 <Label text="%sale.customer" styleClass="form-label, required" minWidth="-Infinity"/>
-                <StackPane styleClass="picker-box" HBox.hgrow="ALWAYS">
+                <StackPane styleClass="picker-box" HBox.hgrow="ALWAYS" minWidth="160">
                     <TextField fx:id="partyField" promptText="%sale.customer.prompt"/>
                     <Region styleClass="picker-arrow" StackPane.alignment="CENTER_RIGHT" mouseTransparent="true"/>
                 </StackPane>
-                <CheckBox fx:id="walkInCheck" text="%sale.walk_in" minWidth="-Infinity"/>
+                <Label text="%label.date" styleClass="form-label, required" minWidth="-Infinity"/>
+                <DatePicker fx:id="datePicker" prefWidth="150" minWidth="130"/>
+                <!-- Wholesale or retail prices for this sale -->
+                <Label text="%sale.price_type" styleClass="form-label, required" minWidth="-Infinity"/>
+                <ComboBox fx:id="priceTypeBox" prefWidth="130" minWidth="110"/>
             </HBox>
+            <CheckBox fx:id="walkInCheck" text="%sale.walk_in" minWidth="-Infinity"/>
             <Label fx:id="partyInfo" styleClass="field-hint" wrapText="true" visible="false" managed="false"/>
             <HBox fx:id="walkInBox" spacing="12" visible="false" managed="false">
                 <TextField fx:id="walkInNameField" promptText="%sale.walk_in.name" HBox.hgrow="ALWAYS"/>
                 <TextField fx:id="walkInPhoneField" promptText="%sale.walk_in.phone" prefWidth="200"/>
             </HBox>
             <Label fx:id="partyError" styleClass="field-error" wrapText="true"/>
-            <HBox spacing="12" alignment="CENTER_LEFT">
-                <Label text="%label.date" styleClass="form-label, required" minWidth="-Infinity"/>
-                <DatePicker fx:id="datePicker" prefWidth="200"/>
-                <Label fx:id="dateError" styleClass="field-error" wrapText="true"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <!-- Wholesale or retail prices for this sale; starts from the party's own type -->
-                <Label text="%sale.price_type" styleClass="form-label, required" minWidth="-Infinity"/>
-                <ComboBox fx:id="priceTypeBox" prefWidth="150"/>
-            </HBox>
+            <Label fx:id="dateError" styleClass="field-error" wrapText="true"/>
         </VBox>
 
         <!-- One item line: picked product, unit, quantity, price, discount -->

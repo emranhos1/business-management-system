@@ -18,6 +18,7 @@
         <Label text="%party.section" styleClass="section-title" minWidth="-Infinity"/>
         <Region HBox.hgrow="ALWAYS" minWidth="8"/>
         <TextField fx:id="searchField" promptText="%party.search" prefWidth="360" minWidth="160"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
         <Button fx:id="addButton" text="%party.add" styleClass="add-button" onAction="#onAdd"/>
     </HBox>
     <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="260"/>

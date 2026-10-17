@@ -25,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Account types list (right side of the Accounts page): add; edit by the row button or double-click;
+ * Account types list (right side of the Accounts page): add; edit by the row button (no double-click: there is no view);
  * delete is in the edit form (only for a type no account uses).
  */
 public class AccountTypesController {

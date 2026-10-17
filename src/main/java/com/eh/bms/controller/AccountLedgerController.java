@@ -35,6 +35,8 @@ public class AccountLedgerController {
     @FXML private Label totalInLabel;
     @FXML private Label totalOutLabel;
     @FXML private Label balanceLabel;
+    @FXML private Label openingLabel;
+    @FXML private javafx.scene.layout.VBox openingTile;
     @FXML private StackPane tableHolder;
 
     private final AccountLedgerService service = new AccountLedgerService();
@@ -62,6 +64,10 @@ public class AccountLedgerController {
             totalInLabel.setText(MoneyUtil.format(s.totalIn()));
             totalOutLabel.setText(MoneyUtil.format(s.totalOut()));
             balanceLabel.setText(MoneyUtil.format(s.balance()));
+            boolean hasOpening = s.opening() != null && s.opening().signum() != 0;
+            openingLabel.setText(hasOpening ? MoneyUtil.format(s.opening()) : "");
+            openingTile.setVisible(hasOpening);
+            openingTile.setManaged(hasOpening);
             if (s.balance().signum() < 0) {
                 balanceLabel.getStyleClass().add("money-out");
             }
@@ -93,11 +99,21 @@ public class AccountLedgerController {
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.transfer_to" : "ledger.transfer_from", other);
         } else if (r.source() == AccountTransactionSource.SALE) {
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.sale_refund" : "ledger.sale_in");
+        } else if (r.source() == AccountTransactionSource.PURCHASE) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.purchase_paid" : "ledger.purchase_refund");
+        } else if (r.source() == AccountTransactionSource.EXPENSE && r.expenseCategory() != null) {
+            what = I18n.get("ledger.expense", ExpenseCategoriesController.nameText(r.expenseCategory()));
         } else if (r.source() == AccountTransactionSource.PARTY && r.party() != null) {
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.party_paid" : "ledger.party_received",
                     PartyText.name(r.party()));
         }
         String note = r.note();
+        // A sale or purchase line's note is its memo number ("#3"): "মেমো #3" / "ক্রয় মেমো #3"
+        if (r.source() == AccountTransactionSource.SALE && note != null) {
+            note = I18n.get("ledger.memo_note", note);
+        } else if (r.source() == AccountTransactionSource.PURCHASE && note != null) {
+            note = I18n.get("ledger.purchase_memo_note", note);
+        }
         if (what == null) {
             return note == null ? "—" : note;
         }

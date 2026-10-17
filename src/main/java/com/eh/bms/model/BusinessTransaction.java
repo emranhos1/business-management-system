@@ -84,6 +84,10 @@ public class BusinessTransaction {
     @Column(name = "memo_no")
     private Long memoNo;
 
+    /** The supplier's own memo (bill) number on a purchase; optional, searchable. */
+    @Column(name = "supplier_memo_no", length = 50)
+    private String supplierMemoNo;
+
     /** Value of the goods that came back (sales return, 11.7); null = nothing returned. */
     @Column(name = "returned_amount", precision = 14, scale = 2)
     private BigDecimal returnedAmount;
@@ -194,6 +198,14 @@ public class BusinessTransaction {
 
     public void setMemoNo(Long memoNo) {
         this.memoNo = memoNo;
+    }
+
+    public String getSupplierMemoNo() {
+        return supplierMemoNo;
+    }
+
+    public void setSupplierMemoNo(String supplierMemoNo) {
+        this.supplierMemoNo = supplierMemoNo;
     }
 
     /** Never null: 0 when nothing came back. */

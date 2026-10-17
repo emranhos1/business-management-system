@@ -52,6 +52,7 @@
         <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
             <ComboBox fx:id="unitBox" promptText="%products.unit.prompt" maxWidth="Infinity"/>
             <Label fx:id="unitError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="packLockedHint" styleClass="field-hint" wrapText="true" text="%products.pack_locked" visible="false" managed="false"/>
         </VBox>
     </HBox>
 

@@ -1,12 +1,14 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.Account;
+import com.eh.bms.model.AppModule;
 import com.eh.bms.model.Party;
 import com.eh.bms.service.AccountLedgerService;
 import com.eh.bms.service.AccountService;
 import com.eh.bms.service.PartyLedgerService;
 import com.eh.bms.service.PartyPaymentService;
 import com.eh.bms.service.PartyPaymentService.Direction;
+import com.eh.bms.service.UserSession;
 import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
@@ -169,7 +171,7 @@ public class PartyPaymentFormController {
             form.error(amountField, I18n.get("party.error.zero"));
         } else if (paid && account != null && balances.containsKey(account.getId())
                 && amount.compareTo(balances.get(account.getId())) > 0) {
-            form.error(amountField, I18n.get("party.error.insufficient", MoneyUtil.format(balances.get(account.getId()))));
+            form.error(amountField, insufficientText(balances.get(account.getId())));
         }
         if (date == null) {
             boolean typed = datePicker.getEditor().getText() != null && !datePicker.getEditor().getText().isBlank();
@@ -197,10 +199,13 @@ public class PartyPaymentFormController {
                     Notifier.success(I18n.get(paid ? "party.pay.done" : "party.receive.done"));
                 }
                 case INSUFFICIENT_BALANCE -> {
-                    // Someone else used the money since the form opened
-                    balances.put(account.getId(), result.available());
+                    // Money went out since the form opened, or the date is earlier: show today's balance again;
+                    // the error shows what was there on that date
+                    balances.put(account.getId(), accountLedger.balance(account.getId()));
                     showAccountBalance(account);
-                    form.error(amountField, I18n.get("party.error.insufficient", MoneyUtil.format(result.available())));
+                    form.error(amountField, canSeeBalances()
+                            ? I18n.get("msg.max_out_on_date", MoneyUtil.format(result.available()))
+                            : I18n.get("party.error.insufficient_plain"));
                     form.focusFirstError();
                 }
             }
@@ -230,8 +235,19 @@ public class PartyPaymentFormController {
         }
     }
 
+    private static boolean canSeeBalances() {
+        return UserSession.isLoggedIn() && UserSession.get().can(AppModule.ACCOUNT, UserSession.Action.VIEW);
+    }
+
+    /** "Not enough money": with the amount only for users who may see account balances. */
+    private static String insufficientText(BigDecimal available) {
+        return canSeeBalances() ? I18n.get("party.error.insufficient", MoneyUtil.format(available))
+                : I18n.get("party.error.insufficient_plain");
+    }
+
     private void showAccountBalance(Account account) {
-        boolean show = account != null && balances.containsKey(account.getId());
+        // Account balances are Accounts data: only users who may view Accounts see them (not a cashier)
+        boolean show = canSeeBalances() && account != null && balances.containsKey(account.getId());
         accountBalanceLabel.setText(show ? I18n.get("transfer.balance_hint", MoneyUtil.format(balances.get(account.getId()))) : "");
         accountBalanceLabel.setVisible(show);
         accountBalanceLabel.setManaged(show);

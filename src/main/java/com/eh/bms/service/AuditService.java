@@ -16,17 +16,24 @@ import org.hibernate.Session;
  * });
  * }</pre>
  * The user comes from {@link UserSession}; with nobody logged in (system work) it is left empty.
+ * When one module has several kinds of rows (accounts and account types, products and units, ...), pass a
+ * record name instead (e.g. {@code "ACCOUNT_TYPE"}), so two rows with the same id never look alike.
  */
 public class AuditService {
 
     public void log(Session session, AuditAction action, AppModule module, Long referenceId,
+                    String oldValue, String newValue) {
+        log(session, action, module.name(), referenceId, oldValue, newValue);
+    }
+
+    public void log(Session session, AuditAction action, String record, Long referenceId,
                     String oldValue, String newValue) {
         AuditLog row = new AuditLog();
         if (UserSession.isLoggedIn()) {
             row.setUser(session.getReference(User.class, UserSession.get().getUserId()));
         }
         row.setAction(action.name());
-        row.setModule(module.name());
+        row.setModule(record);
         row.setReferenceId(referenceId);
         row.setOldValue(oldValue);
         row.setNewValue(newValue);
@@ -34,14 +41,26 @@ public class AuditService {
     }
 
     public void created(Session session, AppModule module, Long referenceId, String newValue) {
-        log(session, AuditAction.CREATE, module, referenceId, null, newValue);
+        created(session, module.name(), referenceId, newValue);
     }
 
     public void updated(Session session, AppModule module, Long referenceId, String oldValue, String newValue) {
-        log(session, AuditAction.UPDATE, module, referenceId, oldValue, newValue);
+        updated(session, module.name(), referenceId, oldValue, newValue);
     }
 
     public void deleted(Session session, AppModule module, Long referenceId, String oldValue) {
-        log(session, AuditAction.DELETE, module, referenceId, oldValue, null);
+        deleted(session, module.name(), referenceId, oldValue);
+    }
+
+    public void created(Session session, String record, Long referenceId, String newValue) {
+        log(session, AuditAction.CREATE, record, referenceId, null, newValue);
+    }
+
+    public void updated(Session session, String record, Long referenceId, String oldValue, String newValue) {
+        log(session, AuditAction.UPDATE, record, referenceId, oldValue, newValue);
+    }
+
+    public void deleted(Session session, String record, Long referenceId, String oldValue) {
+        log(session, AuditAction.DELETE, record, referenceId, oldValue, null);
     }
 }

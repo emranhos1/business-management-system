@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Add / edit expense category popup (13.1). One field per row (label 200 px, input fills the rest). -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ExpenseCategoryFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <HBox styleClass="form-row">
+        <Label text="%expense.category.name_bn" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameBnField" maxWidth="Infinity"/>
+            <Label fx:id="nameBnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%expense.category.name_en" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameEnField" maxWidth="Infinity"/>
+            <Label fx:id="nameEnError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%expense.category.type" styleClass="form-label, required, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="typeBox" maxWidth="Infinity"/>
+            <Label fx:id="typeError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <!-- Only when editing a category no expense uses -->
+        <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"
+                visible="false" managed="false"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button text="%button.save" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>

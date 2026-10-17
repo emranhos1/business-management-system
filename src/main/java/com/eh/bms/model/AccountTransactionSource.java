@@ -10,5 +10,9 @@ public enum AccountTransactionSource {
     /** Money paid to or received from a party (10.5); {@code reference_id} is the party ledger entry. */
     PARTY,
     /** Money for a sale (paid at the sale, installment, or refund on a return); {@code reference_id} is the sale. */
-    SALE
+    SALE,
+    /** Money for a purchase (paid at the purchase, a later payment, or money back on a return); {@code reference_id} is the purchase. */
+    PURCHASE,
+    /** Money paid for an expense (13.2); {@code reference_id} is the expense. */
+    EXPENSE
 }

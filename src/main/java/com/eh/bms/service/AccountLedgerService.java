@@ -4,10 +4,13 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
+import com.eh.bms.model.Expense;
+import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
 import com.eh.bms.repository.AccountTransactionRepository;
 import com.eh.bms.repository.AccountTransactionRepository.Totals;
+import com.eh.bms.repository.ExpenseRepository;
 import com.eh.bms.repository.PartyLedgerRepository;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
@@ -32,11 +35,11 @@ public class AccountLedgerService {
 
     /**
      * One ledger line. {@code otherAccount} is set for transfers (the account on the other side),
-     * {@code party} for money paid to or received from a party.
+     * {@code party} for money paid to or received from a party, {@code expenseCategory} for an expense.
      */
     public record LedgerRow(long id, LocalDate date, AccountTransactionType type, BigDecimal amount,
                             BigDecimal balance, AccountTransactionSource source, Account otherAccount,
-                            Party party, String note) {
+                            Party party, ExpenseCategory expenseCategory, String note) {
         public BigDecimal moneyIn() {
             return type == AccountTransactionType.CREDIT ? amount : null;
         }
@@ -52,6 +55,7 @@ public class AccountLedgerService {
 
     private final AccountTransactionRepository repository = new AccountTransactionRepository();
     private final PartyLedgerRepository partyLedgerRepository = new PartyLedgerRepository();
+    private final ExpenseRepository expenseRepository = new ExpenseRepository();
 
     public BigDecimal balance(long accountId) {
         return TransactionHelper.inTransaction(session -> balance(session, accountId));
@@ -66,6 +70,24 @@ public class AccountLedgerService {
     }
 
     /** Current balance of each account. */
+    /**
+     * Most money that can go out of the account on {@code date}: the lowest balance from the end of that day
+     * on. A back-dated payment must not make the balance negative on that day or on any later day.
+     */
+    public BigDecimal availableOn(Session session, long accountId, LocalDate date) {
+        Account account = session.find(Account.class, accountId);
+        if (account == null) {
+            throw new IllegalStateException("Account not found: " + accountId);
+        }
+        BigDecimal running = account.getOpeningBalance().add(repository.netUpTo(session, accountId, date));
+        BigDecimal lowest = running;
+        for (BigDecimal amount : repository.signedAfter(session, accountId, date)) {
+            running = running.add(amount);
+            lowest = lowest.min(running);
+        }
+        return lowest;
+    }
+
     public Map<Long, BigDecimal> balances(Collection<Account> accounts) {
         List<Long> ids = accounts.stream().map(Account::getId).toList();
         Map<Long, BigDecimal> net = TransactionHelper.inTransaction(session -> repository.netByAccount(session, ids));
@@ -109,6 +131,12 @@ public class AccountLedgerService {
                     .map(AccountTransaction::getReferenceId)
                     .toList();
             Map<Long, PartyLedger> partyEntries = partyLedgerRepository.findByIds(session, partyEntryIds);
+            // Expenses: the expense names its category
+            List<Long> expenseIds = entries.stream()
+                    .filter(t -> t.getSource() == AccountTransactionSource.EXPENSE && t.getReferenceId() != null)
+                    .map(AccountTransaction::getReferenceId)
+                    .toList();
+            Map<Long, Expense> expenses = expenseRepository.findByIds(session, expenseIds);
 
             AccountTransaction first = entries.get(0);
             BigDecimal balance = balance(session, accountId)
@@ -121,9 +149,12 @@ public class AccountLedgerService {
                         ? others.get(t.getReferenceId()) : null;
                 PartyLedger partyEntry = linked && t.getSource() == AccountTransactionSource.PARTY
                         ? partyEntries.get(t.getReferenceId()) : null;
+                Expense expense = linked && t.getSource() == AccountTransactionSource.EXPENSE
+                        ? expenses.get(t.getReferenceId()) : null;
                 rows.add(new LedgerRow(t.getId(), t.getDate(), t.getType(), t.getAmount(), balance,
                         t.getSource(), other == null ? null : other.getAccount(),
-                        partyEntry == null ? null : partyEntry.getParty(), t.getNote()));
+                        partyEntry == null ? null : partyEntry.getParty(),
+                        expense == null ? null : expense.getCategory(), t.getNote()));
                 balance = balance.subtract(signed(t));
             }
             return new PageResult<>(rows, total);

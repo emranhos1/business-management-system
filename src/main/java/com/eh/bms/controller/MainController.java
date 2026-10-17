@@ -6,6 +6,7 @@ import com.eh.bms.service.UserSession;
 import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Notifier;
+import com.eh.bms.util.UnsavedWork;
 import com.eh.bms.util.WindowManager;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -81,7 +82,9 @@ public class MainController {
         logoutButton.textProperty().bind(I18n.bind("menu.logout"));
 
         UserSession session = UserSession.get();
-        userLabel.setText(session.getName() + " (" + session.getRole() + ")");
+        // Role in the current language, e.g. "Administrator (অ্যাডমিন)"
+        userLabel.textProperty().bind(javafx.beans.binding.Bindings.createStringBinding(
+                () -> session.getName() + " (" + I18n.get("role." + session.getRole().name()) + ")", I18n.localeProperty()));
 
         // Only modules the user may view get a button (cashier: no HR, reports, settings, users)
         List<Page> visible = PAGES.stream()
@@ -157,6 +160,10 @@ public class MainController {
     /** Saves the language in app_config and switches the whole UI at once (the open page reloads). */
     private void switchLanguage(String code) {
         if (code.equals(I18n.getLocale().getLanguage())) {
+            return;
+        }
+        // The open page reloads in the new language: offer to save what was typed first
+        if (!UnsavedWork.resolve()) {
             return;
         }
         try {

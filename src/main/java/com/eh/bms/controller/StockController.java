@@ -46,6 +46,12 @@ public class StockController {
     /** Wait after the last key before searching, so typing does not query on every key. */
     private static final Duration SEARCH_DELAY = Duration.millis(300);
 
+    @FXML private javafx.scene.control.TabPane tabs;
+    @FXML private javafx.scene.control.Tab lowTab;
+    @FXML private javafx.scene.control.Tab valueTab;
+    /** Controllers of the included tabs (fx:id="low" and "value"). */
+    @FXML private LowStockController lowController;
+    @FXML private StockValuationController valueController;
     @FXML private TextField searchField;
     @FXML private StackPane tableHolder;
 
@@ -58,6 +64,14 @@ public class StockController {
     @FXML
     private void initialize() {
         InputFilters.maxLength(searchField, SEARCH_MAX);
+        // Stock may have changed on another tab (an adjustment): the low stock and value tabs reload when opened
+        tabs.getSelectionModel().selectedItemProperty().addListener((obs, old, tab) -> {
+            if (tab == lowTab) {
+                lowController.refresh();
+            } else if (tab == valueTab) {
+                valueController.refresh();
+            }
+        });
 
         table = new PaginatedTable<>(this::loadPage);
         TableView<Product> view = table.getTableView();
@@ -129,7 +143,7 @@ public class StockController {
 
     private PageResult<Product> loadPage(int offset, int limit) {
         try {
-            PageResult<Product> page = productService.search(searchField.getText(), offset, limit);
+            PageResult<Product> page = productService.search(InputFilters.toAsciiDigits(searchField.getText()), offset, limit);
             List<Long> ids = page.items().stream().map(Product::getId).toList();
             stocks = ids.isEmpty() ? Map.of() : stockService.currentStocks(ids);
             return page;
@@ -148,5 +162,11 @@ public class StockController {
     /** Reloads the shown page (e.g. after a stock adjustment). */
     public void reload() {
         table.refresh();
+    }
+
+    /** Empties the search; the list shows all products again. */
+    @FXML
+    private void onClearSearch() {
+        searchField.clear();
     }
 }

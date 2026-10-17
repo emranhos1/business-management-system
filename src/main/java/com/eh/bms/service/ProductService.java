@@ -19,7 +19,9 @@ import java.util.StringJoiner;
 public class ProductService {
 
     public enum SaveResult {
-        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU
+        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU,
+        /** Unit, secondary unit or conversion changed on a product that has stock or history. */
+        PACK_LOCKED
     }
 
     public enum DeleteResult {
@@ -82,6 +84,10 @@ public class ProductService {
             } else {
                 p = repository.findById(session, data.id())
                         .orElseThrow(() -> new IllegalStateException("Product not found: " + data.id()));
+                // Stock and past lines are kept in the main unit: a used product keeps its pack
+                if (packChanged(p, unit, secondaryUnit, factor) && repository.isUsed(session, p.getId())) {
+                    return SaveResult.PACK_LOCKED;
+                }
                 old = describe(p);
             }
             p.setName(nameBn);
@@ -111,6 +117,15 @@ public class ProductService {
     }
 
     /** True if the product has no stock entries and no transaction items, so {@link #delete} would delete it. */
+    private static boolean packChanged(Product p, Unit unit, Unit secondary, BigDecimal factor) {
+        long oldSecondary = p.getSecondaryUnit() == null ? -1 : p.getSecondaryUnit().getId();
+        long newSecondary = secondary == null ? -1 : secondary.getId();
+        boolean factorSame = p.getConversionFactor() == null ? factor == null
+                : factor != null && p.getConversionFactor().compareTo(factor) == 0;
+        return p.getUnit() == null || !p.getUnit().getId().equals(unit.getId())
+                || oldSecondary != newSecondary || !factorSame;
+    }
+
     public boolean canDelete(long id) {
         return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
     }

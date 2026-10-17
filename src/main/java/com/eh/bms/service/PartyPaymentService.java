@@ -4,7 +4,6 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
-import com.eh.bms.model.AppModule;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
 import com.eh.bms.model.PartyLedgerType;
@@ -56,7 +55,7 @@ public class PartyPaymentService {
 
             boolean paid = direction == Direction.PAID;
             if (paid) {
-                BigDecimal available = accountLedger.balance(session, accountId);
+                BigDecimal available = accountLedger.availableOn(session, accountId, date);
                 if (available.compareTo(amount) < 0) {
                     return new Result(Status.INSUFFICIENT_BALANCE, available);
                 }
@@ -70,7 +69,7 @@ public class PartyPaymentService {
                     paid ? amount : BigDecimal.ZERO, paid ? BigDecimal.ZERO : amount, money.getId(), note);
             money.setReferenceId(entry.getId());
 
-            auditService.created(session, AppModule.PARTY, entry.getId(),
+            auditService.created(session, "PARTY_PAYMENT", entry.getId(),
                     (paid ? "paid to" : "received from") + " party=" + party.getName() + " (" + party.getPhone() + ")"
                             + " account=" + account.getNameEn() + " amount=" + amount.toPlainString() + " date=" + date
                             + (note == null || note.isBlank() ? "" : " note=" + note.trim()));

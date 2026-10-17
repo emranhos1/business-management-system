@@ -271,10 +271,12 @@ public class StockAdjustmentFormController {
                     Notifier.success(I18n.get("stock.adjust.done"));
                 }
                 case INSUFFICIENT_STOCK -> {
-                    // Stock went out (e.g. a sale) since the form opened
-                    currentStock = result.available();
+                    // Stock went out since the form opened, or the date is earlier: show today's stock again;
+                    // the error shows what was there on that date
+                    currentStock = ledgerService.currentStock(product.getId());
                     showStock();
-                    form.error(quantityField, insufficientText(result.available()));
+                    form.error(quantityField, I18n.get("stock.adjust.error.insufficient_on",
+                            UnitUtil.quantityText(result.available(), product)));
                     form.focusFirstError();
                 }
             }

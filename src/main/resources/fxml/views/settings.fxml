@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.eh.bms.util.TwoColumnLayout?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Tab?>
-<?import com.eh.bms.util.PageTabs?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
@@ -16,156 +14,158 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Settings: business profile (6.1) and app settings (6.2). Language is in the sidebar (6.3).
-     Layout rule: label column 200, every input fills the second column (same width), labels top-aligned.
+<!-- Settings: business profile (6.1) and app settings (6.2) as two equal cards side by side (stacked on a
+     narrow window). Language is in the sidebar (6.3).
+     Labels top-aligned; in both cards the label column is only as wide as its longest label (no wide gap).
+     Business card: two short fields share a row (second label + field in columns 2-3); a long field spans
+     columns 1-3.
      Each checked field sits in a VBox with its error label under it (FormValidator). -->
-<PageTabs fx:id="tabPane" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-         fx:controller="com.eh.bms.controller.SettingsController"
-         tabClosingPolicy="UNAVAILABLE" styleClass="settings-tabs">
+<TwoColumnLayout fx:id="root" mainPercent="50" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                 fx:controller="com.eh.bms.controller.SettingsController">
 
-    <Tab text="%settings.tab.business">
-        <ScrollPane fitToWidth="true" styleClass="form-scroll">
-            <VBox styleClass="form-card" spacing="16" maxWidth="680">
-                <GridPane hgap="16" vgap="12">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="200" prefWidth="200"/>
-                        <ColumnConstraints hgrow="ALWAYS" fillWidth="true"/>
-                    </columnConstraints>
+    <VBox styleClass="form-card" spacing="16" maxHeight="-Infinity" GridPane.valignment="TOP">
+        <Label text="%settings.tab.business" styleClass="section-title"/>
+        <GridPane hgap="16" vgap="12">
+            <columnConstraints>
+                <ColumnConstraints minWidth="-Infinity"/>
+                <ColumnConstraints hgrow="ALWAYS" fillWidth="true" minWidth="100" prefWidth="100"/>
+                <ColumnConstraints minWidth="-Infinity"/>
+                <ColumnConstraints hgrow="ALWAYS" fillWidth="true" minWidth="100" prefWidth="100"/>
+            </columnConstraints>
 
-                    <Label text="%settings.business.name" styleClass="form-label, required"
-                           GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                        <TextField fx:id="nameField" maxWidth="Infinity"/>
-                        <Label fx:id="nameError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <Label text="%label.address" styleClass="form-label"
-                           GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <TextArea fx:id="addressField" prefRowCount="2" wrapText="true" maxWidth="Infinity"
-                              GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                    <Label text="%settings.business.mobile" styleClass="form-label, required"
-                           GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="2" GridPane.columnIndex="1">
-                        <TextField fx:id="phoneField" promptText="01XXXXXXXXX" maxWidth="Infinity"/>
-                        <Label fx:id="phoneError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <Label text="%label.email" styleClass="form-label"
-                           GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="3" GridPane.columnIndex="1">
-                        <TextField fx:id="emailField" maxWidth="Infinity"/>
-                        <Label fx:id="emailError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <!-- Bangla and English symbol side by side; together as wide as the other inputs -->
-                    <Label text="%settings.business.currency_symbol" styleClass="form-label, required"
-                           GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <HBox spacing="16" GridPane.rowIndex="4" GridPane.columnIndex="1">
-                        <VBox styleClass="field-box" HBox.hgrow="ALWAYS" prefWidth="1" maxWidth="Infinity">
-                            <HBox spacing="8" alignment="CENTER_LEFT">
-                                <Label text="%settings.lang.bn" styleClass="inline-caption" minWidth="56" prefWidth="56"/>
-                                <TextField fx:id="currencyField" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
-                            </HBox>
-                            <Label fx:id="currencyError" styleClass="field-error" wrapText="true"/>
-                        </VBox>
-                        <VBox styleClass="field-box" HBox.hgrow="ALWAYS" prefWidth="1" maxWidth="Infinity">
-                            <HBox spacing="8" alignment="CENTER_LEFT">
-                                <Label text="%settings.lang.en" styleClass="inline-caption" minWidth="56" prefWidth="56"/>
-                                <TextField fx:id="currencyEnField" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
-                            </HBox>
-                            <Label fx:id="currencyEnError" styleClass="field-error" wrapText="true"/>
-                        </VBox>
-                    </HBox>
-
-                    <Label text="%settings.business.vat" styleClass="form-label, required"
-                           GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="5" GridPane.columnIndex="1">
-                        <TextField fx:id="vatField" maxWidth="Infinity"/>
-                        <Label fx:id="vatError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <Label text="%settings.business.fy_start" styleClass="form-label"
-                           GridPane.rowIndex="6" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <ComboBox fx:id="fyStartBox" maxWidth="Infinity" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
-
-                    <Label text="%settings.business.logo" styleClass="form-label"
-                           GridPane.rowIndex="7" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <HBox spacing="16" alignment="TOP_LEFT" GridPane.rowIndex="7" GridPane.columnIndex="1">
-                        <StackPane styleClass="logo-box" minWidth="88" minHeight="88" maxWidth="88" maxHeight="88">
-                            <ImageView fx:id="logoView" fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true"/>
-                            <Label fx:id="noLogoLabel" text="%settings.logo.none" styleClass="placeholder-text"
-                                   wrapText="true" textAlignment="CENTER" maxWidth="72"/>
-                        </StackPane>
-                        <VBox spacing="8">
-                            <Button text="%settings.logo.choose" maxWidth="Infinity" onAction="#onChooseLogo"/>
-                            <Button fx:id="removeLogoButton" text="%settings.logo.remove" maxWidth="Infinity"
-                                    onAction="#onRemoveLogo"/>
-                        </VBox>
-                    </HBox>
-                </GridPane>
-
-                <HBox alignment="CENTER_LEFT">
-                    <Button fx:id="saveProfileButton" text="%button.save" styleClass="save-button"
-                            onAction="#onSaveProfile"/>
-                </HBox>
+            <Label text="%settings.business.name" styleClass="form-label, required"
+                   GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.columnSpan="3">
+                <TextField fx:id="nameField" maxWidth="Infinity"/>
+                <Label fx:id="nameError" styleClass="field-error" wrapText="true"/>
             </VBox>
-        </ScrollPane>
-    </Tab>
 
-    <Tab text="%settings.tab.app">
-        <ScrollPane fitToWidth="true" styleClass="form-scroll">
-            <VBox styleClass="form-card" spacing="16" maxWidth="680">
-                <GridPane hgap="16" vgap="12">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="200" prefWidth="200"/>
-                        <ColumnConstraints hgrow="ALWAYS" fillWidth="true"/>
-                    </columnConstraints>
+            <Label text="%label.address" styleClass="form-label"
+                   GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <TextArea fx:id="addressField" prefRowCount="2" wrapText="true" maxWidth="Infinity"
+                      GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="3"/>
 
-                    <Label text="%settings.date_format" styleClass="form-label"
-                           GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                        <ComboBox fx:id="dateFormatBox" maxWidth="Infinity"/>
-                        <Label fx:id="dateExampleLabel" styleClass="field-hint"/>
-                    </VBox>
-
-                    <Label text="%settings.items_per_page" styleClass="form-label, required"
-                           GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="1" GridPane.columnIndex="1">
-                        <TextField fx:id="itemsPerPageField" maxWidth="Infinity"/>
-                        <Label fx:id="itemsPerPageError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <Label text="%settings.low_stock_default" styleClass="form-label, required"
-                           GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="2" GridPane.columnIndex="1">
-                        <TextField fx:id="lowStockField" maxWidth="Infinity"/>
-                        <Label fx:id="lowStockError" styleClass="field-error" wrapText="true"/>
-                    </VBox>
-
-                    <Label text="%settings.auto_backup" styleClass="form-label" wrapText="true"
-                           GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <HBox styleClass="check-row" alignment="CENTER_LEFT" GridPane.rowIndex="3" GridPane.columnIndex="1">
-                        <CheckBox fx:id="autoBackupBox"/>
-                    </HBox>
-
-                    <Label text="%settings.storage" styleClass="form-label, required" wrapText="true"
-                           GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-                    <VBox styleClass="field-box" GridPane.rowIndex="4" GridPane.columnIndex="1">
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <TextField fx:id="storageField" editable="false" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
-                            <Button text="%settings.storage.choose" minWidth="-Infinity" onAction="#onChooseStorage"/>
-                        </HBox>
-                        <Label fx:id="storageError" styleClass="field-error" wrapText="true"/>
-                        <Label text="%settings.storage.hint" styleClass="field-hint" wrapText="true"/>
-                    </VBox>
-                </GridPane>
-
-                <HBox alignment="CENTER_LEFT">
-                    <Button fx:id="saveAppButton" text="%button.save" styleClass="save-button"
-                            onAction="#onSaveApp"/>
-                </HBox>
+            <Label text="%settings.business.mobile" styleClass="form-label, required"
+                   GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="2" GridPane.columnIndex="1">
+                <TextField fx:id="phoneField" promptText="01XXXXXXXXX" maxWidth="Infinity"/>
+                <Label fx:id="phoneError" styleClass="field-error" wrapText="true"/>
             </VBox>
-        </ScrollPane>
-    </Tab>
-</PageTabs>
+            <Label text="%label.email" styleClass="form-label" minWidth="-Infinity"
+                   GridPane.rowIndex="2" GridPane.columnIndex="2" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="2" GridPane.columnIndex="3">
+                <TextField fx:id="emailField" maxWidth="Infinity"/>
+                <Label fx:id="emailError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+
+            <!-- Bangla symbol in column 1, English symbol in columns 2-3, like the other paired rows -->
+            <Label text="%settings.business.currency" styleClass="form-label, required"
+                   GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                <TextField fx:id="currencyField" maxWidth="Infinity"/>
+                <Label fx:id="currencyError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+            <Label text="%settings.lang.en" styleClass="form-label" minWidth="-Infinity"
+                   GridPane.rowIndex="3" GridPane.columnIndex="2" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="3" GridPane.columnIndex="3">
+                <TextField fx:id="currencyEnField" maxWidth="Infinity"/>
+                <Label fx:id="currencyEnError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+
+            <Label text="%settings.business.vat" styleClass="form-label, required"
+                   GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="4" GridPane.columnIndex="1">
+                <TextField fx:id="vatField" maxWidth="Infinity"/>
+                <Label fx:id="vatError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+            <Label text="%settings.business.fy_start" styleClass="form-label" minWidth="-Infinity"
+                   GridPane.rowIndex="4" GridPane.columnIndex="2" GridPane.valignment="TOP"/>
+            <ComboBox fx:id="fyStartBox" maxWidth="Infinity" GridPane.rowIndex="4" GridPane.columnIndex="3"
+                      GridPane.valignment="TOP"/>
+
+            <Label text="%settings.business.logo" styleClass="form-label"
+                   GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <HBox spacing="16" alignment="TOP_LEFT" GridPane.rowIndex="5" GridPane.columnIndex="1"
+                  GridPane.columnSpan="3">
+                <StackPane styleClass="logo-box" minWidth="88" minHeight="88" maxWidth="88" maxHeight="88">
+                    <ImageView fx:id="logoView" fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true"/>
+                    <Label fx:id="noLogoLabel" text="%settings.logo.none" styleClass="placeholder-text"
+                           wrapText="true" textAlignment="CENTER" maxWidth="72"/>
+                </StackPane>
+                <VBox spacing="8">
+                    <Button text="%settings.logo.choose" styleClass="edit-button" minWidth="-Infinity"
+                            maxWidth="Infinity" onAction="#onChooseLogo"/>
+                    <Button fx:id="removeLogoButton" text="%settings.logo.remove" styleClass="delete-button"
+                            minWidth="-Infinity" maxWidth="Infinity" onAction="#onRemoveLogo"/>
+                </VBox>
+            </HBox>
+        </GridPane>
+
+        <HBox alignment="CENTER_LEFT">
+            <Button fx:id="saveProfileButton" text="%button.save" styleClass="save-button"
+                    onAction="#onSaveProfile"/>
+        </HBox>
+    </VBox>
+
+    <VBox styleClass="form-card" spacing="16" maxHeight="-Infinity" GridPane.valignment="TOP">
+        <Label text="%settings.tab.app" styleClass="section-title"/>
+        <GridPane hgap="16" vgap="12">
+            <columnConstraints>
+                <ColumnConstraints minWidth="-Infinity"/>
+                <ColumnConstraints hgrow="ALWAYS" fillWidth="true" minWidth="100"/>
+            </columnConstraints>
+
+            <Label text="%settings.date_format" styleClass="form-label"
+                   GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                <ComboBox fx:id="dateFormatBox" maxWidth="Infinity"/>
+                <Label fx:id="dateExampleLabel" styleClass="field-hint"/>
+            </VBox>
+
+            <Label text="%settings.time_format" styleClass="form-label"
+                   GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                <ComboBox fx:id="timeFormatBox" maxWidth="Infinity"/>
+                <Label fx:id="timeExampleLabel" styleClass="field-hint"/>
+            </VBox>
+
+            <Label text="%settings.items_per_page" styleClass="form-label, required"
+                   GridPane.rowIndex="2" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="2" GridPane.columnIndex="1">
+                <TextField fx:id="itemsPerPageField" maxWidth="Infinity"/>
+                <Label fx:id="itemsPerPageError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+
+            <Label text="%settings.low_stock_default" styleClass="form-label, required"
+                   GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                <TextField fx:id="lowStockField" maxWidth="Infinity"/>
+                <Label fx:id="lowStockError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+
+            <!-- Hidden until auto backup works (20.9) -->
+            <Label text="%settings.auto_backup" styleClass="form-label" wrapText="true" visible="false" managed="false"
+                   GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <HBox styleClass="check-row" alignment="CENTER_LEFT" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                  visible="false" managed="false">
+                <CheckBox fx:id="autoBackupBox"/>
+            </HBox>
+
+            <Label text="%settings.storage" styleClass="form-label, required" wrapText="true"
+                   GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="5" GridPane.columnIndex="1">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <TextField fx:id="storageField" editable="false" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                    <Button text="%settings.storage.choose" styleClass="edit-button" minWidth="-Infinity" onAction="#onChooseStorage"/>
+                </HBox>
+                <Label fx:id="storageError" styleClass="field-error" wrapText="true"/>
+                <Label text="%settings.storage.hint" styleClass="field-hint" wrapText="true"/>
+            </VBox>
+        </GridPane>
+
+        <HBox alignment="CENTER_LEFT">
+            <Button fx:id="saveAppButton" text="%button.save" styleClass="save-button"
+                    onAction="#onSaveApp"/>
+        </HBox>
+    </VBox>
+</TwoColumnLayout>

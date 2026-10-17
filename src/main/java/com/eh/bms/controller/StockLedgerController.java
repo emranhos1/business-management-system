@@ -64,11 +64,8 @@ public class StockLedgerController {
         StockLedgerController ledger = loader.getController();
         ledger.show(product);
         Stage stage = WindowManager.dialog(root, I18n.get("stock.ledger.title", UnitUtil.productName(product)));
-        // A list window: resizable and a fixed starting size, not a form that fits its content
-        stage.getProperties().remove(WindowManager.AUTO_SIZE);
-        stage.setResizable(true);
-        stage.setWidth(WINDOW_WIDTH);
-        stage.setHeight(WINDOW_HEIGHT);
+        // A list window: a fixed size (capped to the screen), not a form that fits its content
+        WindowManager.sizeListWindow(stage, WINDOW_WIDTH, WINDOW_HEIGHT);
         stage.showAndWait();
     }
 

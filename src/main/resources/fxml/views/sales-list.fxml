@@ -19,7 +19,7 @@
             <TextField fx:id="productFilterField" promptText="%sale.filter.product" prefWidth="260"/>
             <Region styleClass="picker-arrow" StackPane.alignment="CENTER_RIGHT" mouseTransparent="true"/>
         </StackPane>
-        <Button text="%sale.filter.clear" styleClass="cancel-button" onAction="#onClearFilters"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearFilters"/>
     </FlowPane>
     <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
 </VBox>

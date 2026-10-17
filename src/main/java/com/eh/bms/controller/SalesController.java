@@ -1,5 +1,8 @@
 package com.eh.bms.controller;
 
+import com.eh.bms.model.AppModule;
+import com.eh.bms.service.UserSession;
+import com.eh.bms.service.UserSession.Action;
 import javafx.fxml.FXML;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -8,6 +11,7 @@ import javafx.scene.control.TabPane;
 public class SalesController {
 
     @FXML private TabPane tabs;
+    @FXML private Tab entryTab;
     @FXML private Tab listTab;
     /** Controllers of the included tabs (fx:id="entry" and "list"). */
     @FXML private SaleEntryController entryController;
@@ -22,5 +26,10 @@ public class SalesController {
                 listController.reload();
             }
         });
+        // Only users who may add sales get the new-sale tab
+        if (!(UserSession.isLoggedIn() && UserSession.get().can(AppModule.SALE, Action.CREATE))) {
+            tabs.getTabs().remove(entryTab);
+            tabs.getSelectionModel().select(listTab);
+        }
     }
 }

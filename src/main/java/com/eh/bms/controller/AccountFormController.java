@@ -110,6 +110,11 @@ public class AccountFormController {
                     .ifPresent(typeBox::setValue);
         }
         numberField.setText(account.getAccountNumber());
+        // The type's number rule may have changed since: the old number is then refused by the field, so say it
+        String oldNumber = account.getAccountNumber();
+        if (oldNumber != null && !oldNumber.isBlank() && !oldNumber.equals(numberField.getText())) {
+            form.error(numberField, I18n.get("accounts.error.old_number", oldNumber));
+        }
         openingField.setText(account.getOpeningBalance().stripTrailingZeros().toPlainString());
         boolean locked = service.hasTransactions(accountId);
         openingField.setDisable(locked);

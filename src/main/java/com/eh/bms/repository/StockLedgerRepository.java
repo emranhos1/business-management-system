@@ -103,6 +103,27 @@ public class StockLedgerRepository {
         return net == null ? BigDecimal.ZERO : net;
     }
 
+    /** Stock from the entries dated on or before this date. */
+    public BigDecimal netUpTo(Session session, long productId, LocalDate date) {
+        BigDecimal net = session.createSelectionQuery(
+                        "select coalesce(sum(s.quantity), 0) from StockLedger s where s.product.id = :id and s.date <= :date",
+                        BigDecimal.class)
+                .setParameter("id", productId)
+                .setParameter("date", date)
+                .getSingleResult();
+        return net == null ? BigDecimal.ZERO : net;
+    }
+
+    /** Each entry's signed quantity dated after this date, in (date, id) order. */
+    public List<BigDecimal> quantitiesAfter(Session session, long productId, LocalDate date) {
+        return session.createSelectionQuery(
+                        "select s.quantity from StockLedger s where s.product.id = :id and s.date > :date"
+                                + " order by s.date, s.id", BigDecimal.class)
+                .setParameter("id", productId)
+                .setParameter("date", date)
+                .getResultList();
+    }
+
     public void save(Session session, StockLedger entry) {
         session.persist(entry);
     }

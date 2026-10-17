@@ -12,8 +12,10 @@ import javafx.scene.layout.RowConstraints;
 import java.util.List;
 
 /**
- * Page with a main part on the left (62%) and a side part on the right (38%), e.g. Accounts + Account types.
- * When the page is narrower than {@link #STACK_BELOW}, the side part moves under the main part; each part
+ * Page with a main part on the left (62% by default, {@link #setMainPercent}) and a side part on the right,
+ * e.g. Accounts + Account types; Settings uses 50/50 for its two equal cards.
+ * When the page is narrower than {@link #STACK_BELOW}, or a part would get less than its own minimum width,
+ * the side part moves under the main part; each part
  * then keeps at least {@link #PART_MIN_HEIGHT} so its table stays usable, and the page scrolls (main.fxml
  * puts every page in a ScrollPane).
  * <pre>{@code
@@ -33,6 +35,8 @@ public class TwoColumnLayout extends GridPane {
 
     /** Null until the first arrange, so it always runs once. */
     private Boolean stacked;
+    /** Width share (%) of the main part side by side; the side part gets the rest. */
+    private double mainPercent = 62;
 
     public TwoColumnLayout() {
         setHgap(GAP);
@@ -44,8 +48,19 @@ public class TwoColumnLayout extends GridPane {
         });
     }
 
+    public double getMainPercent() {
+        return mainPercent;
+    }
+
+    /** FXML: {@code <TwoColumnLayout mainPercent="50">} for two equal parts. */
+    public void setMainPercent(double mainPercent) {
+        this.mainPercent = mainPercent;
+        stacked = null;
+        arrange();
+    }
+
     private void arrange() {
-        boolean stack = getWidth() > 0 && getWidth() < STACK_BELOW;
+        boolean stack = getWidth() > 0 && (getWidth() < STACK_BELOW || !partsFitSideBySide());
         if (stacked != null && stacked == stack) {
             return;
         }
@@ -57,7 +72,7 @@ public class TwoColumnLayout extends GridPane {
             getColumnConstraints().add(column(100));
             getRowConstraints().addAll(row(), row());
         } else {
-            getColumnConstraints().addAll(column(62), column(38));
+            getColumnConstraints().addAll(column(mainPercent), column(100 - mainPercent));
             getRowConstraints().add(row());
         }
         for (int i = 0; i < getChildren().size(); i++) {
@@ -72,6 +87,33 @@ public class TwoColumnLayout extends GridPane {
                 p.requestLayout();
             }
         });
+    }
+
+    /** True if each part gets at least its own minimum width in its share of the current width. */
+    private boolean partsFitSideBySide() {
+        List<Node> parts = getManagedChildren();
+        double room = getWidth() - snappedLeftInset() - snappedRightInset() - Math.max(0, parts.size() - 1) * getHgap();
+        double[] shares = {mainPercent / 100, (100 - mainPercent) / 100};
+        for (int i = 0; i < parts.size() && i < shares.length; i++) {
+            if (parts.get(i).minWidth(-1) > room * shares[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The parts can always stack, so the page never has to be wider than its widest part. (Side by side, the
+     * minimum would be both parts together: a page narrower than that would be pushed wider than the window,
+     * cutting off the side part, instead of stacking.)
+     */
+    @Override
+    protected double computeMinWidth(double height) {
+        double width = 0;
+        for (Node part : getManagedChildren()) {
+            width = Math.max(width, part.minWidth(-1));
+        }
+        return snappedLeftInset() + width + snappedRightInset();
     }
 
     /**

@@ -75,6 +75,7 @@ public class ProductFormController {
     @FXML private Label skuError;
     @FXML private ComboBox<Unit> unitBox;
     @FXML private Label unitError;
+    @FXML private Label packLockedHint;
     /** First item is null = no secondary unit (shown as "None"). */
     @FXML private ComboBox<Unit> secondaryUnitBox;
     @FXML private Label secondaryUnitError;
@@ -183,11 +184,14 @@ public class ProductFormController {
     /** Fills the form for editing; call before showing. Leave it uncalled to add a new product. */
     public void edit(Product product) {
         productId = product.getId();
+        boolean used = !service.canDelete(productId);
         // Delete only a record nothing uses (and the user may delete)
-        boolean deletable = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.DELETE)
-                && service.canDelete(productId);
+        boolean deletable = !used && UserSession.isLoggedIn()
+                && UserSession.get().can(AppModule.PRODUCT, Action.DELETE);
         deleteButton.setVisible(deletable);
         deleteButton.setManaged(deletable);
+        // Stock is kept in the main unit: once used, the pack cannot change
+        lockPack(used);
         nameBnField.setText(product.getName());
         nameEnField.setText(product.getNameEn());
         if (product.getCategory() != null) {
@@ -216,6 +220,18 @@ public class ProductFormController {
         edit(product);
         productId = null;
         skuField.clear();
+        // A copy is a new product: nothing to delete, and its pack is free to change
+        deleteButton.setVisible(false);
+        deleteButton.setManaged(false);
+        lockPack(false);
+    }
+
+    private void lockPack(boolean locked) {
+        unitBox.setDisable(locked);
+        secondaryUnitBox.setDisable(locked);
+        conversionField.setDisable(locked);
+        packLockedHint.setVisible(locked);
+        packLockedHint.setManaged(locked);
     }
 
     /** True if the user saved; the list then reloads. */
@@ -306,7 +322,8 @@ public class ProductFormController {
         String nameBn = text(nameBnField);
         String nameEn = text(nameEnField);
         ProductCategory category = categoryBox.getValue();
-        String sku = text(skuField);
+        // Bangla digits are saved as 0-9, so the code is found whichever digits are typed in a search
+        String sku = InputFilters.toAsciiDigits(text(skuField));
         Unit unit = unitBox.getValue();
         Unit secondaryUnit = secondaryUnitBox.getValue();
         String conversionText = text(conversionField);
@@ -374,6 +391,10 @@ public class ProductFormController {
                     saved = true;
                     close();
                     Notifier.success(I18n.get("msg.saved"));
+                }
+                case PACK_LOCKED -> {
+                    form.error(unitBox, I18n.get("products.pack_locked"));
+                    form.focusFirstError();
                 }
             }
         } catch (RuntimeException e) {

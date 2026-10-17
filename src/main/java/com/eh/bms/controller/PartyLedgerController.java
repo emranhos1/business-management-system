@@ -1,6 +1,7 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.Party;
+import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.service.PartyLedgerService;
 import com.eh.bms.service.PartyLedgerService.LedgerRow;
 import com.eh.bms.service.PartyLedgerService.Summary;
@@ -98,11 +99,18 @@ public class PartyLedgerController {
 
     /** What the line is (e.g. "টাকা পেলাম (ক্যাশ)"), plus the user's note. */
     static String details(LedgerRow r) {
-        String what = I18n.get("party.ledger.type." + r.type().name());
+        // Goods sent back to a supplier read differently from goods a customer brought back
+        String what = r.purchase() && r.type() == PartyLedgerType.RETURN ? I18n.get("party.ledger.type.RETURN_OUT")
+                : I18n.get("party.ledger.type." + r.type().name());
         if (r.account() != null) {
             what = I18n.get("party.ledger.via", what, I18n.pick(r.account().getName(), r.account().getNameEn()));
         }
-        return r.note() == null ? what : what + " — " + r.note();
+        String note = r.note();
+        // A purchase's memo no. ("#3") must not look like a sale's: "ক্রয় মেমো #3"
+        if (r.purchase() && note != null && note.startsWith("#")) {
+            note = I18n.get("ledger.purchase_memo_note", note);
+        }
+        return note == null ? what : what + " — " + note;
     }
 
     @FXML

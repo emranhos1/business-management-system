@@ -2,6 +2,7 @@ package com.eh.bms.service;
 
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
+import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
@@ -32,9 +33,13 @@ import java.util.Objects;
  */
 public class PartyLedgerService {
 
-    /** One ledger line. {@code account} is set for money paid or received (the account it went through). */
+    /**
+     * One ledger line. {@code account} is set for money paid or received (the account it went through);
+     * {@code purchase} is true for a line of a purchase (goods, return or money), so its memo no. is not taken
+     * for a sale's.
+     */
     public record LedgerRow(long id, LocalDate date, PartyLedgerType type, BigDecimal debit, BigDecimal credit,
-                            BigDecimal balance, Account account, String note) {
+                            BigDecimal balance, Account account, boolean purchase, String note) {
         /** What we gave, or null. */
         public BigDecimal gave() {
             return debit.signum() > 0 ? debit : null;
@@ -119,7 +124,8 @@ public class PartyLedgerService {
                 AccountTransaction t = isMoney(l.getType()) && l.getReferenceId() != null
                         ? accountEntries.get(l.getReferenceId()) : null;
                 rows.add(new LedgerRow(l.getId(), l.getDate(), l.getType(), l.getDebit(), l.getCredit(), balance,
-                        t == null ? null : t.getAccount(), l.getNote()));
+                        t == null ? null : t.getAccount(),
+                        isPurchase(l, t), l.getNote()));
                 balance = balance.subtract(l.getDebit().subtract(l.getCredit()));
             }
             return new PageResult<>(rows, total);
@@ -162,6 +168,13 @@ public class PartyLedgerService {
             throw new IllegalStateException("Party not found: " + partyId);
         }
         return party;
+    }
+
+    /** A purchase's line: the goods, goods sent back (we gave them: debit), or money for a purchase. */
+    private static boolean isPurchase(PartyLedger l, AccountTransaction money) {
+        return l.getType() == PartyLedgerType.PURCHASE
+                || (l.getType() == PartyLedgerType.RETURN && l.getDebit().signum() > 0)
+                || (money != null && money.getSource() == AccountTransactionSource.PURCHASE);
     }
 
     /** Entries for money paid or received; their {@code reference_id} is the account ledger entry. */

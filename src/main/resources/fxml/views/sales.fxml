@@ -7,7 +7,7 @@
 <PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
           fx:controller="com.eh.bms.controller.SalesController"
           fx:id="tabs" tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
-    <Tab text="%sale.tab.new">
+    <Tab fx:id="entryTab" text="%sale.tab.new">
         <fx:include fx:id="entry" source="sale-entry.fxml"/>
     </Tab>
     <Tab fx:id="listTab" text="%sale.tab.list">

@@ -61,6 +61,8 @@ public class SearchPicker<T> {
         this.text = text;
         this.listText = listText;
         menu.setAutoHide(true);
+        // Own colours: the list would otherwise take the field's pink error colours
+        menu.getStyleClass().add("picker-menu");
         pause.setOnFinished(e -> showMatches());
         field.textProperty().addListener((obs, old, now) -> {
             if (picking) {

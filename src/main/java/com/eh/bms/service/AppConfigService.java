@@ -1,7 +1,6 @@
 package com.eh.bms.service;
 
 import com.eh.bms.model.AppConfigEntry;
-import com.eh.bms.model.AppModule;
 import com.eh.bms.repository.AppConfigRepository;
 import com.eh.bms.util.TransactionHelper;
 
@@ -18,6 +17,7 @@ public class AppConfigService {
     public static final String DEFAULT_LANGUAGE = "default_language";
     public static final String LOW_STOCK_DEFAULT = "low_stock_default";
     public static final String DATE_FORMAT = "date_format";
+    public static final String TIME_FORMAT = "time_format";
     public static final String ITEMS_PER_PAGE = "items_per_page";
     public static final String AUTO_BACKUP = "auto_backup";
     /** Folder for files the user adds (logo, images, documents). Missing = {@code AppPaths.dataDir()}. */
@@ -77,7 +77,7 @@ public class AppConfigService {
                     entry.setConfigKey(key);
                     entry.setConfigValue(value);
                     repository.save(session, entry);
-                    auditService.created(session, AppModule.SETTINGS, entry.getId(), key + "=" + value);
+                    auditService.created(session, "APP_CONFIG", entry.getId(), key + "=" + value);
                     continue;
                 }
                 String old = entry.getConfigValue();
@@ -85,7 +85,7 @@ public class AppConfigService {
                     continue;
                 }
                 entry.setConfigValue(value);
-                auditService.updated(session, AppModule.SETTINGS, entry.getId(), key + "=" + old, key + "=" + value);
+                auditService.updated(session, "APP_CONFIG", entry.getId(), key + "=" + old, key + "=" + value);
             }
         });
     }

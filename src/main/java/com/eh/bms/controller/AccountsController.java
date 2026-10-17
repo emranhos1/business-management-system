@@ -120,19 +120,22 @@ public class AccountsController {
         ledger.show(selected);
         Stage stage = WindowManager.dialog(root,
                 I18n.get("ledger.title", I18n.pick(selected.getName(), selected.getNameEn())));
-        // A list window: resizable and a fixed starting size, not a form that fits its content
-        stage.getProperties().remove(WindowManager.AUTO_SIZE);
-        stage.setResizable(true);
-        stage.setWidth(LEDGER_WIDTH);
-        stage.setHeight(LEDGER_HEIGHT);
+        // A list window: a fixed size (capped to the screen), not a form that fits its content
+        WindowManager.sizeListWindow(stage, LEDGER_WIDTH, LEDGER_HEIGHT);
         stage.showAndWait();
     }
 
     /** Transfer popup (7.4); balances reload after a transfer. */
     @FXML
     private void onTransfer() {
-        if (service.all().size() < 2) {
-            Notifier.error(I18n.get("transfer.need_two"));
+        try {
+            if (service.all().size() < 2) {
+                Notifier.error(I18n.get("transfer.need_two"));
+                return;
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not load accounts", e);
+            Notifier.error(I18n.get("msg.error"));
             return;
         }
         FXMLLoader loader = WindowManager.loader(TRANSFER_FXML);

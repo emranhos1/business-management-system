@@ -4,7 +4,6 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
-import com.eh.bms.model.AppModule;
 import com.eh.bms.util.TransactionHelper;
 
 import java.math.BigDecimal;
@@ -41,7 +40,7 @@ public class TransferService {
             Account from = first.getId() == fromId ? first : second;
             Account to = from == first ? second : first;
 
-            BigDecimal available = ledger.balance(session, fromId);
+            BigDecimal available = ledger.availableOn(session, fromId, date);
             if (available.compareTo(amount) < 0) {
                 return new Result(Status.INSUFFICIENT_BALANCE, available);
             }
@@ -52,7 +51,7 @@ public class TransferService {
                     AccountTransactionSource.TRANSFER, out.getId(), note);
             out.setReferenceId(in.getId());
 
-            auditService.created(session, AppModule.ACCOUNT, out.getId(),
+            auditService.created(session, "TRANSFER", out.getId(),
                     "transfer from=" + from.getNameEn() + " to=" + to.getNameEn()
                             + " amount=" + amount.toPlainString() + " date=" + date
                             + (note == null || note.isBlank() ? "" : " note=" + note.trim()));

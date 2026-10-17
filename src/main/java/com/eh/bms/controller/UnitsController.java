@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Units list ("Units" tab on the right of the Products page, 8.4): add; edit by the row button or double-click; delete in the edit form. */
+/** Units list ("Units" tab on the right of the Products page, 8.4): add; edit by the row button (no double-click: there is no view); delete in the edit form. */
 public class UnitsController {
 
     private static final Logger LOG = Logger.getLogger(UnitsController.class.getName());

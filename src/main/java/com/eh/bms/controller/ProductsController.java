@@ -178,6 +178,11 @@ public class ProductsController {
     }
 
     @FXML
+    private void onClearSearch() {
+        searchField.clear();
+    }
+
+    @FXML
     private void onAdd() {
         try {
             if (categoryService.all().isEmpty()) {

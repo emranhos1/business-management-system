@@ -2,7 +2,6 @@ package com.eh.bms.service;
 
 import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.AccountType;
-import com.eh.bms.model.AppModule;
 import com.eh.bms.repository.AccountTypeRepository;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
@@ -54,7 +53,7 @@ public class AccountTypeService {
                 t.setNameEn(nameEn);
                 t.setNumberRule(data.numberRule());
                 repository.save(session, t);
-                auditService.created(session, AppModule.ACCOUNT, t.getId(), describe(t));
+                auditService.created(session, "ACCOUNT_TYPE", t.getId(), describe(t));
                 return SaveResult.SAVED;
             }
             AccountType t = repository.findById(session, data.id())
@@ -66,7 +65,7 @@ public class AccountTypeService {
             t.setNumberRule(data.numberRule());
             String now = describe(t);
             if (!Objects.equals(old, now)) {
-                auditService.updated(session, AppModule.ACCOUNT, t.getId(), old, now);
+                auditService.updated(session, "ACCOUNT_TYPE", t.getId(), old, now);
             }
             return SaveResult.SAVED;
         });
@@ -89,7 +88,7 @@ public class AccountTypeService {
             }
             String old = describe(t);
             repository.delete(session, t);
-            auditService.deleted(session, AppModule.ACCOUNT, id, old);
+            auditService.deleted(session, "ACCOUNT_TYPE", id, old);
             return DeleteResult.DELETED;
         });
     }

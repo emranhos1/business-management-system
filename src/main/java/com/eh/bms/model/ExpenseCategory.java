@@ -12,9 +12,13 @@ import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/** An expense category the user manages (13.1): Bangla and English name, and its type. */
 @Entity
 @Table(name = "expense_categories",
-        uniqueConstraints = @UniqueConstraint(name = "uk_expense_categories_name", columnNames = "name"))
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_expense_categories_name", columnNames = "name"),
+                @UniqueConstraint(name = "uk_expense_categories_name_en", columnNames = "name_en")
+        })
 public class ExpenseCategory {
 
     @Id
@@ -23,6 +27,10 @@ public class ExpenseCategory {
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
+
+    /** English name (doc/CLAUDE.md: master data has a Bangla and an English name). */
+    @Column(name = "name_en", length = 100)
+    private String nameEn;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR) // VARCHAR, not MySQL ENUM
@@ -39,6 +47,14 @@ public class ExpenseCategory {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
     }
 
     public ExpenseCategoryType getType() {

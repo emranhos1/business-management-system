@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Tab?>
 <?import com.eh.bms.util.PageTabs?>
 <?import javafx.scene.control.TextField?>
@@ -11,19 +12,20 @@
      stock value (9.7); the last two have their own FXML + controller. -->
 <PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
          fx:controller="com.eh.bms.controller.StockController"
-         tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
+         fx:id="tabs" tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
     <Tab text="%stock.tab.current">
         <VBox spacing="12">
-            <HBox styleClass="toolbar" alignment="CENTER_LEFT">
+            <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
                 <TextField fx:id="searchField" promptText="%stock.search.prompt" prefWidth="320" minWidth="160"/>
+                <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
             </HBox>
             <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
     </Tab>
-    <Tab text="%stock.tab.low">
-        <fx:include source="low-stock.fxml"/>
+    <Tab fx:id="lowTab" text="%stock.tab.low">
+        <fx:include fx:id="low" source="low-stock.fxml"/>
     </Tab>
-    <Tab text="%stock.tab.value">
-        <fx:include source="stock-valuation.fxml"/>
+    <Tab fx:id="valueTab" text="%stock.tab.value">
+        <fx:include fx:id="value" source="stock-valuation.fxml"/>
     </Tab>
 </PageTabs>

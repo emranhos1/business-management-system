@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Product categories list (right side of the Products page, 8.1): add; edit by the row button or double-click; delete in the edit form. */
+/** Product categories list (right side of the Products page, 8.1): add; edit by the row button (no double-click: there is no view); delete in the edit form. */
 public class ProductCategoriesController {
 
     private static final Logger LOG = Logger.getLogger(ProductCategoriesController.class.getName());

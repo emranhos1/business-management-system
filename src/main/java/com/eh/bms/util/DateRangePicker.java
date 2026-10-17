@@ -19,6 +19,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * One field for a date range (e.g. a list filter): click it, pick the first day, then the last day on the
@@ -38,6 +40,8 @@ public class DateRangePicker extends StackPane {
     /** First day picked, waiting for the last one; null when not picking. */
     private LocalDate start;
     private Runnable onChange = () -> { };
+    /** Every day cell the calendar made (it reuses them month to month). */
+    private final List<DateCell> cells = new ArrayList<>();
 
     public DateRangePicker() {
         getStyleClass().add("picker-box");
@@ -50,7 +54,7 @@ public class DateRangePicker extends StackPane {
         getChildren().addAll(field, arrow);
 
         DateUtil.apply(calendar);
-        refreshCells();
+        dayCells();
         Node days = new DatePickerSkin(calendar).getPopupContent();
         hint.getStyleClass().add("field-hint");
         popupBox = new VBox(6, hint, days);
@@ -113,12 +117,12 @@ public class DateRangePicker extends StackPane {
         start = null;
         hint.setText(I18n.get("date_range.pick_first"));
         calendar.setValue(from.get() == null ? LocalDate.now() : from.get());
-        refreshCells();
         // The popup is its own window: give it the app's styles (range colours)
         if (getScene() != null) {
             popupBox.getStylesheets().setAll(getScene().getStylesheets());
         }
         Bounds b = field.localToScreen(field.getBoundsInLocal());
+        refreshCells();
         popup.show(field, b.getMinX(), b.getMaxY() + 2);
     }
 
@@ -145,35 +149,46 @@ public class DateRangePicker extends StackPane {
         onChange.run();
     }
 
-    /** A new cell factory makes the calendar redraw its days with the range marked. */
+    /**
+     * Marks the range on the calendar's days. The calendar does not redraw its days when the range changes,
+     * so every day cell is kept and recoloured here (set once, in the constructor, via {@link #dayCells()}).
+     */
     private void refreshCells() {
-        calendar.setDayCellFactory(p -> new DateCell() {
-            {
-                addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-                    if (getItem() != null && !isEmpty()) {
-                        pick(getItem());
-                    }
-                });
-            }
+        cells.forEach(this::mark);
+    }
 
-            @Override
-            public void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                getStyleClass().removeAll("range-day", "range-edge");
-                if (empty || date == null) {
-                    return;
+    /** Day cells that pick on click and are coloured by {@link #mark}. */
+    private void dayCells() {
+        calendar.setDayCellFactory(p -> {
+            DateCell cell = new DateCell() {
+                @Override
+                public void updateItem(LocalDate date, boolean empty) {
+                    super.updateItem(date, empty);
+                    mark(this);
                 }
-                LocalDate a = start != null ? start : from.get();
-                LocalDate b = start != null ? start : to.get();
-                if (a == null || b == null) {
-                    return;
+            };
+            cell.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+                if (cell.getItem() != null && !cell.isEmpty()) {
+                    pick(cell.getItem());
                 }
-                if (date.equals(a) || date.equals(b)) {
-                    getStyleClass().add("range-edge");
-                } else if (date.isAfter(a) && date.isBefore(b)) {
-                    getStyleClass().add("range-day");
-                }
-            }
+            });
+            cells.add(cell);
+            return cell;
         });
+    }
+
+    private void mark(DateCell cell) {
+        cell.getStyleClass().removeAll("range-day", "range-edge");
+        LocalDate date = cell.getItem();
+        LocalDate a = start != null ? start : from.get();
+        LocalDate b = start != null ? start : to.get();
+        if (cell.isEmpty() || date == null || a == null || b == null) {
+            return;
+        }
+        if (date.equals(a) || date.equals(b)) {
+            cell.getStyleClass().add("range-edge");
+        } else if (date.isAfter(a) && date.isBefore(b)) {
+            cell.getStyleClass().add("range-day");
+        }
     }
 }

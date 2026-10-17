@@ -63,6 +63,7 @@ public class PartiesController {
     private PaginatedTable<Party> inactiveTable;
     /** Current balance of the parties on the shown page. */
     private Map<Long, BigDecimal> balances = Map.of();
+    private Map<Long, BigDecimal> inactiveBalances = Map.of();
 
     @FXML
     private void initialize() {
@@ -95,6 +96,9 @@ public class PartiesController {
         inactiveTable = new PaginatedTable<>((offset, limit) -> loadPage(PartyStatus.INACTIVE, offset, limit));
         TableView<Party> inactiveView = inactiveTable.getTableView();
         addInfoColumns(inactiveView);
+        inactiveView.getColumns().add(TableHelper.styledColumn("party.col.balance",
+                p -> PartyText.balance(inactiveBalances.get(p.getId())),
+                p -> PartyText.balanceStyle(inactiveBalances.get(p.getId()))));
         List<RowAction<Party>> inactiveActions = new ArrayList<>();
         if (canEdit) {
             inactiveActions.add(new RowAction<>(Icons.EDIT, "button.edit", "party.form.edit_title", "icon-edit", this::openForm));
@@ -134,6 +138,8 @@ public class PartiesController {
             PageResult<Party> page = service.page(status, searchField.getText(), offset, limit);
             if (status == PartyStatus.ACTIVE) {
                 balances = ledgerService.balances(page.items());
+            } else {
+                inactiveBalances = ledgerService.balances(page.items());
             }
             return page;
         } catch (RuntimeException e) {
@@ -146,6 +152,11 @@ public class PartiesController {
     private void reloadBoth() {
         table.reload();
         inactiveTable.reload();
+    }
+
+    @FXML
+    private void onClearSearch() {
+        searchField.clear();
     }
 
     @FXML
@@ -189,11 +200,8 @@ public class PartiesController {
         PartyLedgerController ledger = loader.getController();
         ledger.show(party);
         Stage stage = WindowManager.dialog(root, I18n.get("party.ledger.title", PartyText.nameWithPhone(party)));
-        // A list window: resizable and a fixed starting size, not a form that fits its content
-        stage.getProperties().remove(WindowManager.AUTO_SIZE);
-        stage.setResizable(true);
-        stage.setWidth(LEDGER_WIDTH);
-        stage.setHeight(LEDGER_HEIGHT);
+        // A list window: a fixed size (capped to the screen), not a form that fits its content
+        WindowManager.sizeListWindow(stage, LEDGER_WIDTH, LEDGER_HEIGHT);
         stage.showAndWait();
     }
 

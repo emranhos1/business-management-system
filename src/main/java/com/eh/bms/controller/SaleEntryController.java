@@ -1,6 +1,7 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.Account;
+import com.eh.bms.model.AppModule;
 import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyStatus;
@@ -12,6 +13,7 @@ import com.eh.bms.service.PartyLedgerService;
 import com.eh.bms.service.PartyService;
 import com.eh.bms.service.ProductService;
 import com.eh.bms.service.SaleService;
+import com.eh.bms.service.UserSession;
 import com.eh.bms.service.SaleService.LineData;
 import com.eh.bms.service.SaleService.PaymentData;
 import com.eh.bms.service.SaleService.SaleData;
@@ -19,6 +21,7 @@ import com.eh.bms.service.SaleService.Totals;
 import com.eh.bms.service.StockLedgerService;
 import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.Dialogs;
+import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Icons;
 import com.eh.bms.util.InputFilters;
@@ -30,6 +33,7 @@ import com.eh.bms.util.SearchPicker;
 import com.eh.bms.util.TableHelper;
 import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.UnitUtil;
+import com.eh.bms.util.UnsavedWork;
 import com.eh.bms.util.WindowManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -47,6 +51,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 
@@ -118,10 +123,15 @@ public class SaleEntryController {
             InputFilters.decimal(amount, MONEY_INT, MONEY_DEC);
             amount.setPromptText("0");
             amount.setPrefWidth(130);
+            // On a narrow window the account list gets narrower; the amount and the remove button keep their size
+            amount.setMinWidth(Region.USE_PREF_SIZE);
+            account.setMinWidth(80);
             amount.textProperty().addListener((obs, old, now) -> recalc());
             Button remove = new Button();
             remove.setGraphic(Icons.of(Icons.REMOVE));
             remove.getStyleClass().addAll("icon-button", "icon-out");
+            remove.setTooltip(new javafx.scene.control.Tooltip(I18n.get("sale.remove_payment")));
+            remove.setMinWidth(Region.USE_PREF_SIZE);
             node = new HBox(6, account, amount, remove);
             remove.setOnAction(e -> {
                 payments.remove(this);
@@ -189,6 +199,8 @@ public class SaleEntryController {
     private BigDecimal vatPercent = BigDecimal.ZERO;
     /** The price last filled in from the product; a typed price is the user's own. */
     private BigDecimal filledPrice;
+    /** Red box + message under the customer, mobile and date fields; focus goes to the first error. */
+    private FormValidator form;
     private Runnable onSaved = () -> { };
 
     @FXML
@@ -200,6 +212,11 @@ public class SaleEntryController {
         InputFilters.digits(walkInPhoneField, 11);
         InputFilters.maxLength(walkInNameField, 100);
         InputFilters.maxLength(noteField, 150);
+        form = new FormValidator()
+                .add(partyField, partyError)
+                .add(walkInPhoneField, partyError)
+                .add(datePicker, dateError);
+        FormValidator.hideWhenEmpty(stockHint, linePreview, lineError, billDiscountError, paymentError, extraHint);
         DateUtil.apply(datePicker);
         datePicker.setValue(LocalDate.now());
         datePicker.setDayCellFactory(p -> new DateCell() {
@@ -277,24 +294,36 @@ public class SaleEntryController {
             recalc();
         });
         TableHelper.fitColumns(itemsTable);
+        // Before the language switches (the page reloads): offer to finish this sale first
+        UnsavedWork.register(itemsTable, this::hasUnsavedSale, this::confirmSale);
 
         billDiscountField.textProperty().addListener((obs, old, now) -> recalc());
         vatCheck.selectedProperty().addListener((obs, old, now) -> recalc());
 
         try {
-            vatPercent = saleService.vatPercent();
             accounts = accountService.all();
         } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not load sale settings", e);
+            LOG.log(Level.SEVERE, "Could not load accounts", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+        loadVat();
+        addPaymentRow(defaultAccount());
+        recalc();
+    }
+
+    /** VAT % from Settings; the VAT tick shows only when it is above 0, unticked (tick it to add VAT). */
+    private void loadVat() {
+        try {
+            vatPercent = saleService.vatPercent();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not load VAT", e);
             Notifier.error(I18n.get("msg.error"));
         }
         boolean hasVat = vatPercent.signum() > 0;
         vatCheck.setText(I18n.get("sale.vat", UnitUtil.number(vatPercent)));
-        vatCheck.setSelected(hasVat);
+        vatCheck.setSelected(false);
         vatCheck.setVisible(hasVat);
         vatLabel.setVisible(hasVat);
-        addPaymentRow(defaultAccount());
-        recalc();
     }
 
     /** Runs after a sale is saved (the sales list reloads). */
@@ -314,7 +343,7 @@ public class SaleEntryController {
     }
 
     private void onPartyChanged() {
-        partyError.setText("");
+        form.clear(partyField);
         Party p = isWalkIn() ? null : partyPicker.getValue();
         if (p == null) {
             partyInfo.setVisible(false);
@@ -616,8 +645,22 @@ public class SaleEntryController {
 
     @FXML
     private void onConfirm() {
-        partyError.setText("");
-        dateError.setText("");
+        confirmSale();
+    }
+
+    /** Something typed that a reload would lose: item lines, a line being entered, or money received. */
+    private boolean hasUnsavedSale() {
+        return !lines.isEmpty() || productPicker.getValue() != null || !blank(qtyField)
+                || payments.stream().anyMatch(r -> r.value() != null && r.value().signum() > 0);
+    }
+
+    private static boolean blank(TextField field) {
+        return field.getText() == null || field.getText().isBlank();
+    }
+
+    /** Checks and saves the sale; true only if it was saved. */
+    private boolean confirmSale() {
+        form.clearAll();
         lineError.setText("");
         boolean ok = true;
         if (lines.isEmpty()) {
@@ -625,20 +668,20 @@ public class SaleEntryController {
             ok = false;
         }
         if (!isWalkIn() && partyPicker.getValue() == null) {
-            partyError.setText(I18n.get("sale.error.no_customer"));
+            form.error(partyField, I18n.get("sale.error.no_customer"));
             ok = false;
         }
         String walkInPhone = walkInPhoneField.getText() == null ? "" : walkInPhoneField.getText().trim();
         if (isWalkIn() && !walkInPhone.isEmpty() && walkInPhone.length() != 11) {
-            partyError.setText(I18n.get("msg.invalid_mobile"));
+            form.error(walkInPhoneField, I18n.get("msg.invalid_mobile"));
             ok = false;
         }
         LocalDate date = readDate();
         if (date == null) {
-            dateError.setText(I18n.get("party.error.date"));
+            form.error(datePicker, I18n.get("party.error.date"));
             ok = false;
         } else if (date.isAfter(LocalDate.now())) {
-            dateError.setText(I18n.get("party.error.future_date"));
+            form.error(datePicker, I18n.get("party.error.future_date"));
             ok = false;
         }
         Totals t = totals();
@@ -666,17 +709,23 @@ public class SaleEntryController {
         if (!ok) {
             // Shows the live checks' messages too (bill discount, overpaid)
             recalc();
-            return;
+            form.focusFirstError();
+            return false;
         }
 
         // A walk-in customer cannot owe: offer to add them as a party (name and mobile filled in)
         if (due.signum() > 0 && isWalkIn()) {
+            // Adding a party needs its own permission; without it the walk-in must pay in full
+            if (!(UserSession.isLoggedIn() && UserSession.get().can(AppModule.PARTY, UserSession.Action.CREATE))) {
+                paymentError.setText(I18n.get("sale.error.walk_in_due", MoneyUtil.format(due)));
+                return false;
+            }
             if (!Dialogs.confirm(I18n.get("sale.walk_in.due_question", MoneyUtil.format(due)))) {
-                return;
+                return false;
             }
             Optional<Party> added = addWalkInAsParty();
             if (added.isEmpty()) {
-                return;
+                return false;
             }
             walkInCheck.setSelected(false);
             partyPicker.setValue(added.get());
@@ -688,12 +737,13 @@ public class SaleEntryController {
             question = I18n.get("sale.extra_to_ledger", MoneyUtil.format(due.negate())) + "\n" + question;
         }
         if (!Dialogs.confirm(question)) {
-            return;
+            return false;
         }
         Party party = isWalkIn() ? null : partyPicker.getValue();
         SaleData data = new SaleData(party == null ? null : party.getId(),
                 isWalkIn() ? walkInNameField.getText() : null, isWalkIn() ? walkInPhone : null, date,
-                lines.stream().map(Line::data).toList(), amountOf(billDiscountField), vatCheck.isSelected(),
+                lines.stream().map(Line::data).toList(), amountOf(billDiscountField),
+                vatCheck.isSelected() ? vatPercent : BigDecimal.ZERO,
                 paymentData, noteField.getText());
         try {
             SaleService.Result result = saleService.confirm(data);
@@ -702,22 +752,33 @@ public class SaleEntryController {
                     Notifier.success(I18n.get("sale.done", I18n.digits(String.valueOf(result.memoNo()))));
                     reset();
                     onSaved.run();
+                    return true;
                 }
                 case INSUFFICIENT_STOCK -> {
                     Line line = lines.stream().filter(l -> l.product().getId().equals(result.productId()))
                             .findFirst().orElse(null);
-                    lineError.setText(line == null ? I18n.get("msg.error") : I18n.get("sale.error.stock_line",
+                    lineError.setText(line == null ? I18n.get("msg.error") : I18n.get("sale.error.stock_line_on",
                             UnitUtil.productName(line.product()), UnitUtil.quantityText(result.available(), line.product())));
                 }
-                case DUE_WITHOUT_PARTY -> partyError.setText(I18n.get("sale.error.no_customer"));
-                case OVERPAID -> paymentError.setText(I18n.get("sale.error.overpaid", ""));
-                case INACTIVE_PARTY -> partyError.setText(I18n.get("sale.error.inactive_party"));
+                case DUE_WITHOUT_PARTY -> form.error(partyField, I18n.get("sale.error.no_customer"));
+                case OVERPAID -> paymentError.setText(I18n.get("sale.error.overpaid", MoneyUtil.format(due.negate())));
+                case INACTIVE_PARTY -> form.error(partyField, I18n.get("sale.error.inactive_party"));
+                case VAT_CHANGED -> {
+                    // Settings changed meanwhile: show the new VAT (keeping the user's tick) and let the user
+                    // check the total again
+                    boolean ticked = vatCheck.isSelected();
+                    loadVat();
+                    vatCheck.setSelected(ticked && vatPercent.signum() > 0);
+                    recalc();
+                    paymentError.setText(I18n.get("sale.error.vat_changed"));
+                }
                 default -> Notifier.error(I18n.get("msg.error"));
             }
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save sale", e);
             Notifier.error(I18n.get("msg.error"));
         }
+        return false;
     }
 
     /** Opens the new-party form with the walk-in name and mobile; the party, once saved. */
@@ -760,7 +821,7 @@ public class SaleEntryController {
         payments.clear();
         paymentsBox.getChildren().clear();
         addPaymentRow(defaultAccount());
-        partyError.setText("");
+        form.clearAll();
         lineError.setText("");
         paymentError.setText("");
         recalc();

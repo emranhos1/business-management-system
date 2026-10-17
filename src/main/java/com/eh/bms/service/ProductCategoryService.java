@@ -1,6 +1,5 @@
 package com.eh.bms.service;
 
-import com.eh.bms.model.AppModule;
 import com.eh.bms.model.ProductCategory;
 import com.eh.bms.repository.ProductCategoryRepository;
 import com.eh.bms.util.PageResult;
@@ -59,7 +58,7 @@ public class ProductCategoryService {
                 c.setName(nameBn);
                 c.setNameEn(nameEn);
                 repository.save(session, c);
-                auditService.created(session, AppModule.PRODUCT, c.getId(), describe(c));
+                auditService.created(session, "PRODUCT_CATEGORY", c.getId(), describe(c));
                 return SaveResult.SAVED;
             }
             ProductCategory c = repository.findById(session, data.id())
@@ -69,7 +68,7 @@ public class ProductCategoryService {
             c.setNameEn(nameEn);
             String now = describe(c);
             if (!Objects.equals(old, now)) {
-                auditService.updated(session, AppModule.PRODUCT, c.getId(), old, now);
+                auditService.updated(session, "PRODUCT_CATEGORY", c.getId(), old, now);
             }
             return SaveResult.SAVED;
         });
@@ -92,7 +91,7 @@ public class ProductCategoryService {
             }
             String old = describe(c);
             repository.delete(session, c);
-            auditService.deleted(session, AppModule.PRODUCT, id, old);
+            auditService.deleted(session, "PRODUCT_CATEGORY", id, old);
             return DeleteResult.DELETED;
         });
     }

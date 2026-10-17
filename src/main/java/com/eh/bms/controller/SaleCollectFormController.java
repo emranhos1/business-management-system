@@ -63,7 +63,9 @@ public class SaleCollectFormController {
             @Override
             public void updateItem(LocalDate date, boolean empty) {
                 super.updateItem(date, empty);
-                setDisable(empty || date.isAfter(LocalDate.now()));
+                // Only from the sale's date up to today
+                setDisable(empty || date.isAfter(LocalDate.now())
+                        || (sale != null && date.isBefore(sale.getDate())));
             }
         });
         accountBox.setConverter(new StringConverter<>() {
@@ -134,6 +136,8 @@ public class SaleCollectFormController {
             form.error(datePicker, I18n.get("party.error.date"));
         } else if (date.isAfter(LocalDate.now())) {
             form.error(datePicker, I18n.get("party.error.future_date"));
+        } else if (date.isBefore(sale.getDate())) {
+            form.error(datePicker, I18n.get("sale.error.collect_before_sale"));
         }
         if (form.hasErrors()) {
             form.focusFirstError();
@@ -155,6 +159,7 @@ public class SaleCollectFormController {
                     form.error(amountField, I18n.get("sale.error.more_than_due", MoneyUtil.format(r.available())));
                     form.focusFirstError();
                 }
+                case INACTIVE_PARTY -> Notifier.error(I18n.get("sale.error.inactive_party"));
                 default -> Notifier.error(I18n.get("msg.error"));
             }
         } catch (RuntimeException e) {

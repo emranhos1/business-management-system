@@ -47,4 +47,40 @@ public class SchemaRepository {
         }
         return dropped;
     }
+
+    /** hbm2ddl update never drops an index the entities no longer name. Drops it if it is there; safe every startup. */
+    public boolean dropIndex(Session session, String table, String index) {
+        Long found = session.createNativeQuery(
+                        "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE()"
+                                + " AND table_name = :table AND index_name = :index", Long.class)
+                .setParameter("table", table)
+                .setParameter("index", index)
+                .getSingleResult();
+        if (found == 0) {
+            return false;
+        }
+        session.createNativeMutationQuery("ALTER TABLE `" + table + "` DROP INDEX `" + index + "`").executeUpdate();
+        return true;
+    }
+
+    /**
+     * hbm2ddl update never changes an existing column's size. Widens a NOT NULL DECIMAL column to
+     * {@code DECIMAL(precision, scale)} when it has fewer decimal places. Values are kept. Safe every startup.
+     */
+    public boolean widenDecimal(Session session, String table, String column, int precision, int scale) {
+        // CAST: numeric_scale is BIGINT UNSIGNED; Hibernate needs a concrete result type (Long), not Number
+        List<Long> found = session.createNativeQuery(
+                        "SELECT CAST(numeric_scale AS SIGNED) FROM information_schema.columns"
+                                + " WHERE table_schema = DATABASE() AND table_name = :table AND column_name = :column",
+                        Long.class)
+                .setParameter("table", table)
+                .setParameter("column", column)
+                .getResultList();
+        if (found.isEmpty() || found.get(0) == null || found.get(0).intValue() >= scale) {
+            return false;
+        }
+        session.createNativeMutationQuery("ALTER TABLE `" + table + "` MODIFY `" + column + "` DECIMAL("
+                + precision + "," + scale + ") NOT NULL").executeUpdate();
+        return true;
+    }
 }

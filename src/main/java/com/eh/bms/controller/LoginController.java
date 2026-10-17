@@ -2,6 +2,7 @@ package com.eh.bms.controller;
 
 import com.eh.bms.service.AuthService;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.WindowManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -38,6 +39,9 @@ public class LoginController {
         usernameField.promptTextProperty().bind(I18n.bind("login.username"));
         passwordField.promptTextProperty().bind(I18n.bind("login.password"));
         loginButton.textProperty().bind(I18n.bind("login.button"));
+        // users.username is 50 long; BCrypt reads at most 72 bytes of a password
+        InputFilters.maxLength(usernameField, 50);
+        InputFilters.maxLength(passwordField, 72);
 
         Platform.runLater(usernameField::requestFocus);
     }

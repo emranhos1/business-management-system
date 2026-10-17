@@ -160,25 +160,25 @@ Depends on: Stages 7, 9, 10
 | 11.7 | Sales return (restores stock, adjusts party ledger) | Stock and balance correct | ✅ |
 | 11.8 | Memo serial number saved with each sale (`transactions.memo_no`, never reused); sales list searchable by it | Each sale gets the next number; search by number finds it | ✅ |
 
-## Stage 12 — Purchases
+## Stage 12 — Purchases ✅
 Depends on: Stages 7, 9, 10
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 12.1 | Purchase screen: supplier + item rows | Rows add/remove correctly | [ ] |
-| 12.2 | Confirm purchase (atomic): stock, avg cost, party, account | All update; failure rolls back | [ ] |
-| 12.3 | Purchase history with filters (date/supplier/product) | Filters return right rows | [ ] |
-| 12.4 | Purchase return (deducts stock, adjusts supplier ledger) | Stock and balance correct | [ ] |
+| 12.1 | Purchase screen: supplier + item rows | Rows add/remove correctly | ✅ |
+| 12.2 | Confirm purchase (atomic): stock, avg cost, party, account | All update; failure rolls back | ✅ |
+| 12.3 | Purchase history with filters (date/supplier/product) | Filters return right rows | ✅ |
+| 12.4 | Purchase return (deducts stock, adjusts supplier ledger) | Stock and balance correct | ✅ |
 
-## Stage 13 — Expenses
+## Stage 13 — Expenses ✅
 Depends on: Stage 7
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 13.1 | Expense category CRUD | Create/edit/delete works | [ ] |
-| 13.2 | Add expense (atomic account debit) | Expense saved, account reduced | [ ] |
-| 13.3 | Expense history with date filter | Filter returns right rows | [ ] |
-| 13.4 | Monthly expense summary by category | Totals match | [ ] |
+| 13.1 | Expense category CRUD | Create/edit/delete works | ✅ |
+| 13.2 | Add expense (atomic account debit) | Expense saved, account reduced | ✅ |
+| 13.3 | Expense history with date filter | Filter returns right rows | ✅ |
+| 13.4 | Monthly expense summary by category | Totals match | ✅ |
 
 ## Stage 14 — Employees & Payroll
 Depends on: Stage 5 (14.4 also needs Stage 7)

@@ -10,6 +10,7 @@ import com.eh.bms.model.AttendanceStatus;
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.EmployeeStatus;
+import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.ExpenseCategoryType;
 import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.model.PartyStatus;
@@ -29,6 +30,7 @@ import com.eh.bms.model.UserStatus;
 import com.eh.bms.repository.AccountTypeRepository;
 import com.eh.bms.repository.AppConfigRepository;
 import com.eh.bms.repository.BusinessProfileRepository;
+import com.eh.bms.repository.ExpenseCategoryRepository;
 import com.eh.bms.repository.PermissionRepository;
 import com.eh.bms.repository.ProductRepository;
 import com.eh.bms.repository.SchemaRepository;
@@ -39,6 +41,7 @@ import org.mindrot.jbcrypt.BCrypt;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -58,6 +61,7 @@ public final class DataSeeder {
             {"low_stock_default", "10", "Default minimum stock alert"},
             {"profit_method", "average", "Profit calculation method"},
             {"date_format", "dd/MM/yyyy", "Date display format"},
+            {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
             {"auto_backup", "false", "Auto backup on app close"}
     };
@@ -89,6 +93,16 @@ public final class DataSeeder {
     private static final ProductRepository PRODUCT_REPO = new ProductRepository();
     private static final UnitRepository UNIT_REPO = new UnitRepository();
     private static final SchemaRepository SCHEMA_REPO = new SchemaRepository();
+    private static final ExpenseCategoryRepository EXPENSE_CATEGORY_REPO = new ExpenseCategoryRepository();
+
+    /** Common expense categories: Bangla name, English name, type. */
+    private static final Object[][] DEFAULT_EXPENSE_CATEGORIES = {
+            {"দোকান ভাড়া", "Shop rent", ExpenseCategoryType.OVERHEAD},
+            {"বিদ্যুৎ বিল", "Electricity bill", ExpenseCategoryType.OVERHEAD},
+            {"পরিবহন / গাড়ি ভাড়া", "Transport", ExpenseCategoryType.OPERATIONAL},
+            {"চা-নাস্তা", "Tea and snacks", ExpenseCategoryType.OPERATIONAL},
+            {"অন্যান্য", "Others", ExpenseCategoryType.OTHER}
+    };
 
     /** Bangla name, English name, number rule. */
     private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
@@ -135,6 +149,9 @@ public final class DataSeeder {
     }
 
     public static void run() {
+        // First: drop outdated enum CHECKs, so rows with a new enum value (new role, module, ...) can be inserted
+        migrateEnumChecks();
+        migrateColumnSizes();
         seedAppConfig();
         seedBusinessProfile();
         seedAdmin();
@@ -143,8 +160,34 @@ public final class DataSeeder {
         migrateAccountTypes();
         seedUnits();
         migrateProductUnits();
-        migrateEnumChecks();
+        seedExpenseCategories();
+        migrateIndexes();
         migrateData();
+    }
+
+    /** Common expense categories, only when the table is empty (the user may delete or rename them later). */
+    static void seedExpenseCategories() {
+        TransactionHelper.runInTransaction(session -> {
+            if (EXPENSE_CATEGORY_REPO.count(session) == 0) {
+                for (Object[] row : DEFAULT_EXPENSE_CATEGORIES) {
+                    ExpenseCategory c = new ExpenseCategory();
+                    c.setName((String) row[0]);
+                    c.setNameEn((String) row[1]);
+                    c.setType((ExpenseCategoryType) row[2]);
+                    EXPENSE_CATEGORY_REPO.save(session, c);
+                }
+                LOG.info("Seeded expense_categories");
+            }
+        });
+    }
+
+    /** Indexes replaced by a newer one; idx_expenses_date_category also serves date-only searches. */
+    static void migrateIndexes() {
+        TransactionHelper.runInTransaction(session -> {
+            if (SCHEMA_REPO.dropIndex(session, "expenses", "idx_expenses_date")) {
+                LOG.info("Dropped idx_expenses_date (replaced by idx_expenses_date_category)");
+            }
+        });
     }
 
     /**
@@ -190,6 +233,17 @@ public final class DataSeeder {
         });
     }
 
+    /** Stock cost moved from 2 to 4 decimals (averages kept paisa-exact); widens existing columns once. */
+    static void migrateColumnSizes() {
+        TransactionHelper.runInTransaction(session -> {
+            for (String column : new String[]{"unit_price", "avg_cost_after"}) {
+                if (SCHEMA_REPO.widenDecimal(session, "stock_ledger", column, 16, 4)) {
+                    LOG.info("Widened stock_ledger." + column + " to DECIMAL(16,4)");
+                }
+            }
+        });
+    }
+
     /** Common units, only when the table is empty (the user may delete or rename them later). */
     static void seedUnits() {
         TransactionHelper.runInTransaction(session -> {
@@ -225,7 +279,14 @@ public final class DataSeeder {
     static void migrateData() {
         TransactionHelper.runInTransaction(session -> {
             AppConfigEntry version = APP_CONFIG_REPO.findByKey(session, DATA_VERSION).orElse(null);
-            int done = version == null ? 0 : Integer.parseInt(version.getConfigValue().trim());
+            int done;
+            try {
+                done = version == null ? 0 : Integer.parseInt(version.getConfigValue().trim());
+            } catch (NumberFormatException e) {
+                // A broken value must not stop the app, and re-running old fixes could undo the admin's changes
+                LOG.severe("Bad data_version in app_config: " + version.getConfigValue() + "; data fixes skipped");
+                return;
+            }
 
             if (done < 1) {
                 // v1: cashier no longer sees the Accounts module
@@ -334,20 +395,43 @@ public final class DataSeeder {
         });
     }
 
-    /** Creates the admin from the active profile yml when no admin user exists. */
+    /**
+     * When no active admin exists (none yet, or all made inactive = locked out), makes the yml admin usable:
+     * reactivates it if it exists as an inactive admin, otherwise creates it. Never takes over another
+     * user's username and never creates an admin with a blank password (it could not log in).
+     */
     static void seedAdmin() {
         AppConfig cfg = AppConfig.get();
         TransactionHelper.runInTransaction(session -> {
-            if (!USER_REPO.existsByRole(session, UserRole.ADMIN)) {
-                User u = new User();
-                u.setName(cfg.getString("admin.name"));
-                u.setUsername(cfg.getString("admin.username"));
-                u.setPasswordHash(BCrypt.hashpw(cfg.getString("admin.password"), BCrypt.gensalt()));
-                u.setRole(UserRole.ADMIN);
-                u.setStatus(UserStatus.ACTIVE);
-                USER_REPO.save(session, u);
-                LOG.info("Seeded admin user: " + u.getUsername());
+            if (USER_REPO.existsActiveByRole(session, UserRole.ADMIN)) {
+                return;
             }
+            String username = cfg.getString("admin.username").trim();
+            String password = cfg.getString("admin.password", "");
+            Optional<User> existing = USER_REPO.findByUsername(session, username);
+            if (existing.isPresent()) {
+                User u = existing.get();
+                if (u.getRole() == UserRole.ADMIN) {
+                    u.setStatus(UserStatus.ACTIVE);
+                    LOG.warning("No active admin: reactivated admin user " + username);
+                } else {
+                    LOG.warning("No active admin, and the yml admin username '" + username
+                            + "' belongs to a non-admin user; nothing changed");
+                }
+                return;
+            }
+            if (username.isEmpty() || password.isBlank()) {
+                LOG.warning("No active admin, and admin.username / admin.password in the yml is blank; no admin created");
+                return;
+            }
+            User u = new User();
+            u.setName(cfg.getString("admin.name"));
+            u.setUsername(username);
+            u.setPasswordHash(BCrypt.hashpw(password, BCrypt.gensalt()));
+            u.setRole(UserRole.ADMIN);
+            u.setStatus(UserStatus.ACTIVE);
+            USER_REPO.save(session, u);
+            LOG.info("Seeded admin user: " + u.getUsername());
         });
     }
 

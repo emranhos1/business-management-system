@@ -194,7 +194,20 @@ public class SaleReturnFormController {
         BigDecimal value = value(quantities());
         valueLabel.setText(I18n.get("sale.return.value", MoneyUtil.format(value)));
         if (sale.getParty() == null) {
+            refundHint.setText(I18n.get("sale.return.refund_walk_in"));
             refundField.setText(value.signum() == 0 ? "" : value.stripTrailingZeros().toPlainString());
+        } else {
+            // What is still due is cleared first; only the rest can be paid back in money. While the goods only
+            // lower the due, no money can go back: the field is closed instead of offering ৳0
+            BigDecimal max = SaleService.maxRefund(value, sale.getDueAmount());
+            boolean dueOnly = sale.getDueAmount().signum() > 0 && max.signum() == 0;
+            if (dueOnly) {
+                refundField.clear();
+                form.clear(refundField);
+            }
+            refundField.setDisable(dueOnly);
+            refundHint.setText(dueOnly ? I18n.get("sale.return.off_due")
+                    : I18n.get("sale.return.refund_party_max", MoneyUtil.format(max)));
         }
         showAccountRow();
     }
@@ -230,8 +243,9 @@ public class SaleReturnFormController {
         BigDecimal value = value(quantities);
         BigDecimal refund = number(refundField);
         BigDecimal back = refund == null ? BigDecimal.ZERO : refund;
-        if (back.compareTo(value) > 0) {
-            form.error(refundField, I18n.get("sale.error.refund_too_much", MoneyUtil.format(value)));
+        BigDecimal maxRefund = SaleService.maxRefund(value, sale.getDueAmount());
+        if (back.compareTo(maxRefund) > 0) {
+            form.error(refundField, I18n.get("sale.error.refund_too_much", MoneyUtil.format(maxRefund)));
         }
         Account account = accountBox.getValue();
         if (back.signum() > 0 && account == null) {
@@ -262,10 +276,19 @@ public class SaleReturnFormController {
                     Notifier.success(I18n.get("sale.return.done", MoneyUtil.format(r.available())));
                 }
                 case INSUFFICIENT_BALANCE -> {
-                    form.error(refundField, I18n.get("party.error.insufficient", MoneyUtil.format(r.available())));
+                    form.error(refundField, I18n.get("msg.max_out_on_date", MoneyUtil.format(r.available())));
                     form.focusFirstError();
                 }
-                case TOO_MUCH -> linesError.setText(I18n.get("sale.error.back_too_much"));
+                // With a product: more goods than are left; without: more money than may go back
+                case TOO_MUCH -> {
+                    if (r.productId() == null) {
+                        form.error(refundField, I18n.get("sale.error.refund_too_much", MoneyUtil.format(r.available())));
+                        form.focusFirstError();
+                    } else {
+                        linesError.setText(I18n.get("sale.error.back_too_much"));
+                    }
+                }
+                case INACTIVE_PARTY -> Notifier.error(I18n.get("sale.error.inactive_party"));
                 case DUE_WITHOUT_PARTY -> form.error(refundField,
                         I18n.get("sale.return.refund_walk_in"));
                 default -> Notifier.error(I18n.get("msg.error"));

@@ -15,14 +15,16 @@ import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PermissionUtil;
+import com.eh.bms.util.UnsavedWork;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.TabPane;
+import javafx.scene.layout.Region;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.DirectoryChooser;
@@ -37,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -66,10 +69,7 @@ public class SettingsController {
     private static final int LOW_STOCK_MAX = 1_000_000;
     private static final String LOGO_PREFIX = "logo-";
 
-    /** The page reloads when the language changes; this keeps the open tab. */
-    private static int lastTab;
-
-    @FXML private TabPane tabPane;
+    @FXML private Region root;
 
     @FXML private TextField nameField;
     @FXML private Label nameError;
@@ -92,6 +92,8 @@ public class SettingsController {
 
     @FXML private ComboBox<String> dateFormatBox;
     @FXML private Label dateExampleLabel;
+    @FXML private ComboBox<String> timeFormatBox;
+    @FXML private Label timeExampleLabel;
     @FXML private TextField itemsPerPageField;
     @FXML private Label itemsPerPageError;
     @FXML private TextField lowStockField;
@@ -111,6 +113,9 @@ public class SettingsController {
     private String logoPath;
     /** Logo file chosen but not yet saved; copied into the storage folder only on Save. */
     private Path pendingLogo;
+    /** Form contents as last loaded or saved; a difference means unsaved changes. */
+    private String profileSnapshot = "";
+    private String appSnapshot = "";
     /** Storage folder in use, and the one shown (chosen but not yet saved). */
     private Path currentStorage;
     private Path chosenStorage;
@@ -147,12 +152,19 @@ public class SettingsController {
 
         dateFormatBox.getItems().setAll(DateUtil.PATTERNS);
         dateFormatBox.valueProperty().addListener((obs, old, pattern) -> showDateExample(pattern));
+        timeFormatBox.getItems().setAll(DateUtil.TIME_PATTERNS);
+        timeFormatBox.setConverter(converter(p -> I18n.get(DateUtil.TIME_24.equals(p) ? "settings.time.24" : "settings.time.12")));
+        timeFormatBox.valueProperty().addListener((obs, old, pattern) -> showTimeExample(pattern));
 
         loadProfile();
         loadAppConfig();
-
-        tabPane.getSelectionModel().select(lastTab);
-        tabPane.getSelectionModel().selectedIndexProperty().addListener((obs, old, index) -> lastTab = index.intValue());
+        profileSnapshot = profileState();
+        appSnapshot = appState();
+        // Before the language switches (the page reloads), offer to save what was changed
+        UnsavedWork.register(root,
+                () -> !profileState().equals(profileSnapshot) || !appState().equals(appSnapshot),
+                () -> (profileState().equals(profileSnapshot) || saveProfile())
+                        && (appState().equals(appSnapshot) || saveApp()));
     }
 
     // ---- Business profile (6.1) ----
@@ -178,6 +190,11 @@ public class SettingsController {
 
     @FXML
     private void onSaveProfile() {
+        saveProfile();
+    }
+
+    /** True if the profile was saved (false: errors shown, the user said No, or it failed). */
+    private boolean saveProfile() {
         profileForm.clearAll();
         String name = text(nameField);
         String phone = text(phoneField);
@@ -215,10 +232,10 @@ public class SettingsController {
         if (profileForm.hasErrors()) {
             profileForm.focusFirstError();
             Notifier.error(I18n.get("msg.form_has_errors"));
-            return;
+            return false;
         }
         if (!Dialogs.confirmSave()) {
-            return;
+            return false;
         }
 
         int fyStart = fyStartBox.getValue() == null ? 7 : fyStartBox.getValue();
@@ -236,7 +253,7 @@ public class SettingsController {
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save business profile", e);
             Notifier.error(I18n.get("msg.error"));
-            return;
+            return false;
         }
         if (source != null) {
             // 2) only after the DB save, copy the logo into the storage folder
@@ -246,7 +263,7 @@ public class SettingsController {
                 LOG.log(Level.SEVERE, "Could not copy logo; restoring the old logo in the DB", e);
                 restoreLogo(data, savedLogo);
                 Notifier.error(I18n.get("msg.error"));
-                return;
+                return false;
             }
         }
         logoPath = newLogo;
@@ -255,6 +272,8 @@ public class SettingsController {
         showLogo();
         MoneyUtil.reload(); // currency symbol may have changed
         Notifier.success(I18n.get("msg.saved"));
+        profileSnapshot = profileState();
+        return true;
     }
 
     /** Puts the previous logo back in the DB when the new file could not be copied. */
@@ -275,7 +294,7 @@ public class SettingsController {
         chooser.setTitle(I18n.get("settings.logo.choose"));
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter(I18n.get("settings.logo.files"), "*.png", "*.jpg", "*.jpeg"));
-        File file = chooser.showOpenDialog(tabPane.getScene().getWindow());
+        File file = chooser.showOpenDialog(root.getScene().getWindow());
         if (file != null) {
             pendingLogo = file.toPath();
             showLogo();
@@ -308,7 +327,9 @@ public class SettingsController {
     /** Stored path for a new logo copy: {@code images/logo-<time>.<ext>}. */
     private static String newLogoName(Path source) {
         String name = source.getFileName().toString();
-        String ext = name.substring(name.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        int dot = name.lastIndexOf('.');
+        // A file with no extension (the chooser lets one through) is still an image: keep it as .png
+        String ext = dot < 0 ? ".png" : name.substring(dot).toLowerCase(Locale.ROOT);
         return AppPaths.toStored(AppPaths.imagesDir().resolve(LOGO_PREFIX + System.currentTimeMillis() + ext));
     }
 
@@ -337,6 +358,8 @@ public class SettingsController {
                 dateFormatBox.getItems().add(pattern);
             }
             dateFormatBox.setValue(pattern);
+            String time = configService.getString(AppConfigService.TIME_FORMAT, DateUtil.DEFAULT_TIME_PATTERN);
+            timeFormatBox.setValue(DateUtil.TIME_PATTERNS.contains(time) ? time : DateUtil.DEFAULT_TIME_PATTERN);
             itemsPerPageField.setText(String.valueOf(configService.getInt(AppConfigService.ITEMS_PER_PAGE, 20)));
             lowStockField.setText(String.valueOf(configService.getInt(AppConfigService.LOW_STOCK_DEFAULT, 10)));
             autoBackupBox.setSelected(configService.getBoolean(AppConfigService.AUTO_BACKUP, false));
@@ -356,7 +379,7 @@ public class SettingsController {
         if (chosenStorage != null && Files.isDirectory(chosenStorage)) {
             chooser.setInitialDirectory(chosenStorage.toFile());
         }
-        File dir = chooser.showDialog(tabPane.getScene().getWindow());
+        File dir = chooser.showDialog(root.getScene().getWindow());
         if (dir != null) {
             chosenStorage = dir.toPath().toAbsolutePath();
             storageField.setText(chosenStorage.toString());
@@ -365,25 +388,35 @@ public class SettingsController {
 
     @FXML
     private void onSaveApp() {
+        saveApp();
+    }
+
+    /** True if the app settings were saved. */
+    private boolean saveApp() {
         appForm.clearAll();
         Integer items = intInRange(itemsPerPageField, "settings.items_per_page", ITEMS_MIN, ITEMS_MAX);
         Integer lowStock = intInRange(lowStockField, "settings.low_stock_default", 0, LOW_STOCK_MAX);
         boolean storageChanged = chosenStorage != null && !chosenStorage.equals(currentStorage);
-        if (storageChanged && !AppPaths.isWritable(chosenStorage)) {
+        if (storageChanged && chosenStorage.startsWith(currentStorage)) {
+            // Copying a folder into itself would copy it again and again (images/images/...)
+            appForm.error(storageField, I18n.get("settings.storage.inside_current"));
+        } else if (storageChanged && !AppPaths.isWritable(chosenStorage)) {
             appForm.error(storageField, I18n.get("settings.storage.not_writable"));
         }
         if (appForm.hasErrors()) {
             appForm.focusFirstError();
             Notifier.error(I18n.get("msg.form_has_errors"));
-            return;
+            return false;
         }
         if (!Dialogs.confirmSave()) {
-            return;
+            return false;
         }
 
         String pattern = dateFormatBox.getValue() == null ? DateUtil.DEFAULT_PATTERN : dateFormatBox.getValue();
         Map<String, String> values = new LinkedHashMap<>();
         values.put(AppConfigService.DATE_FORMAT, pattern);
+        String timePattern = timeFormatBox.getValue() == null ? DateUtil.DEFAULT_TIME_PATTERN : timeFormatBox.getValue();
+        values.put(AppConfigService.TIME_FORMAT, timePattern);
         values.put(AppConfigService.ITEMS_PER_PAGE, String.valueOf(items));
         values.put(AppConfigService.LOW_STOCK_DEFAULT, String.valueOf(lowStock));
         values.put(AppConfigService.AUTO_BACKUP, String.valueOf(autoBackupBox.isSelected()));
@@ -394,13 +427,29 @@ public class SettingsController {
                 values.put(AppConfigService.STORAGE_PATH, chosenStorage.toString());
             }
             configService.setAll(values);
-            DateUtil.use(pattern);
+            DateUtil.use(pattern, timePattern);
             currentStorage = chosenStorage;
             Notifier.success(I18n.get(storageChanged ? "settings.storage.moved" : "msg.saved"));
+            appSnapshot = appState();
+            return true;
         } catch (IOException | RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save app settings", e);
             Notifier.error(I18n.get("msg.error"));
+            return false;
         }
+    }
+
+    /** Everything the business profile form shows, to tell whether it was changed since the last load/save. */
+    private String profileState() {
+        return String.join("\u0001", text(nameField), text(addressField), text(phoneField), text(emailField),
+                text(currencyField), text(currencyEnField), text(vatField), String.valueOf(fyStartBox.getValue()),
+                String.valueOf(pendingLogo), String.valueOf(logoPath));
+    }
+
+    private String appState() {
+        return String.join("\u0001", String.valueOf(dateFormatBox.getValue()), String.valueOf(timeFormatBox.getValue()),
+                text(itemsPerPageField),
+                text(lowStockField), String.valueOf(autoBackupBox.isSelected()), String.valueOf(chosenStorage));
     }
 
     /** Whole number from a digits-only field; shows the field error and returns null if empty or out of range. */
@@ -427,9 +476,15 @@ public class SettingsController {
         dateExampleLabel.setText(I18n.get("settings.date_example", I18n.digits(example)));
     }
 
+    private void showTimeExample(String pattern) {
+        String example = pattern == null ? ""
+                : DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH).format(LocalTime.now());
+        timeExampleLabel.setText(pattern == null ? "" : I18n.get("settings.date_example", I18n.digits(example)));
+    }
+
     // ---- helpers ----
 
-    private static String text(TextField field) {
+    private static String text(TextInputControl field) {
         return field.getText() == null ? "" : field.getText().trim();
     }
 

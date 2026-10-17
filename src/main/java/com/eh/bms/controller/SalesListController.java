@@ -3,7 +3,7 @@ package com.eh.bms.controller;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.BusinessTransaction;
 import com.eh.bms.model.Product;
-import com.eh.bms.repository.SaleRepository.Filter;
+import com.eh.bms.repository.TransactionRepository.Filter;
 import com.eh.bms.service.ProductService;
 import com.eh.bms.service.SaleService;
 import com.eh.bms.service.UserSession;
@@ -48,8 +48,8 @@ public class SalesListController {
     private static final String VIEW_FXML = "/fxml/views/sale-view.fxml";
     private static final String COLLECT_FXML = "/fxml/views/sale-collect-form.fxml";
     private static final String RETURN_FXML = "/fxml/views/sale-return-form.fxml";
-    private static final double VIEW_WIDTH = 900;
-    private static final double VIEW_HEIGHT = 640;
+    private static final double VIEW_WIDTH = 960;
+    private static final double VIEW_HEIGHT = 720;
 
     @FXML private TextField searchField;
     @FXML private DateRangePicker dateRange;
@@ -158,11 +158,8 @@ public class SalesListController {
         SaleViewController controller = loader.getController();
         controller.show(sale.getId());
         Stage stage = WindowManager.dialog(root, I18n.get("sale.view.title", memoText(sale)));
-        // A list window: resizable and a fixed starting size, not a form that fits its content
-        stage.getProperties().remove(WindowManager.AUTO_SIZE);
-        stage.setResizable(true);
-        stage.setWidth(VIEW_WIDTH);
-        stage.setHeight(VIEW_HEIGHT);
+        // A list window: a fixed size (capped to the screen), not a form that fits its content
+        WindowManager.sizeListWindow(stage, VIEW_WIDTH, VIEW_HEIGHT);
         stage.showAndWait();
     }
 
@@ -184,10 +181,7 @@ public class SalesListController {
     }
 
     private void openReturn(BusinessTransaction sale) {
-        if (sale.getReturnedAmount().compareTo(sale.getGrandTotal()) >= 0) {
-            Notifier.error(I18n.get("sale.error.all_returned"));
-            return;
-        }
+        // The form itself says "all returned" when no goods are left (a 0-total sale can still return goods)
         FXMLLoader loader = WindowManager.loader(RETURN_FXML);
         Parent root = WindowManager.load(loader, RETURN_FXML);
         SaleReturnFormController form = loader.getController();

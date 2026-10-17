@@ -20,8 +20,8 @@ import com.eh.bms.model.TransactionStatus;
 import com.eh.bms.model.TransactionType;
 import com.eh.bms.model.Unit;
 import com.eh.bms.repository.BusinessProfileRepository;
-import com.eh.bms.repository.SaleRepository;
-import com.eh.bms.repository.SaleRepository.Filter;
+import com.eh.bms.repository.TransactionRepository;
+import com.eh.bms.repository.TransactionRepository.Filter;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
 import jakarta.persistence.LockModeType;
@@ -64,10 +64,11 @@ public class SaleService {
 
     /**
      * The whole sale. {@code partyId} null = walk-in customer ({@code walkInName}/{@code walkInPhone} optional,
-     * kept in the note; no due allowed).
+     * kept in the note; no due allowed). {@code vatPercent} is the VAT % the screen used (0 = no VAT); it must
+     * still be the one in Settings, so the saved total is the total the user saw.
      */
     public record SaleData(Long partyId, String walkInName, String walkInPhone, LocalDate date,
-                           List<LineData> lines, BigDecimal billDiscount, boolean withVat,
+                           List<LineData> lines, BigDecimal billDiscount, BigDecimal vatPercent,
                            List<PaymentData> payments, String note) {
     }
 
@@ -75,7 +76,9 @@ public class SaleService {
     }
 
     public enum Status {
-        DONE, INSUFFICIENT_STOCK, INSUFFICIENT_BALANCE, DUE_WITHOUT_PARTY, OVERPAID, INACTIVE_PARTY, TOO_MUCH
+        DONE, INSUFFICIENT_STOCK, INSUFFICIENT_BALANCE, DUE_WITHOUT_PARTY, OVERPAID, INACTIVE_PARTY, TOO_MUCH,
+        /** The VAT % in Settings changed while the sale was being typed. */
+        VAT_CHANGED
     }
 
     /**
@@ -97,7 +100,7 @@ public class SaleService {
     public record SaleDetails(BusinessTransaction sale, List<TransactionItem> items, List<TransactionPayment> payments) {
     }
 
-    private final SaleRepository repository = new SaleRepository();
+    private final TransactionRepository repository = new TransactionRepository(TransactionType.SALE);
     private final BusinessProfileRepository profileRepository = new BusinessProfileRepository();
     private final StockLedgerService stockLedger = new StockLedgerService();
     private final PartyLedgerService partyLedger = new PartyLedgerService();
@@ -134,7 +137,7 @@ public class SaleService {
 
     public SaleDetails details(long saleId) {
         return TransactionHelper.inTransaction(session -> {
-            BusinessTransaction sale = repository.findSale(session, saleId)
+            BusinessTransaction sale = repository.find(session, saleId)
                     .orElseThrow(() -> new IllegalStateException("Sale not found: " + saleId));
             return new SaleDetails(sale, repository.items(session, saleId), repository.payments(session, saleId));
         });
@@ -165,8 +168,11 @@ public class SaleService {
                         return Result.of(Status.INACTIVE_PARTY);
                     }
                 }
-                Totals totals = totals(data.lines(), data.billDiscount(),
-                        data.withVat() ? vatPercent(session) : BigDecimal.ZERO);
+                BigDecimal vat = data.vatPercent() == null ? BigDecimal.ZERO : data.vatPercent();
+                if (vat.signum() > 0 && vat.compareTo(vatPercent(session)) != 0) {
+                    return Result.of(Status.VAT_CHANGED);
+                }
+                Totals totals = totals(data.lines(), data.billDiscount(), vat);
                 BigDecimal paid = BigDecimal.ZERO;
                 for (PaymentData p : data.payments()) {
                     paid = paid.add(p.amount());
@@ -183,7 +189,7 @@ public class SaleService {
                     return Result.of(Status.DUE_WITHOUT_PARTY);
                 }
 
-                long memoNo = repository.nextMemoNo(session, TransactionType.SALE);
+                long memoNo = repository.nextMemoNo(session);
                 String memoNote = "#" + memoNo;
                 BusinessTransaction sale = new BusinessTransaction();
                 sale.setType(TransactionType.SALE);
@@ -226,11 +232,18 @@ public class SaleService {
                 }
 
                 // What the customer owes for the goods, then what they paid
-                if (party != null) {
+                // A free sale (total 0) moves only stock; the ledger takes no 0 row
+                if (party != null && totals.grandTotal().signum() > 0) {
                     partyLedger.post(session, party.getId(), data.date(), PartyLedgerType.SALE,
                             totals.grandTotal(), BigDecimal.ZERO, sale.getId(), memoNote);
                 }
-                List<PaymentData> payments = new ArrayList<>(data.payments());
+                // One payment row per account, even if the same account was sent twice
+                Map<Long, BigDecimal> byAccount = new java.util.TreeMap<>();
+                for (PaymentData p : data.payments()) {
+                    byAccount.merge(p.accountId(), p.amount(), BigDecimal::add);
+                }
+                List<PaymentData> payments = new ArrayList<>();
+                byAccount.forEach((accountId, amount) -> payments.add(new PaymentData(accountId, amount)));
                 payments.sort(Comparator.comparingLong(PaymentData::accountId));
                 PaymentMethod mainMethod = null;
                 BigDecimal toSale = salePaid;
@@ -271,6 +284,12 @@ public class SaleService {
         }
         return TransactionHelper.inTransaction(session -> {
             BusinessTransaction sale = lockSale(session, saleId);
+            if (isInactive(sale)) {
+                return Result.of(Status.INACTIVE_PARTY);
+            }
+            if (date.isBefore(sale.getDate())) {
+                throw new IllegalArgumentException("Installment date is before the sale date");
+            }
             if (sale.getDueAmount().compareTo(amount) < 0) {
                 return new Result(Status.TOO_MUCH, null, null, null, sale.getDueAmount());
             }
@@ -295,6 +314,9 @@ public class SaleService {
         try {
             return TransactionHelper.inTransaction(session -> {
                 BusinessTransaction sale = lockSale(session, saleId);
+                if (isInactive(sale)) {
+                    return Result.of(Status.INACTIVE_PARTY);
+                }
                 Party party = sale.getParty();
                 List<TransactionItem> items = repository.items(session, saleId);
                 items.sort(Comparator.comparingLong(i -> i.getProduct().getId()));
@@ -304,6 +326,7 @@ public class SaleService {
                 String memoNote = "#" + sale.getMemoNo() + (note == null || note.isBlank() ? "" : " — " + note.trim());
 
                 BigDecimal value = BigDecimal.ZERO;
+                boolean anyBack = false;
                 for (TransactionItem item : items) {
                     BigDecimal qty = quantities.get(item.getId());
                     if (qty == null || qty.signum() <= 0) {
@@ -318,25 +341,29 @@ public class SaleService {
                     stockLedger.post(session, item.getProduct().getId(), date, StockLedgerType.SALE_RETURN,
                             mainQty, null, null, sale.getId(), memoNote);
                     item.setReturnedQuantity(item.getReturnedQuantity().add(qty));
+                    anyBack = true;
                     value = value.add(qty.multiply(item.getUnitPrice().subtract(item.getDiscountPerUnit())));
                 }
                 value = value.multiply(factor).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
                 // Never more than what the sale is still worth (rounding on the last return)
-                value = value.min(sale.getGrandTotal().subtract(sale.getReturnedAmount()));
-                if (value.signum() <= 0) {
+                value = value.min(sale.getGrandTotal().subtract(sale.getReturnedAmount())).max(BigDecimal.ZERO);
+                if (!anyBack) {
                     throw new IllegalArgumentException("Nothing to return");
                 }
 
                 // Stock is already written above, so a refusal must roll back (Abort), not return
                 BigDecimal back = refund == null ? BigDecimal.ZERO : refund;
-                if (back.compareTo(value) > 0) {
-                    throw new Abort(new Result(Status.TOO_MUCH, null, null, null, value));
+                // The goods first clear what is still due; only money actually paid can go back
+                BigDecimal maxRefund = maxRefund(value, sale.getDueAmount());
+                if (back.compareTo(maxRefund) > 0) {
+                    throw new Abort(new Result(Status.TOO_MUCH, null, null, null, maxRefund));
                 }
                 if (party == null && back.compareTo(value) != 0) {
                     // A walk-in customer has no ledger: the whole value goes back in cash
                     throw new Abort(new Result(Status.DUE_WITHOUT_PARTY, null, null, null, value));
                 }
-                if (party != null) {
+                // Goods worth 0 (a free line) only come back to stock
+                if (party != null && value.signum() > 0) {
                     partyLedger.post(session, party.getId(), date, PartyLedgerType.RETURN,
                             BigDecimal.ZERO, value, sale.getId(), memoNote);
                 }
@@ -345,7 +372,7 @@ public class SaleService {
                         throw new IllegalArgumentException("Refund account is required");
                     }
                     Account account = accountLedger.lock(session, refundAccountId);
-                    BigDecimal available = accountLedger.balance(session, refundAccountId);
+                    BigDecimal available = accountLedger.availableOn(session, refundAccountId, date);
                     if (available.compareTo(back) < 0) {
                         throw new Abort(new Result(Status.INSUFFICIENT_BALANCE, null, null, refundAccountId, available));
                     }
@@ -411,7 +438,7 @@ public class SaleService {
 
     /** Locks the sale's party (if any) and then the sale row, in that order. */
     private BusinessTransaction lockSale(Session session, long saleId) {
-        BusinessTransaction sale = repository.findSale(session, saleId)
+        BusinessTransaction sale = repository.find(session, saleId)
                 .orElseThrow(() -> new IllegalStateException("Sale not found: " + saleId));
         if (sale.getParty() != null) {
             partyLedger.lock(session, sale.getParty().getId());
@@ -421,8 +448,18 @@ public class SaleService {
         return sale;
     }
 
+    /** An inactive party's ledger must not move (it is hidden from money screens); make it active first. */
+    private static boolean isInactive(BusinessTransaction sale) {
+        return sale.getParty() != null && sale.getParty().getStatus() == PartyStatus.INACTIVE;
+    }
+
+    /** Most money that can go back on a return worth {@code value}: the part above what is still due. */
+    public static BigDecimal maxRefund(BigDecimal value, BigDecimal due) {
+        return value.subtract(due).max(BigDecimal.ZERO);
+    }
+
     /** The unit must be the product's unit or its secondary unit. */
-    private static Unit unitOf(Product product, long unitId) {
+    static Unit unitOf(Product product, long unitId) {
         if (product.getUnit() != null && product.getUnit().getId() == unitId) {
             return product.getUnit();
         }
@@ -442,7 +479,7 @@ public class SaleService {
         return quantity.divide(product.getConversionFactor(), QTY_SCALE, RoundingMode.HALF_UP);
     }
 
-    private static PaymentMethod methodOf(Account account) {
+    static PaymentMethod methodOf(Account account) {
         AccountNumberRule rule = account.getType() == null ? AccountNumberRule.NONE : account.getType().getNumberRule();
         return switch (rule) {
             case NONE -> PaymentMethod.CASH;

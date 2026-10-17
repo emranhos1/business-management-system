@@ -201,10 +201,6 @@
     -fx-border-radius: 8;
 }
 
-.settings-tabs .tab-content-area {
-    -fx-padding: 16 0 0 0;
-}
-
 /* Tabs beside a page's main list (e.g. Products page: categories / units) */
 .side-tabs .tab-content-area {
     -fx-padding: 12 0 0 0;
@@ -216,8 +212,16 @@
     -fx-padding: 6 0 0 0;
 }
 
-.form-label.required {
+/* Every field name is bold; a required one gets a red asterisk after it (the icon follows the "required"
+   class, also when a page adds or removes it) */
+.form-label {
     -fx-font-weight: bold;
+}
+
+.form-label.required {
+    -fx-graphic: url("../icons/required.png");
+    -fx-content-display: right;
+    -fx-graphic-text-gap: 3;
 }
 
 .logo-box {
@@ -272,6 +276,15 @@
     -fx-border-color: #d64545;
     -fx-border-radius: 3;
     -fx-background-color: #fff5f5;
+}
+
+/* SearchPicker list: fixed colours, never the field's error colours */
+.context-menu.picker-menu {
+    -fx-control-inner-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-focus-color: #2563eb;
+    -fx-faint-focus-color: transparent;
 }
 
 .field-error {
@@ -484,11 +497,21 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 10, 0.1, 0, 3);
 }
 
-.date-cell.range-day {
-    -fx-background-color: #dbeafe;
+/* In the range list only the picked range is coloured: the calendar's own "selected" day (it opens on
+   today) must not look picked */
+.range-popup .date-cell.selected,
+.range-popup .date-cell:focused {
+    -fx-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1f2937;
 }
 
-.date-cell.range-edge {
+.range-popup .date-cell.range-day {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1f2937;
+}
+
+.range-popup .date-cell.range-edge {
     -fx-background-color: #2563eb;
     -fx-text-fill: #ffffff;
 }
@@ -596,12 +619,13 @@
     -fx-max-height: 36;
 }
 
-/* Every button the same width (Login fills its card instead) */
+/* Every button at least 140 wide; a longer label makes it wider instead of cutting the text to "..."
+   (Login fills its card instead). -1 = as wide as its label. */
 .save-button, .add-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-min-width: 140;
-    -fx-pref-width: 140;
-    -fx-max-width: 140;
+    -fx-pref-width: -1;
+    -fx-max-width: -1;
 }
 
 .save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
