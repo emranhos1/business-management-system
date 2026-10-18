@@ -30,6 +30,9 @@ public class AppConfigService {
     public static final String DATE_FORMAT = "date_format";
     public static final String TIME_FORMAT = "time_format";
     public static final String ITEMS_PER_PAGE = "items_per_page";
+    /** Rows per page of the dashboard tables (small, so the whole dashboard fits on one screen). */
+    public static final String DASHBOARD_ROWS = "dashboard_rows";
+    public static final int DASHBOARD_ROWS_DEFAULT = 5;
     public static final String AUTO_BACKUP = "auto_backup";
     /** Folder for files the user adds (logo, images, documents). Missing = {@code AppPaths.dataDir()}. */
     public static final String STORAGE_PATH = "storage_path";
@@ -77,6 +80,11 @@ public class AppConfigService {
     /** Rows per table page; at least 1. */
     public int itemsPerPage() {
         return Math.max(1, getInt(ITEMS_PER_PAGE, 20));
+    }
+
+    /** Rows per dashboard table page; at least 1. */
+    public int dashboardRows() {
+        return Math.max(1, getInt(DASHBOARD_ROWS, DASHBOARD_ROWS_DEFAULT));
     }
 
     /** "bn" or "en". */

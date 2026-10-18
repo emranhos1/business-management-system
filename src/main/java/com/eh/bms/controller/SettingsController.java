@@ -73,6 +73,8 @@ public class SettingsController {
     private static final int MOBILE_LENGTH = 11;
     private static final int ITEMS_MIN = 5;
     private static final int ITEMS_MAX = 200;
+    private static final int DASHBOARD_ROWS_MIN = 3;
+    private static final int DASHBOARD_ROWS_MAX = 50;
     private static final int LOW_STOCK_MAX = 1_000_000;
     private static final String LOGO_PREFIX = "logo-";
     /** Weekly off day ticks in the order shown: Saturday first, as the week starts in Bangladesh. */
@@ -106,6 +108,8 @@ public class SettingsController {
     @FXML private Label timeExampleLabel;
     @FXML private TextField itemsPerPageField;
     @FXML private Label itemsPerPageError;
+    @FXML private TextField dashboardRowsField;
+    @FXML private Label dashboardRowsError;
     @FXML private TextField lowStockField;
     @FXML private Label lowStockError;
     @FXML private CheckBox autoBackupBox;
@@ -150,6 +154,7 @@ public class SettingsController {
         InputFilters.maxLength(currencyEnField, 10);
         InputFilters.decimal(vatField, 3, 2);
         InputFilters.digits(itemsPerPageField, 3);
+        InputFilters.digits(dashboardRowsField, 2);
         InputFilters.digits(lowStockField, 7);
 
         profileForm = new FormValidator()
@@ -161,6 +166,7 @@ public class SettingsController {
                 .add(vatField, vatError);
         appForm = new FormValidator()
                 .add(itemsPerPageField, itemsPerPageError)
+                .add(dashboardRowsField, dashboardRowsError)
                 .add(lowStockField, lowStockError)
                 .add(workEndPicker, workTimeError)
                 .add(storageField, storageError);
@@ -388,6 +394,7 @@ public class SettingsController {
             String time = configService.getString(AppConfigService.TIME_FORMAT, DateUtil.DEFAULT_TIME_PATTERN);
             timeFormatBox.setValue(DateUtil.TIME_PATTERNS.contains(time) ? time : DateUtil.DEFAULT_TIME_PATTERN);
             itemsPerPageField.setText(String.valueOf(configService.getInt(AppConfigService.ITEMS_PER_PAGE, 20)));
+            dashboardRowsField.setText(String.valueOf(configService.dashboardRows()));
             lowStockField.setText(String.valueOf(configService.getInt(AppConfigService.LOW_STOCK_DEFAULT, 10)));
             autoBackupBox.setSelected(configService.getBoolean(AppConfigService.AUTO_BACKUP, false));
             Set<DayOfWeek> offDays = configService.weeklyOffDays();
@@ -427,6 +434,7 @@ public class SettingsController {
     private boolean saveApp() {
         appForm.clearAll();
         Integer items = intInRange(itemsPerPageField, "settings.items_per_page", ITEMS_MIN, ITEMS_MAX);
+        Integer dashboardRows = intInRange(dashboardRowsField, "settings.dashboard_rows", DASHBOARD_ROWS_MIN, DASHBOARD_ROWS_MAX);
         Integer lowStock = intInRange(lowStockField, "settings.low_stock_default", 0, LOW_STOCK_MAX);
         boolean storageChanged = chosenStorage != null && !chosenStorage.equals(currentStorage);
         if (storageChanged && chosenStorage.startsWith(currentStorage)) {
@@ -457,6 +465,7 @@ public class SettingsController {
         String timePattern = timeFormatBox.getValue() == null ? DateUtil.DEFAULT_TIME_PATTERN : timeFormatBox.getValue();
         values.put(AppConfigService.TIME_FORMAT, timePattern);
         values.put(AppConfigService.ITEMS_PER_PAGE, String.valueOf(items));
+        values.put(AppConfigService.DASHBOARD_ROWS, String.valueOf(dashboardRows));
         values.put(AppConfigService.LOW_STOCK_DEFAULT, String.valueOf(lowStock));
         values.put(AppConfigService.AUTO_BACKUP, String.valueOf(autoBackupBox.isSelected()));
         // Same text as AppConfigService.setWeeklyOffDays, saved (and audited) with the other settings
@@ -492,7 +501,7 @@ public class SettingsController {
 
     private String appState() {
         return String.join("\u0001", String.valueOf(dateFormatBox.getValue()), String.valueOf(timeFormatBox.getValue()),
-                text(itemsPerPageField),
+                text(itemsPerPageField), text(dashboardRowsField),
                 text(lowStockField), String.valueOf(autoBackupBox.isSelected()), String.valueOf(chosenStorage),
                 AppConfigService.formatOffDays(selectedOffDays()), String.valueOf(workStartPicker.getValue()),
                 String.valueOf(workEndPicker.getValue()), String.valueOf(paidLeaveBox.isSelected()));

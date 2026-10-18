@@ -1,11 +1,110 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.eh.bms.util.DateRangePicker?>
+<?import com.eh.bms.util.TwoColumnLayout?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Placeholder; the real view comes with its own stage. -->
+<!-- Dashboard (Stage 15): a date range (today at first) on top. Sales, purchases, expenses, net cash and profit are for
+     those dates; money to get / to pay, account balances and stock are as at the end of the last day. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      styleClass="placeholder-view" alignment="CENTER" spacing="8">
-    <Label text="%menu.dashboard" styleClass="placeholder-title"/>
-    <Label text="%page.coming_soon" styleClass="placeholder-text"/>
+      fx:controller="com.eh.bms.controller.DashboardController" spacing="16">
+
+    <!-- One line: title on the left, date range pushed to the right -->
+    <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+        <Label fx:id="periodTitle" styleClass="section-title" minWidth="-Infinity"/>
+        <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+        <DateRangePicker fx:id="dateRange" prefWidth="260" minWidth="150"/>
+    </HBox>
+
+    <!-- FlowPane: six tiles on one line on a wide window, wrapping to more lines on a narrow one -->
+    <FlowPane hgap="12" vgap="12">
+        <VBox styleClass="stat-tile, stat-tile-main, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="salesTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="salesLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="purchasesTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="purchasesLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="expensesTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="expensesLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="netCashTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="netCashLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="receivableTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="receivableLabel" styleClass="stat-value, money-in"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" prefWidth="190" maxWidth="190">
+            <Label fx:id="payableTitle" styleClass="stat-label" wrapText="true"/>
+            <Label fx:id="payableLabel" styleClass="stat-value, money-out"/>
+        </VBox>
+    </FlowPane>
+
+    <TwoColumnLayout mainPercent="50">
+        <!-- Profit of the range, line by line; only as tall as its lines -->
+        <VBox styleClass="form-card" spacing="12" maxHeight="-Infinity" GridPane.valignment="TOP">
+            <Label fx:id="profitTitle" styleClass="section-title" wrapText="true"/>
+            <GridPane hgap="16" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="ALWAYS"/>
+                    <ColumnConstraints halignment="RIGHT"/>
+                </columnConstraints>
+                <Label text="%dashboard.profit.sales" GridPane.rowIndex="0"/>
+                <Label fx:id="profitSalesLabel" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                <Label text="%dashboard.profit.cost" GridPane.rowIndex="1"/>
+                <Label fx:id="profitCostLabel" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                <Label text="%dashboard.profit.gross" styleClass="form-label" GridPane.rowIndex="2"/>
+                <Label fx:id="profitGrossLabel" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                <Label text="%dashboard.profit.expenses" GridPane.rowIndex="3"/>
+                <Label fx:id="profitExpensesLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                <Label text="%dashboard.profit.salary" GridPane.rowIndex="4"/>
+                <Label fx:id="profitSalaryLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                <Label fx:id="profitNetTitle" text="%dashboard.profit.net" styleClass="stat-value" GridPane.rowIndex="5"/>
+                <Label fx:id="profitNetLabel" styleClass="stat-value" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+            </GridPane>
+        </VBox>
+
+        <!-- Account balances -->
+        <VBox spacing="8" maxHeight="-Infinity" GridPane.valignment="TOP">
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="%dashboard.accounts" styleClass="section-title" minWidth="-Infinity"/>
+                <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+                <Label fx:id="accountsTotalLabel" styleClass="form-label" minWidth="-Infinity"/>
+            </HBox>
+            <StackPane fx:id="accountsHolder"/>
+        </VBox>
+    </TwoColumnLayout>
+
+    <TwoColumnLayout mainPercent="50">
+        <!-- Stock value per category -->
+        <VBox spacing="8">
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="%dashboard.stock" styleClass="section-title" minWidth="-Infinity"/>
+                <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+                <Label fx:id="stockTotalLabel" styleClass="form-label" minWidth="-Infinity"/>
+            </HBox>
+            <StackPane fx:id="stockHolder"/>
+        </VBox>
+
+        <!-- Low stock -->
+        <VBox spacing="8">
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="%dashboard.low_stock" styleClass="section-title" minWidth="-Infinity"/>
+                <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+                <Label fx:id="lowStockCountLabel" styleClass="form-label, money-out" minWidth="-Infinity"/>
+            </HBox>
+            <StackPane fx:id="lowStockHolder"/>
+        </VBox>
+    </TwoColumnLayout>
 </VBox>

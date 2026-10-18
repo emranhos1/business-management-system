@@ -138,33 +138,40 @@
                 <Label fx:id="itemsPerPageError" styleClass="field-error" wrapText="true"/>
             </VBox>
 
-            <Label text="%settings.low_stock_default" styleClass="form-label, required"
+            <Label text="%settings.dashboard_rows" styleClass="form-label, required" wrapText="true"
                    GridPane.rowIndex="3" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
             <VBox styleClass="field-box" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                <TextField fx:id="dashboardRowsField" maxWidth="Infinity"/>
+                <Label fx:id="dashboardRowsError" styleClass="field-error" wrapText="true"/>
+            </VBox>
+
+            <Label text="%settings.low_stock_default" styleClass="form-label, required"
+                   GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="4" GridPane.columnIndex="1">
                 <TextField fx:id="lowStockField" maxWidth="Infinity"/>
                 <Label fx:id="lowStockError" styleClass="field-error" wrapText="true"/>
             </VBox>
 
             <!-- Hidden until auto backup works (20.9) -->
             <Label text="%settings.auto_backup" styleClass="form-label" wrapText="true" visible="false" managed="false"
-                   GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-            <HBox styleClass="check-row" alignment="CENTER_LEFT" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                   GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <HBox styleClass="check-row" alignment="CENTER_LEFT" GridPane.rowIndex="5" GridPane.columnIndex="1"
                   visible="false" managed="false">
                 <CheckBox fx:id="autoBackupBox"/>
             </HBox>
 
             <!-- Weekly off days (Stage 14): seven ticks, Saturday first; none ticked = no weekly off -->
             <Label text="%settings.weekly_off" styleClass="form-label"
-                   GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-            <VBox styleClass="field-box" GridPane.rowIndex="5" GridPane.columnIndex="1">
+                   GridPane.rowIndex="6" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="6" GridPane.columnIndex="1">
                 <FlowPane fx:id="weeklyOffPane" styleClass="check-row" hgap="16" vgap="8" alignment="CENTER_LEFT"/>
                 <Label text="%settings.weekly_off.hint" styleClass="field-hint" wrapText="true"/>
             </VBox>
 
             <!-- Work day (Stage 14): auto attendance times of hourly staff and paid leave hours; picked on a clock -->
             <Label text="%settings.work_time" styleClass="form-label, required"
-                   GridPane.rowIndex="6" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-            <VBox styleClass="field-box" GridPane.rowIndex="6" GridPane.columnIndex="1">
+                   GridPane.rowIndex="7" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="7" GridPane.columnIndex="1">
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <TimePicker fx:id="workStartPicker" HBox.hgrow="ALWAYS"/>
                     <Label text="—"/>
@@ -176,8 +183,8 @@
 
             <!-- Paid leave (Stage 14): a leave day is paid for daily and hourly employees -->
             <Label text="%settings.paid_leave" styleClass="form-label"
-                   GridPane.rowIndex="7" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-            <VBox styleClass="field-box" GridPane.rowIndex="7" GridPane.columnIndex="1">
+                   GridPane.rowIndex="8" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="8" GridPane.columnIndex="1">
                 <HBox styleClass="check-row" alignment="CENTER_LEFT">
                     <CheckBox fx:id="paidLeaveBox" text="%settings.paid_leave.box" wrapText="true"/>
                 </HBox>
@@ -185,8 +192,8 @@
             </VBox>
 
             <Label text="%settings.storage" styleClass="form-label, required" wrapText="true"
-                   GridPane.rowIndex="8" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
-            <VBox styleClass="field-box" GridPane.rowIndex="8" GridPane.columnIndex="1">
+                   GridPane.rowIndex="9" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="9" GridPane.columnIndex="1">
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <TextField fx:id="storageField" editable="false" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
                     <Button text="%settings.storage.choose" styleClass="edit-button" minWidth="-Infinity" onAction="#onChooseStorage"/>

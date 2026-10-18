@@ -64,6 +64,7 @@ public final class DataSeeder {
             {"date_format", "dd/MM/yyyy", "Date display format"},
             {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
+            {"dashboard_rows", "5", "Dashboard table rows per page"},
             {"auto_backup", "false", "Auto backup on app close"},
             {"weekly_off_days", "FRIDAY", "Weekly off days (comma list of day names, empty = none)"},
             {"paid_leave", "false", "Leave days are paid for daily and hourly employees"},

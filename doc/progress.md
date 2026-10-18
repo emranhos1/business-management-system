@@ -193,17 +193,17 @@ Depends on: Stage 5 (14.4 also needs Stage 7)
 | 14.5 | Salary history per employee | History shows correctly | ✅ |
 | 14.6 | Employees page tabs (list, attendance, salary); salary type column in attendance; times picked on a clock (`TimePicker`), never typed; weekly off days, paid leave and work hours in Settings | Clock picks in/out; settings apply | ✅ |
 
-## Stage 15 — Dashboard
+## Stage 15 — Dashboard ✅
 Depends on: Stages 7–14
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 15.1 | Today's sales, purchases, expenses, net cash | Matches data | [ ] |
-| 15.2 | Total receivable and payable | Matches party balances | [ ] |
-| 15.3 | Stock summary by category | Matches stock | [ ] |
-| 15.4 | Net profit this month | Matches P&L | [ ] |
-| 15.5 | Low stock alerts | Matches alert list | [ ] |
-| 15.6 | Account balances | Matches accounts | [ ] |
+| 15.1 | Today's sales, purchases, expenses, net cash | Matches data | ✅ |
+| 15.2 | Total receivable and payable | Matches party balances | ✅ |
+| 15.3 | Stock summary by category | Matches stock | ✅ |
+| 15.4 | Net profit this month | Matches P&L | ✅ |
+| 15.5 | Low stock alerts | Matches alert list | ✅ |
+| 15.6 | Account balances | Matches accounts | ✅ |
 
 ## Stage 16 — Reports (Excel .xlsx export)
 Depends on: 16.1 first; each report depends on its module
@@ -344,3 +344,20 @@ Depends on: Stage 11 (memo number saved with each sale)
 | N6.1 | Decide memo layout and paper size (A4 / A5 / thermal roll) | User confirms layout | [ ] |
 | N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [ ] |
 | N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [ ] |
+
+### N7 — Sale Return Stock Rounding (known bug)
+Part returns of one sale line round the stock quantity on each return, so stock drifts (10 pcs sold as 0.833 dozen, returned 5 + 5, puts back 0.834). `SaleService.returnGoods` should use the cumulative rounding `PurchaseService` already uses (`mainShare(item, returned + qty) − mainShare(item, returned)`).
+Depends on: Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | [ ] |
+
+### N8 — Hide Account Balances From Users Without Accounts Permission
+Account pickers on money forms (purchase, purchase pay, expense, party payment, salary payment) show each account's balance, so a cashier sees balances although the Accounts module is closed to them (user decision). Show only the account name to users without Accounts view permission; saving is still blocked when money is short, but the error then shows no amount. Do it in one shared place for all these forms.
+Depends on: Stage 7
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N8.1 | Account picker shows balance only with Accounts view permission (shared helper used by every money form) | Cashier sees names only; admin/manager see balances | [ ] |
+| N8.2 | Short-balance errors without the amount for users without Accounts permission | Cashier gets the error, no amount shown | [ ] |
