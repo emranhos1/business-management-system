@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.eh.bms.util.PageTabs?>
-<?import javafx.scene.control.Tab?>
+<?import com.eh.bms.util.TwoColumnLayout?>
 
-<!-- Expenses page (Stage 13): expenses list (add, edit, filters), monthly summary, and expense categories. -->
-<PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-          fx:controller="com.eh.bms.controller.ExpensesController"
-          fx:id="tabs" tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
-    <Tab fx:id="listTab" text="%expense.tab.list">
-        <fx:include fx:id="list" source="expenses-list.fxml"/>
-    </Tab>
-    <Tab fx:id="summaryTab" text="%expense.tab.summary">
-        <fx:include fx:id="summary" source="expense-summary.fxml"/>
-    </Tab>
-    <Tab fx:id="categoriesTab" text="%expense.tab.categories">
-        <fx:include fx:id="categories" source="expense-categories.fxml"/>
-    </Tab>
-</PageTabs>
+<!-- Expenses page (Stage 13), one page, no tabs (user decision): the month's expenses grouped by category on the left,
+     the expense categories on the right; stacked on a narrow window. -->
+<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                 fx:controller="com.eh.bms.controller.ExpensesController" mainPercent="68">
+    <fx:include fx:id="list" source="expenses-list.fxml"/>
+    <fx:include fx:id="categories" source="expense-categories.fxml"/>
+</TwoColumnLayout>

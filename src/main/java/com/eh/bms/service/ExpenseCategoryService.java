@@ -1,7 +1,6 @@
 package com.eh.bms.service;
 
 import com.eh.bms.model.ExpenseCategory;
-import com.eh.bms.model.ExpenseCategoryType;
 import com.eh.bms.repository.ExpenseCategoryRepository;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
@@ -21,7 +20,7 @@ public class ExpenseCategoryService {
     }
 
     /** Values from the form. {@code id} is null for a new category. */
-    public record CategoryData(Long id, String name, String nameEn, ExpenseCategoryType type) {
+    public record CategoryData(Long id, String name, String nameEn) {
     }
 
     private final ExpenseCategoryRepository repository = new ExpenseCategoryRepository();
@@ -51,7 +50,6 @@ public class ExpenseCategoryService {
                 ExpenseCategory c = new ExpenseCategory();
                 c.setName(name);
                 c.setNameEn(nameEn);
-                c.setType(data.type());
                 repository.save(session, c);
                 auditService.created(session, "EXPENSE_CATEGORY", c.getId(), describe(c));
                 return SaveResult.SAVED;
@@ -61,7 +59,6 @@ public class ExpenseCategoryService {
             String old = describe(c);
             c.setName(name);
             c.setNameEn(nameEn);
-            c.setType(data.type());
             String now = describe(c);
             if (!Objects.equals(old, now)) {
                 auditService.updated(session, "EXPENSE_CATEGORY", c.getId(), old, now);
@@ -93,6 +90,6 @@ public class ExpenseCategoryService {
     }
 
     private static String describe(ExpenseCategory c) {
-        return "expenseCategory: name=" + c.getName() + ", nameEn=" + c.getNameEn() + ", type=" + c.getType();
+        return "expenseCategory: name=" + c.getName() + ", nameEn=" + c.getNameEn();
     }
 }

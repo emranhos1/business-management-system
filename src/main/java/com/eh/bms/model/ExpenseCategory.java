@@ -2,17 +2,16 @@ package com.eh.bms.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
-/** An expense category the user manages (13.1): Bangla and English name, and its type. */
+/**
+ * An expense category the user manages (13.1): Bangla and English name.
+ * The old {@code type} column is left in the table unused (user decision: no category type).
+ */
 @Entity
 @Table(name = "expense_categories",
         uniqueConstraints = {
@@ -32,11 +31,6 @@ public class ExpenseCategory {
     @Column(name = "name_en", length = 100)
     private String nameEn;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR) // VARCHAR, not MySQL ENUM
-    @Column(name = "type", nullable = false, length = 20)
-    private ExpenseCategoryType type;
-
     public Long getId() {
         return id;
     }
@@ -55,13 +49,5 @@ public class ExpenseCategory {
 
     public void setNameEn(String nameEn) {
         this.nameEn = nameEn;
-    }
-
-    public ExpenseCategoryType getType() {
-        return type;
-    }
-
-    public void setType(ExpenseCategoryType type) {
-        this.type = type;
     }
 }

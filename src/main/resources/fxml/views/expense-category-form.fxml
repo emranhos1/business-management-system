@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
@@ -26,14 +25,6 @@
         <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
             <TextField fx:id="nameEnField" maxWidth="Infinity"/>
             <Label fx:id="nameEnError" styleClass="field-error" wrapText="true"/>
-        </VBox>
-    </HBox>
-
-    <HBox styleClass="form-row">
-        <Label text="%expense.category.type" styleClass="form-label, required, form-row-label" wrapText="true"/>
-        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
-            <ComboBox fx:id="typeBox" maxWidth="Infinity"/>
-            <Label fx:id="typeError" styleClass="field-error" wrapText="true"/>
         </VBox>
     </HBox>
 

@@ -5,6 +5,7 @@ import com.eh.bms.config.DataSeeder;
 import com.eh.bms.config.DatabaseConfig;
 import com.eh.bms.controller.SplashController;
 import com.eh.bms.service.AppConfigService;
+import com.eh.bms.service.AttendanceService;
 import com.eh.bms.service.AuthService;
 import com.eh.bms.util.AppIcons;
 import com.eh.bms.util.DateUtil;
@@ -21,6 +22,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import java.time.LocalDate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,6 +73,12 @@ public class BmsApplication extends Application {
                     DataSeeder.run();
                 } catch (RuntimeException e) {
                     throw new StartupException("Startup seeding failed", "seed.error.header", "seed.error.content", e);
+                }
+                try {
+                    // Auto attendance: present for every active employee up to today (never stops the start)
+                    new AttendanceService().autoFill(LocalDate.now());
+                } catch (RuntimeException e) {
+                    LOG.log(Level.WARNING, "Auto attendance failed", e);
                 }
                 DateUtil.reload();
                 return new AppConfigService().language();

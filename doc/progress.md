@@ -179,17 +179,19 @@ Depends on: Stage 7
 | 13.2 | Add expense (atomic account debit) | Expense saved, account reduced | ✅ |
 | 13.3 | Expense history with date filter | Filter returns right rows | ✅ |
 | 13.4 | Monthly expense summary by category | Totals match | ✅ |
+| 13.5 | Expenses page as one page: list grouped by category (one table, share per category) beside the categories; month + year and date range filters; five tiles in one line; category type removed | Groups and totals match; arrow opens/closes once | ✅ |
 
-## Stage 14 — Employees & Payroll
+## Stage 14 — Employees & Payroll ✅
 Depends on: Stage 5 (14.4 also needs Stage 7)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 14.1 | Employee CRUD | Create/edit/delete works | [ ] |
-| 14.2 | Daily attendance with in/out time | Attendance saved per day | [ ] |
-| 14.3 | Monthly salary calculation (attendance + deductions + bonus) | Matches manual calculation | [ ] |
-| 14.4 | Salary payment linked to account (atomic) | Salary saved, account reduced | [ ] |
-| 14.5 | Salary history per employee | History shows correctly | [ ] |
+| 14.1 | Employee CRUD; no inactive while salary due or advance left | Create/edit/delete works; inactive blocked with money open | ✅ |
+| 14.2 | Daily attendance with in/out time; present saved automatically each work day (work hours in Settings) | Attendance saved per day; auto rows skip off days, join date, existing rows | ✅ |
+| 14.3 | Monthly salary calculation (attendance + deductions + bonus; paid leave setting) | Matches manual calculation | ✅ |
+| 14.4 | Salary payment linked to account (atomic): advance before the month is worked out, or in parts after; never more than the due unless emergency advance, extra carries to next months (`salary_payments`) | Payment saved, account reduced; over-payment blocked; emergency extra carried forward | ✅ |
+| 14.5 | Salary history per employee | History shows correctly | ✅ |
+| 14.6 | Employees page tabs (list, attendance, salary); salary type column in attendance; times picked on a clock (`TimePicker`), never typed; weekly off days, paid leave and work hours in Settings | Clock picks in/out; settings apply | ✅ |
 
 ## Stage 15 — Dashboard
 Depends on: Stages 7–14

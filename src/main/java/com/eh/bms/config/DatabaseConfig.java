@@ -16,6 +16,7 @@ import com.eh.bms.model.PartyLedger;
 import com.eh.bms.model.Permission;
 import com.eh.bms.model.Product;
 import com.eh.bms.model.ProductCategory;
+import com.eh.bms.model.SalaryPayment;
 import com.eh.bms.model.SalaryProcessing;
 import com.eh.bms.model.StockLedger;
 import com.eh.bms.model.TransactionItem;
@@ -64,6 +65,7 @@ public final class DatabaseConfig {
             Employee.class,
             Attendance.class,
             SalaryProcessing.class,
+            SalaryPayment.class,
             User.class,
             Permission.class,
             AuditLog.class

@@ -4,7 +4,6 @@ import com.eh.bms.model.Expense;
 import org.hibernate.Session;
 import org.hibernate.query.SelectionQuery;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,27 +15,13 @@ import java.util.Optional;
 public class ExpenseRepository {
 
     /** Filters of the expenses list; any may be null. {@code text}: the note. */
-    public record Filter(String text, LocalDate from, LocalDate to, Long categoryId) {
+    public record Filter(String text, LocalDate from, LocalDate to) {
     }
 
-    /** One page, newest first, with category and account loaded. */
-    public List<Expense> page(Session session, Filter filter, int offset, int limit) {
+    /** Every expense the filter finds, newest first, with category and account loaded. */
+    public List<Expense> list(Session session, Filter filter) {
         return where(session.createSelectionQuery("from Expense e join fetch e.category join fetch e.account"
-                        + where(filter) + " order by e.date desc, e.id desc", Expense.class), filter)
-                .setFirstResult(offset)
-                .setMaxResults(limit)
-                .getResultList();
-    }
-
-    public long count(Session session, Filter filter) {
-        return where(session.createSelectionQuery("select count(e) from Expense e" + where(filter), Long.class), filter)
-                .getSingleResult();
-    }
-
-    /** Sum of the amounts the filter finds. */
-    public BigDecimal total(Session session, Filter filter) {
-        return where(session.createSelectionQuery("select coalesce(sum(e.amount), 0) from Expense e" + where(filter),
-                BigDecimal.class), filter).getSingleResult();
+                + where(filter) + " order by e.date desc, e.id desc", Expense.class), filter).getResultList();
     }
 
     public Optional<Expense> findById(Session session, long id) {
@@ -54,20 +39,6 @@ public class ExpenseRepository {
                 .getResultList()
                 .forEach(e -> result.put(e.getId(), e));
         return result;
-    }
-
-    /** Total per category id for the dates {@code from}..{@code to}: rows of [categoryId, sum]. */
-    public List<Object[]> totalsByCategory(Session session, LocalDate from, LocalDate to) {
-        return session.createSelectionQuery("select e.category.id, sum(e.amount) from Expense e"
-                        + " where e.date >= :from and e.date <= :to group by e.category.id", Object[].class)
-                .setParameter("from", from)
-                .setParameter("to", to)
-                .getResultList();
-    }
-
-    /** Date of the oldest expense, or null if there is none. */
-    public LocalDate firstDate(Session session) {
-        return session.createSelectionQuery("select min(e.date) from Expense e", LocalDate.class).getSingleResult();
     }
 
     public void save(Session session, Expense expense) {
@@ -89,9 +60,6 @@ public class ExpenseRepository {
         if (f.to() != null) {
             w.append(" and e.date <= :to");
         }
-        if (f.categoryId() != null) {
-            w.append(" and e.category.id = :category");
-        }
         return w.toString();
     }
 
@@ -104,9 +72,6 @@ public class ExpenseRepository {
         }
         if (f.to() != null) {
             q.setParameter("to", f.to());
-        }
-        if (f.categoryId() != null) {
-            q.setParameter("category", f.categoryId());
         }
         return q;
     }

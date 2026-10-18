@@ -99,6 +99,12 @@ public class DateRangePicker extends StackPane {
         this.onChange = onChange == null ? () -> { } : onChange;
     }
 
+    /** Shows this range (e.g. this month at first) and runs the change action. */
+    public void setRange(LocalDate first, LocalDate last) {
+        start = null;
+        set(first, last);
+    }
+
     /** No range (all dates). */
     public void clear() {
         start = null;

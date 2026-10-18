@@ -16,22 +16,10 @@ public class SchemaRepository {
      * The Java enum still limits the values. Safe every startup.
      */
     public boolean dropOutdatedEnumCheck(Session session, String table, String column, Class<? extends Enum<?>> type) {
-        List<Object[]> checks = session.createNativeQuery(
-                        "SELECT tc.constraint_name, cc.check_clause FROM information_schema.table_constraints tc"
-                                + " JOIN information_schema.check_constraints cc"
-                                + " ON cc.constraint_schema = tc.constraint_schema AND cc.constraint_name = tc.constraint_name"
-                                + " WHERE tc.table_schema = DATABASE() AND tc.table_name = :table"
-                                + " AND tc.constraint_type = 'CHECK'", Object[].class)
-                .setParameter("table", table)
-                .getResultList();
-        Pattern onColumn = Pattern.compile("\\b" + Pattern.quote(column.toLowerCase(Locale.ROOT)) + "\\b");
         boolean dropped = false;
-        for (Object[] check : checks) {
+        for (Object[] check : checksOn(session, table, column)) {
             String name = String.valueOf(check[0]);
             String clause = String.valueOf(check[1]);
-            if (!onColumn.matcher(clause.toLowerCase(Locale.ROOT)).find()) {
-                continue;
-            }
             boolean outdated = false;
             for (Enum<?> value : type.getEnumConstants()) {
                 // Whole word: SALE must not match inside SALE_RETURN
@@ -46,6 +34,53 @@ public class SchemaRepository {
             }
         }
         return dropped;
+    }
+
+    /** Drops every CHECK on {@code table.column} (for a column no entity uses any more). Safe every startup. */
+    public boolean dropChecks(Session session, String table, String column) {
+        boolean dropped = false;
+        for (Object[] check : checksOn(session, table, column)) {
+            session.createNativeMutationQuery("ALTER TABLE `" + table + "` DROP CHECK `" + check[0] + "`").executeUpdate();
+            dropped = true;
+        }
+        return dropped;
+    }
+
+    /** CHECK constraints of {@code table} whose clause names {@code column}: name, clause. */
+    private List<Object[]> checksOn(Session session, String table, String column) {
+        List<Object[]> checks = session.createNativeQuery(
+                        "SELECT tc.constraint_name, cc.check_clause FROM information_schema.table_constraints tc"
+                                + " JOIN information_schema.check_constraints cc"
+                                + " ON cc.constraint_schema = tc.constraint_schema AND cc.constraint_name = tc.constraint_name"
+                                + " WHERE tc.table_schema = DATABASE() AND tc.table_name = :table"
+                                + " AND tc.constraint_type = 'CHECK'", Object[].class)
+                .setParameter("table", table)
+                .getResultList();
+        Pattern onColumn = Pattern.compile("\\b" + Pattern.quote(column.toLowerCase(Locale.ROOT)) + "\\b");
+        return checks.stream()
+                .filter(c -> onColumn.matcher(String.valueOf(c[1]).toLowerCase(Locale.ROOT)).find())
+                .toList();
+    }
+
+    /**
+     * hbm2ddl update never makes a NOT NULL column nullable. Changes {@code table.column} to
+     * {@code columnDefinition} (e.g. {@code VARCHAR(20) NULL}) when it is still NOT NULL, so rows can leave a
+     * column no entity uses any more empty. Values are kept. Safe every startup.
+     */
+    public boolean makeNullable(Session session, String table, String column, String columnDefinition) {
+        List<String> found = session.createNativeQuery(
+                        "SELECT is_nullable FROM information_schema.columns"
+                                + " WHERE table_schema = DATABASE() AND table_name = :table AND column_name = :column",
+                        String.class)
+                .setParameter("table", table)
+                .setParameter("column", column)
+                .getResultList();
+        if (found.isEmpty() || "YES".equalsIgnoreCase(found.get(0))) {
+            return false;
+        }
+        session.createNativeMutationQuery("ALTER TABLE `" + table + "` MODIFY `" + column + "` " + columnDefinition)
+                .executeUpdate();
+        return true;
     }
 
     /** hbm2ddl update never drops an index the entities no longer name. Drops it if it is there; safe every startup. */

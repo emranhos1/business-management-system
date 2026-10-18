@@ -11,13 +11,22 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -28,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /** Shared table setup for list pages (add / edit / delete over a table). */
 public final class TableHelper {
@@ -219,9 +229,17 @@ public final class TableHelper {
             }
         }
         String fitWords = words.toString();
-        c.getProperties().put(FIT_TEXT, (Function<T, String>) item -> fitWords);
-        c.getProperties().put(FIT_EXTRA, extra);
+        fitBy(c, item -> fitWords, extra);
         return c;
+    }
+
+    /**
+     * For a column whose cells hold an input (ComboBox, text field) instead of plain text: {@link #fitColumns}
+     * sizes it by {@code text} for each row plus {@code extra} px for the input's own padding and arrow.
+     */
+    public static <T> void fitBy(TableColumn<T, ?> column, Function<T, String> text, double extra) {
+        column.getProperties().put(FIT_TEXT, text);
+        column.getProperties().put(FIT_EXTRA, extra);
     }
 
     /**
@@ -256,34 +274,39 @@ public final class TableHelper {
      * table scrolls sideways.
      */
     public static void fillWidth(TableView<?> table) {
+        fillWidth(table, table.getColumns(), () -> fillWidth(table));
+    }
+
+    /** {@link #fillWidth(TableView)} for any table kind; {@code again} re-runs it when the scroll bar shows or hides. */
+    private static void fillWidth(Control table, List<? extends TableColumnBase<?, ?>> columns, Runnable again) {
         double available = Math.floor(table.getWidth() - table.snappedLeftInset() - table.snappedRightInset()
-                - verticalScrollBarWidth(table)) - EDGE_GAP;
+                - verticalScrollBarWidth(table, again)) - EDGE_GAP;
         double total = 0;
-        for (TableColumn<?, ?> c : table.getColumns()) {
+        for (TableColumnBase<?, ?> c : columns) {
             total += fittedWidth(c);
         }
         double spare = total > 0 ? available - total : 0;
-        for (TableColumn<?, ?> c : table.getColumns()) {
+        for (TableColumnBase<?, ?> c : columns) {
             double fitted = fittedWidth(c);
             c.setPrefWidth(spare > 0 ? Math.floor(fitted + spare * fitted / total) : fitted);
         }
     }
 
     /** Width the column needs; before {@link #fitColumns} ran, its first width (kept, so filling never makes it grow for good). */
-    private static double fittedWidth(TableColumn<?, ?> c) {
+    private static double fittedWidth(TableColumnBase<?, ?> c) {
         c.getProperties().putIfAbsent(FIT_WIDTH, c.getPrefWidth());
         return c.getProperties().get(FIT_WIDTH) instanceof Double d ? d : c.getPrefWidth();
     }
 
     /**
      * Width of the table's vertical scroll bar while it shows, else 0. The first time the bar is found, a
-     * listener re-runs {@link #fillWidth} whenever it shows or hides (e.g. a page with more rows).
+     * listener runs {@code again} (fills the width again) whenever it shows or hides (e.g. a page with more rows).
      */
-    private static double verticalScrollBarWidth(TableView<?> table) {
+    private static double verticalScrollBarWidth(Control table, Runnable again) {
         for (Node node : table.lookupAll(".scroll-bar")) {
             if (node instanceof ScrollBar bar && bar.getOrientation() == Orientation.VERTICAL) {
                 if (bar.getProperties().putIfAbsent(FIT_WIDTH, Boolean.TRUE) == null) {
-                    bar.visibleProperty().addListener(o -> fillWidth(table));
+                    bar.visibleProperty().addListener(o -> again.run());
                 }
                 return bar.isVisible() ? bar.getWidth() : 0;
             }
@@ -292,7 +315,7 @@ public final class TableHelper {
     }
 
     /** Font the table's CSS gives {@code selector}; before the table is drawn, the same font as main.css. */
-    private static Font fontOf(TableView<?> table, String selector, FontWeight fallbackWeight) {
+    private static Font fontOf(Control table, String selector, FontWeight fallbackWeight) {
         Node node = table.lookup(selector);
         if (node instanceof Labeled labeled) {
             return labeled.getFont();
@@ -457,5 +480,207 @@ public final class TableHelper {
             });
             return row;
         });
+    }
+
+    // ---- Grouped tables (TreeTableView): a group row with its rows under it, e.g. expenses by category ----
+
+    /** Style class of a group row (a row with rows under it): bold on a light background (main.css). */
+    private static final String GROUP_ROW = "group-row";
+    /** Space the tree column gives each level, and the expand arrow before the text. */
+    private static final double TREE_INDENT = 10;
+    private static final double TREE_ARROW = 18;
+
+    /**
+     * What every grouped table gets: "no data" text, column widths that fit their text and follow the table's
+     * width (call {@link #fitColumns(TreeTableView)} after its rows change), group rows bold on a light background
+     * that open / close on a click, and the row tooltip {@code tip} gives (null = no tooltip for that row).
+     */
+    public static <T> void setUp(TreeTableView<T> tree, Function<T, RowTip> tip) {
+        Label empty = new Label();
+        empty.textProperty().bind(I18n.bind("msg.no_data"));
+        tree.setPlaceholder(empty);
+        tree.setShowRoot(false);
+        tree.setColumnResizePolicy(TreeTableView.UNCONSTRAINED_RESIZE_POLICY);
+        tree.widthProperty().addListener(o -> fillWidth(tree));
+        tree.setMinWidth(0);
+        tree.setRowFactory(tv -> {
+            Tooltip tooltip = new Tooltip();
+            tooltip.setShowDelay(Duration.millis(400));
+            tooltip.setShowDuration(Duration.INDEFINITE);
+            TreeTableRow<T> row = new TreeTableRow<>() {
+                @Override
+                protected void updateItem(T item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().remove(GROUP_ROW);
+                    if (empty || item == null) {
+                        setTooltip(null);
+                        return;
+                    }
+                    if (getTreeItem() != null && !getTreeItem().isLeaf()) {
+                        getStyleClass().add(GROUP_ROW);
+                    }
+                    RowTip t = tip == null ? null : tip.apply(item);
+                    Tooltip shown = null;
+                    if (t != null && (t.title() != null || !t.lines().isEmpty())) {
+                        tooltip.setGraphic(tipNode(t));
+                        shown = tooltip;
+                    }
+                    if (getProperties().containsKey(HIDDEN_ROW_TIP)) {
+                        // The mouse is on the buttons column: keep it aside until the mouse leaves
+                        getProperties().put(HIDDEN_ROW_TIP, shown);
+                    } else {
+                        setTooltip(shown);
+                    }
+                }
+            };
+            // A press anywhere on a group row (the arrow too) opens / closes it once. It is handled here and
+            // consumed, so the arrow's own toggle never runs as well (two toggles = nothing seems to happen).
+            row.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+                TreeItem<T> item = row.getTreeItem();
+                if (e.getButton() == MouseButton.PRIMARY && item != null && !item.isLeaf()) {
+                    item.setExpanded(!item.isExpanded());
+                    e.consume();
+                }
+            });
+            return row;
+        });
+    }
+
+    /** Text column of a grouped table with a translated title. */
+    public static <T> TreeTableColumn<T, String> treeColumn(String titleKey, Function<T, String> value) {
+        TreeTableColumn<T, String> c = new TreeTableColumn<>(I18n.get(titleKey));
+        c.setCellValueFactory(cell -> new SimpleStringProperty(
+                cell.getValue() == null || cell.getValue().getValue() == null ? "" : value.apply(cell.getValue().getValue())));
+        c.setSortable(false);
+        return c;
+    }
+
+    /** Money column of a grouped table: right-aligned so amounts line up. */
+    public static <T> TreeTableColumn<T, String> treeMoneyColumn(String titleKey, Function<T, String> value) {
+        TreeTableColumn<T, String> c = treeColumn(titleKey, value);
+        c.getStyleClass().add("money-column");
+        return c;
+    }
+
+    /**
+     * Icon buttons on the rows of a grouped table for which {@code shown} is true (e.g. edit on an expense,
+     * none on its group row); same look and tooltips as {@link #actionsColumn}.
+     */
+    @SafeVarargs
+    public static <T> TreeTableColumn<T, T> treeActionsColumn(String titleKey, Predicate<T> shown, RowAction<T>... actions) {
+        TreeTableColumn<T, T> c = new TreeTableColumn<>(I18n.get(titleKey));
+        c.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue() == null ? null : cell.getValue().getValue()));
+        c.setCellFactory(col -> new TreeTableCell<>() {
+            private final HBox box = new HBox(4);
+
+            {
+                setOnMouseEntered(e -> {
+                    TreeTableRow<T> row = getTableRow();
+                    if (row != null && row.getTooltip() != null) {
+                        row.getProperties().put(HIDDEN_ROW_TIP, row.getTooltip());
+                        row.setTooltip(null);
+                    }
+                });
+                setOnMouseExited(e -> {
+                    TreeTableRow<T> row = getTableRow();
+                    if (row != null && row.getProperties().containsKey(HIDDEN_ROW_TIP)) {
+                        Object tip = row.getProperties().remove(HIDDEN_ROW_TIP);
+                        row.setTooltip(tip instanceof Tooltip t ? t : null);
+                    }
+                });
+                box.setAlignment(Pos.CENTER);
+                for (RowAction<T> a : actions) {
+                    Button b = new Button();
+                    b.setGraphic(Icons.of(a.icon()));
+                    b.getStyleClass().addAll("icon-button", a.colorClass());
+                    if (a.labelKey() != null) {
+                        b.setText(I18n.get(a.labelKey()));
+                        b.getStyleClass().add("icon-text-button");
+                    }
+                    Tooltip tip = new Tooltip(I18n.get(a.tooltipKey()));
+                    tip.setShowDelay(Duration.millis(300));
+                    b.setTooltip(tip);
+                    b.setOnAction(e -> {
+                        T item = getItem();
+                        if (item != null) {
+                            a.action().accept(item);
+                        }
+                    });
+                    box.getChildren().add(b);
+                }
+            }
+
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty || item == null || !shown.test(item) ? null : box);
+            }
+        });
+        c.setSortable(false);
+        c.getStyleClass().add("button-column");
+        StringBuilder words = new StringBuilder();
+        double extra = 0;
+        for (RowAction<T> a : actions) {
+            if (a.labelKey() == null) {
+                extra += ACTION_WIDTH;
+            } else {
+                words.append(I18n.get(a.labelKey()));
+                extra += ACTION_LABEL_EXTRA;
+            }
+        }
+        String fitWords = words.toString();
+        c.getProperties().put(FIT_TEXT, (Function<T, String>) item -> fitWords);
+        c.getProperties().put(FIT_EXTRA, extra);
+        return c;
+    }
+
+    /**
+     * {@link #fitColumns(TableView)} for a grouped table: every row counts, closed groups too (so widths do not
+     * jump when a group opens); group rows are measured bold, and the first column gets room for the arrow and
+     * the indent.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> void fitColumns(TreeTableView<T> tree) {
+        Font cellFont = fontOf(tree, ".tree-table-row-cell .tree-table-cell", FontWeight.NORMAL);
+        Font boldFont = Font.font(cellFont.getFamily(), FontWeight.BOLD, cellFont.getSize());
+        Font headerFont = fontOf(tree, ".column-header .label", FontWeight.BOLD);
+        List<TreeItem<T>> items = new ArrayList<>();
+        List<Integer> depths = new ArrayList<>();
+        if (tree.getRoot() != null) {
+            collect(tree.getRoot().getChildren(), 0, items, depths);
+        }
+        boolean first = true;
+        for (TreeTableColumn<T, ?> c : tree.getColumns()) {
+            Function<T, String> fitText = (Function<T, String>) c.getProperties().get(FIT_TEXT);
+            double extra = c.getProperties().get(FIT_EXTRA) instanceof Double d ? d : 0;
+            double width = textWidth(c.getText(), headerFont);
+            for (int i = 0; i < items.size(); i++) {
+                TreeItem<T> item = items.get(i);
+                String text = fitText != null ? fitText.apply(item.getValue()) : Objects.toString(c.getCellData(item), "");
+                double w = textWidth(text, item.isLeaf() ? cellFont : boldFont) + extra;
+                if (first) {
+                    w += TREE_ARROW + TREE_INDENT * depths.get(i);
+                }
+                width = Math.max(width, w);
+            }
+            double fitted = Math.ceil(Math.min(width + CELL_PADDING, MAX_FIT_WIDTH));
+            c.setMinWidth(fitted);
+            c.getProperties().put(FIT_WIDTH, fitted);
+            first = false;
+        }
+        fillWidth(tree);
+    }
+
+    private static <T> void collect(List<TreeItem<T>> children, int depth, List<TreeItem<T>> items, List<Integer> depths) {
+        for (TreeItem<T> child : children) {
+            items.add(child);
+            depths.add(depth);
+            collect(child.getChildren(), depth + 1, items, depths);
+        }
+    }
+
+    /** {@link #fillWidth(TableView)} for a grouped table. */
+    public static void fillWidth(TreeTableView<?> tree) {
+        fillWidth(tree, tree.getColumns(), () -> fillWidth(tree));
     }
 }

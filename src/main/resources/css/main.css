@@ -339,6 +339,124 @@
     -fx-background-color: -fx-selection-bar;
 }
 
+/* Grouped tables (TableHelper.setUp(TreeTableView)): a group row, e.g. an expense category with its expenses */
+.tree-table-row-cell.group-row {
+    -fx-background-color: #e8eef6;
+    -fx-cursor: hand;
+}
+
+.tree-table-row-cell.group-row:selected {
+    -fx-background-color: -fx-selection-bar;
+}
+
+.tree-table-row-cell.group-row .tree-table-cell {
+    -fx-font-weight: bold;
+}
+
+/* Attendance: a weekly off day (day name next to the date, and those days in its calendar) */
+.label.attendance-off-day,
+.date-cell.attendance-off-day {
+    -fx-text-fill: #c05621;
+}
+
+.date-cell.attendance-off-day:disabled {
+    -fx-opacity: 0.6;
+}
+
+/* TimePicker: looks like a text field with a clock icon; the time is picked on a clock, never typed */
+.button.time-picker {
+    -fx-background-color: #d1d5db, #ffffff;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
+    -fx-padding: 5 8 5 8;
+    -fx-text-fill: #1f2933;
+    -fx-cursor: hand;
+}
+
+.button.time-picker:hover {
+    -fx-background-color: #2563eb, #ffffff;
+}
+
+.button.time-picker.time-picker-empty {
+    -fx-text-fill: #9aa5b1;
+}
+
+.button.time-picker .icon {
+    -fx-background-color: #616e7c;
+}
+
+.button.time-picker.field-invalid {
+    -fx-background-color: #d64545, #fff5f5;
+}
+
+.clock-popup {
+    -fx-background-color: #ffffff;
+    -fx-padding: 14;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 14, 0.1, 0, 4);
+}
+
+.clock-head-part {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9aa5b1;
+    -fx-padding: 0 6;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.clock-head-part.clock-head-active {
+    -fx-text-fill: #2563eb;
+    -fx-background-color: #e8effd;
+}
+
+.clock-head-colon {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9aa5b1;
+}
+
+.toggle-button.clock-half {
+    -fx-min-width: 52;
+    -fx-background-color: #f3f4f6;
+    -fx-text-fill: #616e7c;
+    -fx-font-weight: bold;
+}
+
+.toggle-button.clock-half:selected {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
+.clock-dial {
+    -fx-fill: #f1f5f9;
+}
+
+.button.clock-number {
+    -fx-background-color: transparent;
+    -fx-background-radius: 17;
+    -fx-padding: 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: #1f2933;
+    -fx-cursor: hand;
+}
+
+.button.clock-number.clock-number-inner {
+    -fx-font-size: 12px;
+    -fx-text-fill: #616e7c;
+}
+
+.button.clock-number:hover {
+    -fx-background-color: #dbe5fb;
+}
+
+.button.clock-number.clock-number-selected {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
 /* Account ledger window: figures on top */
 .ledger-window {
     -fx-padding: 20;
@@ -353,6 +471,12 @@
     -fx-padding: 12 16;
     -fx-spacing: 4;
     -fx-min-width: 200;
+}
+
+/* Tiles that share one line with others (e.g. Expenses): no fixed minimum, they split the width */
+.stat-tile.stat-tile-fit {
+    -fx-min-width: 0;
+    -fx-padding: 10 12;
 }
 
 .stat-tile-main {

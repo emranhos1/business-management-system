@@ -2,7 +2,6 @@ package com.eh.bms.controller;
 
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.ExpenseCategory;
-import com.eh.bms.model.ExpenseCategoryType;
 import com.eh.bms.service.ExpenseCategoryService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
@@ -26,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Expense categories (13.1, a tab of the Expenses page): add; edit by the row button (no double-click: there is
+ * Expense categories (13.1, beside the list on the Expenses page): add; edit by the row button (no double-click: there is
  * no view); delete is in the edit form (only for a category no expense uses).
  */
 public class ExpenseCategoriesController {
@@ -49,7 +48,6 @@ public class ExpenseCategoriesController {
         table = new PaginatedTable<>(this::loadPage);
         TableView<ExpenseCategory> view = table.getTableView();
         view.getColumns().add(TableHelper.column("expense.category.name", ExpenseCategoriesController::nameText));
-        view.getColumns().add(TableHelper.column("expense.category.type", c -> typeText(c.getType())));
 
         if (UserSession.isLoggedIn() && UserSession.get().can(AppModule.EXPENSE, Action.EDIT)) {
             view.getColumns().add(TableHelper.actionsColumn("label.actions",
@@ -67,11 +65,6 @@ public class ExpenseCategoriesController {
     /** Category name in the current language. */
     public static String nameText(ExpenseCategory c) {
         return I18n.pick(c.getName(), c.getNameEn());
-    }
-
-    /** Type in plain words, e.g. "স্থায়ী খরচ". */
-    public static String typeText(ExpenseCategoryType type) {
-        return type == null ? "—" : I18n.get("expense.category.type." + type.name());
     }
 
     private PageResult<ExpenseCategory> loadPage(int offset, int limit) {

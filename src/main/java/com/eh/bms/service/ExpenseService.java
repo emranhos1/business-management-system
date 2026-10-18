@@ -6,22 +6,18 @@ import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.Expense;
 import com.eh.bms.model.ExpenseCategory;
-import com.eh.bms.model.ExpenseCategoryType;
 import com.eh.bms.repository.AccountTransactionRepository;
 import com.eh.bms.repository.ExpenseCategoryRepository;
 import com.eh.bms.repository.ExpenseRepository;
 import com.eh.bms.repository.ExpenseRepository.Filter;
-import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
 import org.hibernate.Session;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,12 +42,12 @@ public class ExpenseService {
                               String note) {
     }
 
-    /** One category's total in a month. */
-    public record SummaryRow(ExpenseCategory category, BigDecimal total) {
+    /** One category in the chosen dates: its total and its expenses, newest first. */
+    public record Group(ExpenseCategory category, BigDecimal total, List<Expense> expenses) {
     }
 
-    /** A month's expenses by category (largest first), the month's total and the total per category type. */
-    public record Summary(List<SummaryRow> rows, BigDecimal total, Map<ExpenseCategoryType, BigDecimal> byType) {
+    /** Expenses of a date range grouped by category (largest total first), their total and the number of expenses. */
+    public record GroupedExpenses(List<Group> groups, BigDecimal total, int count) {
     }
 
     private static final int NOTE_MAX = 255;
@@ -61,16 +57,6 @@ public class ExpenseService {
     private final AccountTransactionRepository accountTransactions = new AccountTransactionRepository();
     private final AccountLedgerService ledger = new AccountLedgerService();
     private final AuditService auditService = new AuditService();
-
-    public PageResult<Expense> page(Filter filter, int offset, int limit) {
-        return TransactionHelper.inTransaction(session ->
-                new PageResult<>(repository.page(session, filter, offset, limit), repository.count(session, filter)));
-    }
-
-    /** Sum of the expenses the filter finds. */
-    public BigDecimal total(Filter filter) {
-        return TransactionHelper.inTransaction(session -> repository.total(session, filter));
-    }
 
     /** Adds ({@code id} null) or changes an expense, with its money out of the account. */
     public Result save(ExpenseData data) {
@@ -152,33 +138,27 @@ public class ExpenseService {
         });
     }
 
-    /** Year of the oldest expense (this year if there is none), for the month picker. */
-    public int firstYear() {
-        LocalDate first = TransactionHelper.inTransaction(repository::firstDate);
-        return first == null ? LocalDate.now().getYear() : Math.min(first.getYear(), LocalDate.now().getYear());
-    }
-
-    /** The month's expenses per category, largest first (13.4). */
-    public Summary monthSummary(YearMonth month) {
-        return TransactionHelper.inTransaction(session -> {
-            Map<Long, ExpenseCategory> categories = new HashMap<>();
-            categoryRepository.findAll(session).forEach(c -> categories.put(c.getId(), c));
-            List<SummaryRow> rows = new ArrayList<>();
-            BigDecimal total = BigDecimal.ZERO;
-            Map<ExpenseCategoryType, BigDecimal> byType = new EnumMap<>(ExpenseCategoryType.class);
-            for (ExpenseCategoryType t : ExpenseCategoryType.values()) {
-                byType.put(t, BigDecimal.ZERO);
-            }
-            for (Object[] r : repository.totalsByCategory(session, month.atDay(1), month.atEndOfMonth())) {
-                ExpenseCategory c = categories.get((Long) r[0]);
-                BigDecimal sum = (BigDecimal) r[1];
-                rows.add(new SummaryRow(c, sum));
-                total = total.add(sum);
-                byType.merge(c.getType(), sum, BigDecimal::add);
-            }
-            rows.sort(Comparator.comparing(SummaryRow::total).reversed());
-            return new Summary(rows, total, byType);
-        });
+    /**
+     * Expenses from {@code from} to {@code to} (null = no limit on that side) grouped by category, largest total
+     * first (13.3, 13.4); one query, the grouping is done here.
+     */
+    public GroupedExpenses groups(LocalDate from, LocalDate to) {
+        List<Expense> expenses = TransactionHelper.inTransaction(session ->
+                repository.list(session, new Filter(null, from, to)));
+        // Newest first within each category, as the query returns them
+        Map<Long, List<Expense>> byCategory = new LinkedHashMap<>();
+        for (Expense e : expenses) {
+            byCategory.computeIfAbsent(e.getCategory().getId(), id -> new ArrayList<>()).add(e);
+        }
+        List<Group> groups = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (List<Expense> list : byCategory.values()) {
+            BigDecimal sum = list.stream().map(Expense::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            groups.add(new Group(list.get(0).getCategory(), sum, List.copyOf(list)));
+            total = total.add(sum);
+        }
+        groups.sort(Comparator.comparing(Group::total).reversed());
+        return new GroupedExpenses(groups, total, expenses.size());
     }
 
     private static void fill(Expense e, ExpenseCategory category, Account account, ExpenseData data) {

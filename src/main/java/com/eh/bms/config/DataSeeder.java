@@ -11,7 +11,6 @@ import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.EmployeeStatus;
 import com.eh.bms.model.ExpenseCategory;
-import com.eh.bms.model.ExpenseCategoryType;
 import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.model.PartyStatus;
 import com.eh.bms.model.PartyTradeType;
@@ -36,10 +35,12 @@ import com.eh.bms.repository.ProductRepository;
 import com.eh.bms.repository.SchemaRepository;
 import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.repository.UserRepository;
+import com.eh.bms.service.AppConfigService;
 import com.eh.bms.util.TransactionHelper;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
@@ -63,7 +64,11 @@ public final class DataSeeder {
             {"date_format", "dd/MM/yyyy", "Date display format"},
             {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
-            {"auto_backup", "false", "Auto backup on app close"}
+            {"auto_backup", "false", "Auto backup on app close"},
+            {"weekly_off_days", "FRIDAY", "Weekly off days (comma list of day names, empty = none)"},
+            {"paid_leave", "false", "Leave days are paid for daily and hourly employees"},
+            {"work_start_time", "09:00", "Work day start (HH:mm)"},
+            {"work_end_time", "17:00", "Work day end (HH:mm)"}
     };
 
     private static final String DEFAULT_BUSINESS_NAME = "আমার ব্যবসা";
@@ -95,13 +100,13 @@ public final class DataSeeder {
     private static final SchemaRepository SCHEMA_REPO = new SchemaRepository();
     private static final ExpenseCategoryRepository EXPENSE_CATEGORY_REPO = new ExpenseCategoryRepository();
 
-    /** Common expense categories: Bangla name, English name, type. */
-    private static final Object[][] DEFAULT_EXPENSE_CATEGORIES = {
-            {"দোকান ভাড়া", "Shop rent", ExpenseCategoryType.OVERHEAD},
-            {"বিদ্যুৎ বিল", "Electricity bill", ExpenseCategoryType.OVERHEAD},
-            {"পরিবহন / গাড়ি ভাড়া", "Transport", ExpenseCategoryType.OPERATIONAL},
-            {"চা-নাস্তা", "Tea and snacks", ExpenseCategoryType.OPERATIONAL},
-            {"অন্যান্য", "Others", ExpenseCategoryType.OTHER}
+    /** Common expense categories: Bangla name, English name. */
+    private static final String[][] DEFAULT_EXPENSE_CATEGORIES = {
+            {"দোকান ভাড়া", "Shop rent"},
+            {"বিদ্যুৎ বিল", "Electricity bill"},
+            {"পরিবহন / গাড়ি ভাড়া", "Transport"},
+            {"চা-নাস্তা", "Tea and snacks"},
+            {"অন্যান্য", "Others"}
     };
 
     /** Bangla name, English name, number rule. */
@@ -152,6 +157,7 @@ public final class DataSeeder {
         // First: drop outdated enum CHECKs, so rows with a new enum value (new role, module, ...) can be inserted
         migrateEnumChecks();
         migrateColumnSizes();
+        migrateUnusedColumns();
         seedAppConfig();
         seedBusinessProfile();
         seedAdmin();
@@ -169,11 +175,10 @@ public final class DataSeeder {
     static void seedExpenseCategories() {
         TransactionHelper.runInTransaction(session -> {
             if (EXPENSE_CATEGORY_REPO.count(session) == 0) {
-                for (Object[] row : DEFAULT_EXPENSE_CATEGORIES) {
+                for (String[] row : DEFAULT_EXPENSE_CATEGORIES) {
                     ExpenseCategory c = new ExpenseCategory();
-                    c.setName((String) row[0]);
-                    c.setNameEn((String) row[1]);
-                    c.setType((ExpenseCategoryType) row[2]);
+                    c.setName(row[0]);
+                    c.setNameEn(row[1]);
                     EXPENSE_CATEGORY_REPO.save(session, c);
                 }
                 LOG.info("Seeded expense_categories");
@@ -202,7 +207,6 @@ public final class DataSeeder {
             {"attendance", "status", AttendanceStatus.class},
             {"employees", "salary_type", SalaryType.class},
             {"employees", "status", EmployeeStatus.class},
-            {"expense_categories", "type", ExpenseCategoryType.class},
             {"parties", "type", PartyType.class},
             {"parties", "party_type", PartyTradeType.class},
             {"parties", "balance_type", BalanceType.class},
@@ -240,6 +244,21 @@ public final class DataSeeder {
                 if (SCHEMA_REPO.widenDecimal(session, "stock_ledger", column, 16, 4)) {
                     LOG.info("Widened stock_ledger." + column + " to DECIMAL(16,4)");
                 }
+            }
+        });
+    }
+
+    /**
+     * Columns no entity uses any more are kept (old data stays) but must not block inserts: NOT NULL and enum
+     * CHECKs go. expense_categories.type: categories have no type (user decision).
+     */
+    static void migrateUnusedColumns() {
+        TransactionHelper.runInTransaction(session -> {
+            if (SCHEMA_REPO.dropChecks(session, "expense_categories", "type")) {
+                LOG.info("Dropped CHECK on expense_categories.type (unused)");
+            }
+            if (SCHEMA_REPO.makeNullable(session, "expense_categories", "type", "VARCHAR(20) NULL")) {
+                LOG.info("Made expense_categories.type nullable (unused)");
             }
         });
     }
@@ -376,6 +395,15 @@ public final class DataSeeder {
                     APP_CONFIG_REPO.save(session, e);
                     LOG.info("Seeded app_config: " + row[0]);
                 }
+            }
+            // Auto attendance starts the day it first runs, so older history is never filled
+            if (!APP_CONFIG_REPO.existsByKey(session, AppConfigService.ATTENDANCE_AUTO_FROM)) {
+                AppConfigEntry e = new AppConfigEntry();
+                e.setConfigKey(AppConfigService.ATTENDANCE_AUTO_FROM);
+                e.setConfigValue(LocalDate.now().toString());
+                e.setDescription("First day auto attendance may fill (yyyy-MM-dd)");
+                APP_CONFIG_REPO.save(session, e);
+                LOG.info("Seeded app_config: " + AppConfigService.ATTENDANCE_AUTO_FROM);
             }
         });
     }

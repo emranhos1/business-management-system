@@ -14,5 +14,7 @@ public enum AccountTransactionSource {
     /** Money for a purchase (paid at the purchase, a later payment, or money back on a return); {@code reference_id} is the purchase. */
     PURCHASE,
     /** Money paid for an expense (13.2); {@code reference_id} is the expense. */
-    EXPENSE
+    EXPENSE,
+    /** A salary payment (14.4): an advance or part of a month's salary; {@code reference_id} is the salary payment. */
+    SALARY
 }

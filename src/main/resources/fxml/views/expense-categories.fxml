@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Expense categories (13.1, a tab of the Expenses page): add; edit on each row; delete in the edit form. -->
+<!-- Expense categories (13.1, beside the list on the Expenses page): add; edit on each row; delete in the edit form. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.ExpenseCategoriesController" spacing="12">
     <!-- One line: title on the left, button pushed to the right -->

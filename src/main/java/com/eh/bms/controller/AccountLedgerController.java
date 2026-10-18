@@ -3,6 +3,7 @@ package com.eh.bms.controller;
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
+import com.eh.bms.model.SalaryPayment;
 import com.eh.bms.service.AccountLedgerService;
 import com.eh.bms.service.AccountLedgerService.LedgerRow;
 import com.eh.bms.service.AccountLedgerService.Summary;
@@ -21,6 +22,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -106,6 +109,9 @@ public class AccountLedgerController {
         } else if (r.source() == AccountTransactionSource.PARTY && r.party() != null) {
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.party_paid" : "ledger.party_received",
                     PartyText.name(r.party()));
+        } else if (r.source() == AccountTransactionSource.SALARY && r.salaryPayment() != null) {
+            SalaryPayment p = r.salaryPayment();
+            what = I18n.get("ledger.salary", p.getEmployee().getName(), monthText(p.getYear(), p.getMonth()));
         }
         String note = r.note();
         // A sale or purchase line's note is its memo number ("#3"): "মেমো #3" / "ক্রয় মেমো #3"
@@ -118,6 +124,12 @@ public class AccountLedgerController {
             return note == null ? "—" : note;
         }
         return note == null ? what : what + " — " + note;
+    }
+
+    /** "আগস্ট ২০২৬" / "August 2026". */
+    private static String monthText(int year, int month) {
+        return Month.of(month).getDisplayName(TextStyle.FULL_STANDALONE, I18n.getLocale()) + " "
+                + I18n.digits(String.valueOf(year));
     }
 
     private static <T> TableColumn<T, String> styled(TableColumn<T, String> column, String styleClass) {
