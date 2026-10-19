@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.eh.bms.util.DateRangePicker?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Audit log (17.4): who changed what and when, newest first; filter by dates, user and section. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.AuditLogController" spacing="12">
+    <!-- FlowPane: wraps to a second line when the page is narrow -->
+    <FlowPane styleClass="toolbar" hgap="12" vgap="8" alignment="CENTER_LEFT">
+        <DateRangePicker fx:id="dateRange" prefWidth="260"/>
+        <ComboBox fx:id="userBox" prefWidth="220"/>
+        <ComboBox fx:id="moduleBox" prefWidth="220"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearFilters"/>
+    </FlowPane>
+    <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="420"/>
+</VBox>

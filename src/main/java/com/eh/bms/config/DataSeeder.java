@@ -162,6 +162,7 @@ public final class DataSeeder {
         seedAppConfig();
         seedBusinessProfile();
         seedAdmin();
+        seedSupport();
         seedPermissions();
         seedAccountTypes();
         migrateAccountTypes();
@@ -459,15 +460,56 @@ public final class DataSeeder {
             u.setPasswordHash(BCrypt.hashpw(password, BCrypt.gensalt()));
             u.setRole(UserRole.ADMIN);
             u.setStatus(UserStatus.ACTIVE);
+            // The config password is known to whoever reads the repo: the admin picks their own at the first login
+            u.setMustChangePassword(true);
             USER_REPO.save(session, u);
             LOG.info("Seeded admin user: " + u.getUsername());
         });
     }
 
-    /** One row per role and module; missing rows only. */
+    /**
+     * The support team's hidden login ({@link SupportAccount}): created if missing, and kept in step with the hash
+     * in the code (so a release can change the support password). Not created while the hash is blank; never
+     * takes over a normal user's username.
+     */
+    static void seedSupport() {
+        if (SupportAccount.PASSWORD_HASH.isBlank()) {
+            LOG.warning("SupportAccount.PASSWORD_HASH is blank: no support login is created");
+            return;
+        }
+        TransactionHelper.runInTransaction(session -> {
+            Optional<User> existing = USER_REPO.findByUsername(session, SupportAccount.USERNAME);
+            if (existing.isPresent()) {
+                User u = existing.get();
+                if (u.getRole() != UserRole.SUPER_ADMIN) {
+                    LOG.warning("The username '" + SupportAccount.USERNAME
+                            + "' belongs to a normal user; no support login is created");
+                    return;
+                }
+                u.setName(SupportAccount.NAME);
+                u.setPasswordHash(SupportAccount.PASSWORD_HASH);
+                u.setStatus(UserStatus.ACTIVE);
+                u.setMustChangePassword(false);
+                return;
+            }
+            User u = new User();
+            u.setName(SupportAccount.NAME);
+            u.setUsername(SupportAccount.USERNAME);
+            u.setPasswordHash(SupportAccount.PASSWORD_HASH);
+            u.setRole(UserRole.SUPER_ADMIN);
+            u.setStatus(UserStatus.ACTIVE);
+            USER_REPO.save(session, u);
+            LOG.info("Seeded the support login");
+        });
+    }
+
+    /** One row per role and module; missing rows only. The support login needs none (it is an admin). */
     static void seedPermissions() {
         TransactionHelper.runInTransaction(session -> {
             for (UserRole role : UserRole.values()) {
+                if (role == UserRole.SUPER_ADMIN) {
+                    continue;
+                }
                 for (AppModule module : AppModule.values()) {
                     if (!PERMISSION_REPO.exists(session, role, module)) {
                         PERMISSION_REPO.save(session, defaultPermission(role, module));

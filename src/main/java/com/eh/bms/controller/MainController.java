@@ -1,6 +1,7 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.AppModule;
+import com.eh.bms.model.UserRole;
 import com.eh.bms.service.AppConfigService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.util.DateUtil;
@@ -86,9 +87,12 @@ public class MainController {
         userLabel.textProperty().bind(javafx.beans.binding.Bindings.createStringBinding(
                 () -> session.getName() + " (" + I18n.get("role." + session.getRole().name()) + ")", I18n.localeProperty()));
 
-        // Only modules the user may view get a button (cashier: no HR, reports, settings, users)
+        // Only modules the user may view get a button (cashier: no HR, reports, settings, users).
+        // The support login is only there to reset passwords, so it sees just the Users page.
+        boolean support = session.getRole() == UserRole.SUPER_ADMIN;
         List<Page> visible = PAGES.stream()
-                .filter(page -> session.can(page.module(), UserSession.Action.VIEW))
+                .filter(page -> support ? page.module() == AppModule.USER
+                        : session.can(page.module(), UserSession.Action.VIEW))
                 .toList();
 
         for (Page page : visible) {

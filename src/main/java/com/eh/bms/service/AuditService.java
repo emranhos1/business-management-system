@@ -28,9 +28,16 @@ public class AuditService {
 
     public void log(Session session, AuditAction action, String record, Long referenceId,
                     String oldValue, String newValue) {
+        log(session, action, record, referenceId, oldValue, newValue,
+                UserSession.isLoggedIn() ? UserSession.get().getUserId() : null);
+    }
+
+    /** For a change by someone who is not logged in yet (a first-login or forgotten-password reset). */
+    public void log(Session session, AuditAction action, String record, Long referenceId,
+                    String oldValue, String newValue, Long userId) {
         AuditLog row = new AuditLog();
-        if (UserSession.isLoggedIn()) {
-            row.setUser(session.getReference(User.class, UserSession.get().getUserId()));
+        if (userId != null) {
+            row.setUser(session.getReference(User.class, userId));
         }
         row.setAction(action.name());
         row.setModule(record);

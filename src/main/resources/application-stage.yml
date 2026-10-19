@@ -11,4 +11,4 @@ db:
 admin:
   name: Administrator
   username: admin
-  password: admin123
+  password: "123456"

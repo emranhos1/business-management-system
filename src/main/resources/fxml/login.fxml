@@ -19,7 +19,7 @@
     <!-- Square card; window is square too, so the margin is equal on all sides -->
     <VBox styleClass="login-card" spacing="10" alignment="CENTER_LEFT"
           minWidth="360" prefWidth="360" maxWidth="360"
-          minHeight="360" prefHeight="360" maxHeight="360">
+          minHeight="410" prefHeight="410" maxHeight="410">
         <HBox spacing="10" alignment="CENTER_LEFT">
             <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
                 <Image url="@../icons/bms-64.png"/>
@@ -38,5 +38,7 @@
 
         <Button fx:id="loginButton" styleClass="login-button" maxWidth="Infinity"
                 defaultButton="true" onAction="#onLogin"/>
+
+        <Label fx:id="forgotLabel" styleClass="login-subtitle" wrapText="true"/>
     </VBox>
 </StackPane>

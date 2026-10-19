@@ -1,11 +1,14 @@
 package com.eh.bms.controller;
 
+import com.eh.bms.model.User;
 import com.eh.bms.service.AuthService;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.WindowManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -19,6 +22,8 @@ public class LoginController {
 
     private static final Logger LOG = Logger.getLogger(LoginController.class.getName());
 
+    private static final String CHANGE_PASSWORD_FXML = "/fxml/views/change-password-form.fxml";
+
     private final AuthService authService = new AuthService();
 
     @FXML private Label titleLabel;
@@ -29,9 +34,11 @@ public class LoginController {
     @FXML private PasswordField passwordField;
     @FXML private Label errorLabel;
     @FXML private Button loginButton;
+    @FXML private Label forgotLabel;
 
     @FXML
     private void initialize() {
+        forgotLabel.textProperty().bind(I18n.bind("login.forgot_hint"));
         titleLabel.textProperty().bind(I18n.bind("app.title"));
         subtitleLabel.textProperty().bind(I18n.bind("login.subtitle"));
         usernameLabel.textProperty().bind(I18n.bind("login.username"));
@@ -83,7 +90,28 @@ public class LoginController {
                 passwordField.clear();
             }
             case SUCCESS -> WindowManager.showMain();
+            case MUST_CHANGE_PASSWORD -> firstLogin(result.user());
         }
+    }
+
+    /**
+     * The password was chosen by somebody else (the config's first admin password, or one the admin set): the user
+     * picks their own before getting in. An admin is then shown a recovery code, once. Closing the popup without
+     * saving leaves the user on the login screen.
+     */
+    private void firstLogin(User user) {
+        FXMLLoader loader = WindowManager.loader(CHANGE_PASSWORD_FXML);
+        Parent root = WindowManager.load(loader, CHANGE_PASSWORD_FXML);
+        ChangePasswordFormController form = loader.getController();
+        form.setUp(user);
+        WindowManager.dialog(root, I18n.get("password.change.title")).showAndWait();
+        if (!form.isSaved()) {
+            passwordField.clear();
+            passwordField.requestFocus();
+            return;
+        }
+        authService.startSession(user);
+        WindowManager.showMain();
     }
 
     private void showError(String message) {

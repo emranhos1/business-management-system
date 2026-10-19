@@ -223,15 +223,15 @@ Depends on: 16.1 first; each report depends on its module
 | 16.11 | Stock valuation report | Data and export correct | ✅ |
 | 16.12 | Profit & Loss (monthly/yearly) | Data and export correct | ✅ |
 
-## Stage 17 — User Management (Admin only)
+## Stage 17 — User Management (Admin only) ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 17.1 | User CRUD with role | Create/edit/delete works | [ ] |
-| 17.2 | Activate/deactivate user | Inactive user cannot log in | [ ] |
-| 17.3 | Permission editor per role and module | Changes apply after re-login | [ ] |
-| 17.4 | Audit log viewer | Shows who did what and when | [ ] |
+| 17.1 | User CRUD with role | Create/edit/delete works | ✅ |
+| 17.2 | Activate/deactivate user | Inactive user cannot log in | ✅ |
+| 17.3 | Permission editor per role and module | Changes apply after re-login | ✅ |
+| 17.4 | Audit log viewer | Shows who did what and when | ✅ |
 
 ## Stage 18 — Auto-Update: GitHub Actions
 Depends on: Stage 0
@@ -304,7 +304,7 @@ Depends on: Stages 11, 12, 17
 | N2.10 | Staff view of own entries (pending/approved/rejected) by `created_by` | Status shows correctly | [ ] |
 | N2.11 | Audit log for approve/reject | Audit row with admin and time | [ ] |
 
-### N3 — Keep Passwords Out of the Public Repo
+### N3 — Keep Passwords Out of the Public Repo (dropped: replaced by N10; the DB password stays, it is `localhost`)
 `application-{dev,stage,prod}.yml` hold DB and admin passwords; the GitHub repo is public.
 Depends on: before first release (Stage 18)
 
@@ -351,7 +351,7 @@ Depends on: Stage 11
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | [T] |
+| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | ✅ |
 
 ### N8 — Hide Account Balances From Users Without Accounts Permission
 Account pickers on money forms (purchase, purchase pay, expense, party payment, salary payment) show each account's balance, so a cashier sees balances although the Accounts module is closed to them (user decision). Show only the account name to users without Accounts view permission; saving is still blocked when money is short, but the error then shows no amount. Do it in one shared place for all these forms.
@@ -368,6 +368,17 @@ Depends on: Stage 11
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N9.1 | Refund may differ from the goods' value by under ৳1: a walk-in customer more or less, a party more (less stays in its ledger as credit); the difference is added to `returned_amount` and the party's return credit, so profit, cash and ledger all agree | ৳0.70 piece back as ৳1: cash −৳1, profit −৳1 on that sale, party ledger nets 0; back as ৳0 (walk-in): profit +৳0.70 kept | [T] |
-| N9.2 | Return form: walk-in refund field is editable; a line under it says the difference and that it is a loss (taken off profit) or gain; the confirm question says it too | Hint and confirm text show the difference; over ৳1 off is refused | [T] |
-| N9.3 | "Still worth" cap of the next return counted from the goods returned, not from `returned_amount` (which now holds roundings) | Second part return of a rounded-up first one keeps its full value | [T] |
+| N9.1 | Refund may differ from the goods' value by under ৳1: a walk-in customer more or less, a party more (less stays in its ledger as credit); the difference is added to `returned_amount` and the party's return credit, so profit, cash and ledger all agree | ৳0.70 piece back as ৳1: cash −৳1, profit −৳1 on that sale, party ledger nets 0; back as ৳0 (walk-in): profit +৳0.70 kept | ✅ |
+| N9.2 | Return form: walk-in refund field is editable; a line under it says the difference and that it is a loss (taken off profit) or gain; the confirm question says it too | Hint and confirm text show the difference; over ৳1 off is refused | ✅ |
+| N9.3 | "Still worth" cap of the next return counted from the goods returned, not from `returned_amount` (which now holds roundings) | Second part return of a rounded-up first one keeps its full value | ✅ |
+
+### N10 — First-Login Password Change and the Support Login
+Replaces N3's main need: the admin password in the public repo's yml is known to everyone, so every user picks their own password before getting in. The DB password stays in the yml (the DB is on the same PC: `localhost`). A forgotten password is solved by the support team's hidden login (the recovery-code idea was dropped by the user).
+Depends on: Stages 5, 17 (N3 is dropped by user decision; this is its smaller replacement)
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N10.1 | `users.must_change_password`; the admin made from the yml, and any user the admin creates or sets a password for, must pick their own at the next login (nothing opens before that; same or username-like password refused) | Fresh DB: admin / yml password → "choose your own password" popup; cancel = stays on login; save = in | ✅ |
+| N10.2 | Support login (`SUPER_ADMIN` role, username `emranhos1`): password only as a BCrypt hash in `SupportAccount.PASSWORD_HASH` (made with `SupportHashTool`), created at startup, hidden from the users list and the audit log's user filter, cannot be edited, switched off or deleted; it can do everything an admin can, so it resets any admin's or user's password from the Users page | Support login works; not in the Users page; sets an admin's new password; that admin must pick their own at the next login | ✅ |
+| N10.3 | Login screen says who to ask when a password is forgotten (no self-service reset) | Hint shows under the login button | ✅ |
+| N10.4 | Dev auto-login (`dev.auto-login`, dev profile only) is kept blank (user decision): dev opens the login screen too; set a username there only to skip it | Dev run shows the login screen and the first-login popup | ✅ |
