@@ -140,6 +140,14 @@
     -fx-text-fill: #616e7c;
 }
 
+/* Page scroll (main.fxml). -fx-background is inherited by every control on the page (text colours, tab
+   headers are worked out from it), so it must stay the page colour, never transparent. */
+.page-scroll,
+.page-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: #f4f6f8;
+}
+
 .content-area {
     -fx-padding: 24;
 }
@@ -182,7 +190,7 @@
 .form-scroll,
 .form-scroll > .viewport {
     -fx-background-color: transparent;
-    -fx-background: transparent;
+    -fx-background: #f4f6f8;
 }
 
 .form-card {
@@ -191,10 +199,6 @@
     -fx-padding: 24;
     -fx-border-color: #e5e7eb;
     -fx-border-radius: 8;
-}
-
-.settings-tabs .tab-content-area {
-    -fx-padding: 16 0 0 0;
 }
 
 /* Tabs beside a page's main list (e.g. Products page: categories / units) */
@@ -208,8 +212,16 @@
     -fx-padding: 6 0 0 0;
 }
 
-.form-label.required {
+/* Every field name is bold; a required one gets a red asterisk after it (the icon follows the "required"
+   class, also when a page adds or removes it) */
+.form-label {
     -fx-font-weight: bold;
+}
+
+.form-label.required {
+    -fx-graphic: url("../icons/required.png");
+    -fx-content-display: right;
+    -fx-graphic-text-gap: 3;
 }
 
 .logo-box {
@@ -242,6 +254,20 @@
     -fx-padding: 0 0 8 0;
 }
 
+/* New version notice above the login card */
+.update-banner {
+    -fx-background-color: #fff4d6;
+    -fx-border-color: #e8c46a;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 12;
+}
+
+.update-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
 .error-label {
     -fx-text-fill: #d64545;
 }
@@ -264,6 +290,15 @@
     -fx-border-color: #d64545;
     -fx-border-radius: 3;
     -fx-background-color: #fff5f5;
+}
+
+/* SearchPicker list: fixed colours, never the field's error colours */
+.context-menu.picker-menu {
+    -fx-control-inner-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-focus-color: #2563eb;
+    -fx-faint-focus-color: transparent;
 }
 
 .field-error {
@@ -318,6 +353,124 @@
     -fx-background-color: -fx-selection-bar;
 }
 
+/* Grouped tables (TableHelper.setUp(TreeTableView)): a group row, e.g. an expense category with its expenses */
+.tree-table-row-cell.group-row {
+    -fx-background-color: #e8eef6;
+    -fx-cursor: hand;
+}
+
+.tree-table-row-cell.group-row:selected {
+    -fx-background-color: -fx-selection-bar;
+}
+
+.tree-table-row-cell.group-row .tree-table-cell {
+    -fx-font-weight: bold;
+}
+
+/* Attendance: a weekly off day (day name next to the date, and those days in its calendar) */
+.label.attendance-off-day,
+.date-cell.attendance-off-day {
+    -fx-text-fill: #c05621;
+}
+
+.date-cell.attendance-off-day:disabled {
+    -fx-opacity: 0.6;
+}
+
+/* TimePicker: looks like a text field with a clock icon; the time is picked on a clock, never typed */
+.button.time-picker {
+    -fx-background-color: #d1d5db, #ffffff;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
+    -fx-padding: 5 8 5 8;
+    -fx-text-fill: #1f2933;
+    -fx-cursor: hand;
+}
+
+.button.time-picker:hover {
+    -fx-background-color: #2563eb, #ffffff;
+}
+
+.button.time-picker.time-picker-empty {
+    -fx-text-fill: #9aa5b1;
+}
+
+.button.time-picker .icon {
+    -fx-background-color: #616e7c;
+}
+
+.button.time-picker.field-invalid {
+    -fx-background-color: #d64545, #fff5f5;
+}
+
+.clock-popup {
+    -fx-background-color: #ffffff;
+    -fx-padding: 14;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 14, 0.1, 0, 4);
+}
+
+.clock-head-part {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9aa5b1;
+    -fx-padding: 0 6;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.clock-head-part.clock-head-active {
+    -fx-text-fill: #2563eb;
+    -fx-background-color: #e8effd;
+}
+
+.clock-head-colon {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9aa5b1;
+}
+
+.toggle-button.clock-half {
+    -fx-min-width: 52;
+    -fx-background-color: #f3f4f6;
+    -fx-text-fill: #616e7c;
+    -fx-font-weight: bold;
+}
+
+.toggle-button.clock-half:selected {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
+.clock-dial {
+    -fx-fill: #f1f5f9;
+}
+
+.button.clock-number {
+    -fx-background-color: transparent;
+    -fx-background-radius: 17;
+    -fx-padding: 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: #1f2933;
+    -fx-cursor: hand;
+}
+
+.button.clock-number.clock-number-inner {
+    -fx-font-size: 12px;
+    -fx-text-fill: #616e7c;
+}
+
+.button.clock-number:hover {
+    -fx-background-color: #dbe5fb;
+}
+
+.button.clock-number.clock-number-selected {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
 /* Account ledger window: figures on top */
 .ledger-window {
     -fx-padding: 20;
@@ -332,6 +485,12 @@
     -fx-padding: 12 16;
     -fx-spacing: 4;
     -fx-min-width: 200;
+}
+
+/* Tiles that share one line with others (e.g. Expenses): no fixed minimum, they split the width */
+.stat-tile.stat-tile-fit {
+    -fx-min-width: 0;
+    -fx-padding: 10 12;
 }
 
 .stat-tile-main {
@@ -355,6 +514,83 @@
 
 .stat-value.money-out {
     -fx-text-fill: #c53030;
+}
+
+/* Every tooltip: light grey, black text, a bit larger than the page text.
+   -fx-background is set too: labels inside work out their text colour from it. */
+.tooltip {
+    -fx-background: #f3f4f6;
+    -fx-background-color: #f3f4f6;
+    -fx-background-radius: 6;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 6;
+    -fx-text-fill: #111827;
+    -fx-font-size: 14px;
+    -fx-padding: 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 8, 0, 0, 2);
+}
+
+/* Row tooltip (TableHelper.installRows): big title, then "label : value"; amounts bold */
+.row-tip .label {
+    -fx-text-fill: #111827;
+    -fx-font-size: 14px;
+}
+
+.row-tip .tip-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.row-tip .tip-label {
+    -fx-text-fill: #4b5563;
+}
+
+.row-tip .tip-amount {
+    -fx-font-weight: bold;
+}
+
+/* Sale screen: white cards, amounts right-aligned, grand total big */
+.sale-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 8;
+    -fx-padding: 14 16;
+}
+
+/* Search field that opens like a dropdown (SearchPicker) */
+.picker-box .text-field {
+    -fx-padding: 0.333333em 28 0.333333em 0.583em;
+}
+
+.picker-arrow {
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+    -fx-background-color: #4b5563;
+    -fx-min-width: 9;
+    -fx-max-width: 9;
+    -fx-min-height: 5;
+    -fx-max-height: 5;
+    -fx-translate-x: -10;
+}
+
+.sale-amount {
+    -fx-font-weight: bold;
+}
+
+.sale-grand {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
+/* Scroll around every popup's content (WindowManager.dialog); scrolls only when taller than the screen.
+   -fx-background stays a real colour: controls inside work out their text colours from it. */
+.dialog-scroll,
+.dialog-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: #ffffff;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 /* Add/edit popup forms */
@@ -389,6 +625,62 @@
 
 .dialog-buttons {
     -fx-padding: 4 0 0 0;
+}
+
+/* Date range calendar (DateRangePicker): first/last day dark, the days between light */
+.range-popup {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-padding: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 10, 0.1, 0, 3);
+}
+
+/* In the range list only the picked range is coloured: the calendar's own "selected" day (it opens on
+   today) must not look picked */
+.range-popup .date-cell.selected,
+.range-popup .date-cell:focused {
+    -fx-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1f2937;
+}
+
+.range-popup .date-cell.range-day {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1f2937;
+}
+
+.range-popup .date-cell.range-edge {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
+/* Round down-arrow at the bottom of a popup while more is hidden below (WindowManager.dialog) */
+.scroll-more {
+    -fx-background-color: #2563eb;
+    -fx-background-radius: 18;
+    -fx-min-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-width: 36;
+    -fx-pref-height: 36;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 8, 0.1, 0, 2);
+}
+
+.scroll-more-arrow {
+    -fx-shape: "M 0 0 L 6 6 L 12 0 L 10 -2 L 6 2 L 2 -2 Z";
+    -fx-background-color: #ffffff;
+    -fx-min-width: 14;
+    -fx-max-width: 14;
+    -fx-min-height: 8;
+    -fx-max-height: 8;
+}
+
+/* A form's button row fixed under its scrolling part (WindowManager.dialog) */
+.dialog-buttons.dialog-footer {
+    -fx-padding: 12 24 16 24;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e5e7eb transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
 }
 
 /* Every popup (WindowManager.dialog): no window title bar; the title stands turned on a dark strip on the left */
@@ -438,18 +730,19 @@
      save-button   Save (forms, Settings), Yes in confirm dialogs   blue
      add-button    New ... (toolbars)                               blue
      login-button  Login                                            blue
+     update-button Update now (login screen, new version)            blue
      edit-button   Edit                                             orange
      delete-button Delete                                           red
      cancel-button Cancel in forms                                  red
      no-button     No in confirm dialogs                            grey
      page-button   Previous / Next under tables                     grey
      view-button   Open a read-only view (e.g. account ledger)      teal
-     row-button    Small action inside a table row (e.g. Copy)      blue, row height
+     icon-button   Action on a table row (edit, view, copy, ...)    icon (+ word), colour per action
    Normal: light background, coloured border and text, soft shadow.
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
 
-.save-button, .add-button, .login-button, .edit-button,
+.save-button, .add-button, .login-button, .update-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
@@ -465,27 +758,28 @@
     -fx-max-height: 36;
 }
 
-/* Every button the same width (Login fills its card instead) */
-.save-button, .add-button, .edit-button,
+/* Every button at least 140 wide; a longer label makes it wider instead of cutting the text to "..."
+   (Login fills its card instead). -1 = as wide as its label. */
+.save-button, .add-button, .update-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-min-width: 140;
-    -fx-pref-width: 140;
-    -fx-max-width: 140;
+    -fx-pref-width: -1;
+    -fx-max-width: -1;
 }
 
-.save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
+.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover, .edit-button:hover,
 .delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
     -fx-text-fill: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
 }
 
-/* Blue: Save / Add / Login */
-.save-button, .add-button, .login-button {
+/* Blue: Save / Add / Login / Update */
+.save-button, .add-button, .login-button, .update-button {
     -fx-border-color: #2563eb;
     -fx-text-fill: #2563eb;
 }
 
-.save-button:hover, .add-button:hover, .login-button:hover {
+.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover {
     -fx-background-color: #2563eb;
 }
 
@@ -530,24 +824,84 @@
     -fx-background-color: #6b7280;
 }
 
-/* Small button inside a table row (e.g. Copy): fits the row height, blue like Add */
-.row-button {
+/* Icon buttons inside a table row (TableHelper.actionsColumn): a square with the action's colour,
+   the icon in that colour; hover fills it and turns the icon white. What it does shows in a tooltip. */
+.icon-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
     -fx-border-radius: 4;
     -fx-border-width: 1;
-    -fx-border-color: #2563eb;
-    -fx-text-fill: #2563eb;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 1 12;
+    -fx-padding: 0;
     -fx-cursor: hand;
+    -fx-min-width: 30;
+    -fx-pref-width: 30;
+    -fx-max-width: 30;
+    -fx-min-height: 26;
+    -fx-pref-height: 26;
+    -fx-max-height: 26;
 }
 
-.row-button:hover {
-    -fx-background-color: #2563eb;
+.icon-button:hover .icon {
+    -fx-background-color: #ffffff;
+}
+
+/* Icon + a short word (e.g. "দেখুন", "পেলাম"): as wide as its text */
+.icon-text-button {
+    -fx-min-width: -1;
+    -fx-pref-width: -1;
+    -fx-max-width: -1;
+    -fx-padding: 0 8 0 6;
+    -fx-graphic-text-gap: 4;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.icon-text-button:hover {
     -fx-text-fill: #ffffff;
 }
+
+.icon-view.icon-text-button { -fx-text-fill: #0d9488; }
+.icon-in.icon-text-button, .icon-on.icon-text-button { -fx-text-fill: #2f855a; }
+.icon-out.icon-text-button { -fx-text-fill: #c53030; }
+.icon-off.icon-text-button { -fx-text-fill: #6b7280; }
+.icon-view.icon-text-button:hover, .icon-in.icon-text-button:hover, .icon-on.icon-text-button:hover,
+.icon-out.icon-text-button:hover, .icon-off.icon-text-button:hover {
+    -fx-text-fill: #ffffff;
+}
+
+/* Teal: view (ledger) */
+.icon-view { -fx-border-color: #0d9488; }
+.icon-view .icon { -fx-background-color: #0d9488; }
+.icon-view:hover { -fx-background-color: #0d9488; }
+
+/* Green: money in / make active */
+.icon-in, .icon-on { -fx-border-color: #2f855a; }
+.icon-in .icon, .icon-on .icon { -fx-background-color: #2f855a; }
+.icon-in:hover, .icon-on:hover { -fx-background-color: #2f855a; }
+
+/* Red: money out */
+.icon-out { -fx-border-color: #c53030; }
+.icon-out .icon { -fx-background-color: #c53030; }
+.icon-out:hover { -fx-background-color: #c53030; }
+
+/* Orange: edit */
+.icon-edit { -fx-border-color: #d97706; }
+.icon-edit .icon { -fx-background-color: #d97706; }
+.icon-edit:hover { -fx-background-color: #d97706; }
+.icon-edit.icon-text-button { -fx-text-fill: #d97706; }
+.icon-edit.icon-text-button:hover { -fx-text-fill: #ffffff; }
+
+/* Blue: copy */
+.icon-copy { -fx-border-color: #2563eb; }
+.icon-copy .icon { -fx-background-color: #2563eb; }
+.icon-copy:hover { -fx-background-color: #2563eb; }
+.icon-copy.icon-text-button { -fx-text-fill: #2563eb; }
+.icon-copy.icon-text-button:hover { -fx-text-fill: #ffffff; }
+
+/* Grey: make inactive */
+.icon-off { -fx-border-color: #6b7280; }
+.icon-off .icon { -fx-background-color: #6b7280; }
+.icon-off:hover { -fx-background-color: #6b7280; }
 
 .button-column {
     -fx-alignment: center;
@@ -562,3 +916,14 @@
 .view-button:hover {
     -fx-background-color: #0d9488;
 }
+
+/* Reports page (Stage 16): the list of reports, and the totals row of a report table */
+.report-list .list-cell {
+    -fx-padding: 10 12;
+    -fx-font-size: 14px;
+}
+
+.report-total-row .table-cell {
+    -fx-font-weight: bold;
+}
+

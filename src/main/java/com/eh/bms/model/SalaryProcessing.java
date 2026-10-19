@@ -17,9 +17,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * One employee's salary for one month.
+ * One employee's salary sheet for one month (14.3).
  * net_salary = gross_salary - deductions + bonus.
- * account_id and paid_date stay empty until the salary is paid.
+ * Payments are in {@code salary_payments}; account_id and paid_date are no longer used (kept, always empty).
  */
 @Entity
 @Table(name = "salary_processing",
@@ -53,6 +53,10 @@ public class SalaryProcessing {
     @Column(name = "leave_days", nullable = false)
     private Integer leaveDays;
 
+    /** Days (daily, monthly) or hours (hourly) worked; the gross of a daily/hourly employee is this x rate. */
+    @Column(name = "worked_units", precision = 8, scale = 2)
+    private BigDecimal workedUnits;
+
     @Column(name = "gross_salary", nullable = false, precision = 14, scale = 2)
     private BigDecimal grossSalary;
 
@@ -65,12 +69,13 @@ public class SalaryProcessing {
     @Column(name = "net_salary", nullable = false, precision = 14, scale = 2)
     private BigDecimal netSalary;
 
-    /** Account the salary was paid from. */
+    /** No longer used: payments are in salary_payments. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id",
             foreignKey = @ForeignKey(name = "fk_salary_processing_account"))
     private Account account;
 
+    /** No longer used: payments are in salary_payments. */
     @Column(name = "paid_date")
     private LocalDate paidDate;
 
@@ -127,6 +132,14 @@ public class SalaryProcessing {
 
     public void setLeaveDays(Integer leaveDays) {
         this.leaveDays = leaveDays;
+    }
+
+    public BigDecimal getWorkedUnits() {
+        return workedUnits;
+    }
+
+    public void setWorkedUnits(BigDecimal workedUnits) {
+        this.workedUnits = workedUnits;
     }
 
     public BigDecimal getGrossSalary() {

@@ -170,10 +170,11 @@ public class TransferFormController {
                     form.focusFirstError();
                 }
                 case INSUFFICIENT_BALANCE -> {
-                    // Someone else used the money since the form opened
-                    balances.put(from.getId(), result.available());
+                    // Money went out since the form opened, or the date is earlier: show today's balance again;
+                    // the error shows what was there on that date
+                    balances.put(from.getId(), ledgerService.balance(from.getId()));
                     showBalance(fromBalanceLabel, from);
-                    form.error(amountField, I18n.get("transfer.error.insufficient", MoneyUtil.format(result.available())));
+                    form.error(amountField, I18n.get("msg.max_out_on_date", MoneyUtil.format(result.available())));
                     form.focusFirstError();
                 }
             }

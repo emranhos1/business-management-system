@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <!-- Add / edit unit popup (8.4). One field per row (label 200 px, input fills the rest). -->
@@ -28,6 +29,10 @@
     </HBox>
 
     <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <!-- Only when editing a record nothing uses -->
+        <Button fx:id="deleteButton" text="%button.delete" styleClass="delete-button" onAction="#onDelete"
+                visible="false" managed="false"/>
+        <Region HBox.hgrow="ALWAYS"/>
         <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
         <Button text="%button.save" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
     </HBox>

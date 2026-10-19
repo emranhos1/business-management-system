@@ -1,9 +1,10 @@
 package com.eh.bms.util;
 
-import com.eh.bms.config.AppConfig;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -11,10 +12,13 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -40,7 +44,8 @@ public final class WindowManager {
     private static final String LOGIN_FXML = "/fxml/login.fxml";
     private static final String MAIN_FXML = "/fxml/main.fxml";
 
-    private static final double LOGIN_SIZE = 500;
+    /** Login window width and height; it grows taller only for the update banner (LoginController). */
+    public static final double LOGIN_SIZE = 500;
     /** Restored (not maximized) main window: share of the screen. */
     private static final double RESTORED_WIDTH = 0.90;
     private static final double RESTORED_HEIGHT = 0.85;
@@ -49,6 +54,10 @@ public final class WindowManager {
 
     /** Window property: the popup resizes to its content when form errors appear or go (FormValidator). */
     public static final String AUTO_SIZE = "bms.autoSize";
+    /** Height of the strip under a popup's scrolling part that holds the "more below" arrow. */
+    private static final double MORE_STRIP_HEIGHT = 44;
+    /** Window property: the popup's scrolling part. */
+    private static final String SCROLL = "bms.scroll";
 
     private static Stage current;
 
@@ -109,8 +118,27 @@ public final class WindowManager {
         stage.initModality(Modality.WINDOW_MODAL);
         stage.setResizable(false);
 
-        HBox.setHgrow(root, Priority.ALWAYS);
-        HBox frame = new HBox(titleStrip(stage, title), root);
+        // The content scrolls when the popup is taller than the screen (e.g. a long form on a small screen)
+        ScrollPane scroll = new ScrollPane(root);
+        // Not fitToHeight: with it, JavaFX hides the scroll bar even when the form is taller than the popup
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("dialog-scroll");
+        stage.getProperties().put(SCROLL, scroll);
+        // A form's button row (Save / Cancel / Delete) stays fixed under the scrolling part, always in sight
+        Node body = withMoreArrow(scroll, root);
+        if (root.getStyleClass().contains("dialog-form") && root instanceof Pane pane) {
+            Node buttons = pane.getChildren().stream()
+                    .filter(n -> n.getStyleClass().contains("dialog-buttons")).findFirst().orElse(null);
+            if (buttons != null) {
+                pane.getChildren().remove(buttons);
+                buttons.getStyleClass().add("dialog-footer");
+                VBox.setVgrow(body, Priority.ALWAYS);
+                body = new VBox(body, buttons);
+            }
+        }
+        HBox.setHgrow(body, Priority.ALWAYS);
+        HBox frame = new HBox(titleStrip(stage, title), body);
         frame.getStyleClass().add("popup-frame");
         // Transparent margin around the popup, so its shadow has room to show
         StackPane shadowHost = new StackPane(frame);
@@ -127,25 +155,111 @@ public final class WindowManager {
         stage.setOnShown(e -> {
             // CSS (fonts, padding) is in place only now; size again so no edge is cut off
             if (Boolean.TRUE.equals(stage.getProperties().get(AUTO_SIZE))) {
+                // A form keeps its full height inside the scroll (never squeezed, so no text is cut to "...")
+                if (root instanceof Region region) {
+                    region.setMinHeight(Region.USE_PREF_SIZE);
+                }
                 stage.sizeToScene();
+                fitToScreen(stage);
             }
             centerOnWorkArea(stage, owner);
         });
         return stage;
     }
 
-    /** Centers the popup on the main window's work area (right of the sidebar); other owners keep JavaFX's centering. */
+    /**
+     * Centers the popup on the main window's work area (right of the sidebar), or on its owner popup
+     * (e.g. a Yes/No question over a form). Done after the final size is known; JavaFX's own centering
+     * uses the size before {@code sizeToScene}, so it lands off-centre.
+     */
     private static void centerOnWorkArea(Stage stage, Window owner) {
-        if (owner == null || owner != current || owner.getScene() == null) {
+        if (owner == null) {
             return;
         }
-        Node work = owner.getScene().lookup("#workArea");
-        Bounds area = work == null ? null : work.localToScreen(work.getLayoutBounds());
+        Bounds area = null;
+        if (owner == current && owner.getScene() != null) {
+            Node work = owner.getScene().lookup("#workArea");
+            area = work == null ? null : work.localToScreen(work.getLayoutBounds());
+        }
         if (area == null) {
-            return;
+            area = new BoundingBox(owner.getX(), owner.getY(), owner.getWidth(), owner.getHeight());
         }
-        stage.setX(area.getMinX() + Math.max(0, (area.getWidth() - stage.getWidth()) / 2));
-        stage.setY(area.getMinY() + Math.max(0, (area.getHeight() - stage.getHeight()) / 2));
+        Rectangle2D screen = screenOf(stage);
+        double x = area.getMinX() + (area.getWidth() - stage.getWidth()) / 2;
+        double y = area.getMinY() + (area.getHeight() - stage.getHeight()) / 2;
+        // Never past the screen's edges (taskbar included)
+        stage.setX(Math.max(screen.getMinX(), Math.min(x, screen.getMaxX() - stage.getWidth())));
+        stage.setY(Math.max(screen.getMinY(), Math.min(y, screen.getMaxY() - stage.getHeight())));
+    }
+
+    /**
+     * The popup's scrolling part with a round down-arrow under it while more is hidden below (gone at the
+     * bottom); clicking it scrolls down. The arrow sits in its own strip, shown only while the content is
+     * taller than the popup, so it never covers the content.
+     */
+    private static Node withMoreArrow(ScrollPane scroll, Parent content) {
+        Region arrow = new Region();
+        arrow.getStyleClass().add("scroll-more-arrow");
+        StackPane more = new StackPane(arrow);
+        more.getStyleClass().add("scroll-more");
+        more.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        more.setOnMouseClicked(e -> scroll.setVvalue(scroll.getVmax()));
+        StackPane strip = new StackPane(more);
+        strip.setPadding(new Insets(4, 0, 4, 0));
+        strip.setMinHeight(MORE_STRIP_HEIGHT);
+        strip.setPrefHeight(MORE_STRIP_HEIGHT);
+        strip.setMaxHeight(MORE_STRIP_HEIGHT);
+        // Is the content taller than the room the scroll part would have without the strip?
+        Runnable update = () -> {
+            double room = scroll.getViewportBounds().getHeight() + (strip.isManaged() ? MORE_STRIP_HEIGHT : 0);
+            boolean needed = content.getLayoutBounds().getHeight() > room + 1;
+            if (needed != strip.isManaged()) {
+                strip.setManaged(needed);
+                strip.setVisible(needed);
+            }
+        };
+        strip.setManaged(false);
+        strip.setVisible(false);
+        scroll.viewportBoundsProperty().addListener(o -> update.run());
+        content.layoutBoundsProperty().addListener(o -> update.run());
+        more.visibleProperty().bind(scroll.vvalueProperty().lessThan(scroll.vmaxProperty().subtract(0.001)));
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return new VBox(scroll, strip);
+    }
+
+    /**
+     * A list popup (ledger, sale details): a fixed size instead of fitting its content, never bigger than the
+     * screen the app is on (e.g. 1040 px on a 1024 px screen). Its content fills that height (the table
+     * grows or shrinks), so the buttons under the table are never pushed out of the window; content that
+     * cannot shrink that far scrolls instead (with the scroll bar). Call before showing.
+     */
+    public static void sizeListWindow(Stage stage, double width, double height) {
+        stage.getProperties().remove(AUTO_SIZE);
+        if (stage.getProperties().get(SCROLL) instanceof ScrollPane scroll
+                && scroll.getContent() instanceof Region content) {
+            // Filling the height while the content is taller than the window would hide the scroll bar
+            scroll.viewportBoundsProperty().addListener((obs, old, view) ->
+                    scroll.setFitToHeight(content.minHeight(view.getWidth()) <= view.getHeight()));
+        }
+        Window owner = stage.getOwner() != null ? stage.getOwner() : current;
+        Rectangle2D screen = owner == null ? Screen.getPrimary().getVisualBounds() : screenOf(owner);
+        stage.setWidth(Math.min(width, screen.getWidth()));
+        stage.setHeight(Math.min(height, screen.getHeight()));
+    }
+
+    /** Caps a popup's height at the screen's visible height; its content then scrolls. */
+    private static void fitToScreen(Stage stage) {
+        double max = screenOf(stage).getHeight();
+        if (stage.getHeight() > max) {
+            stage.setHeight(max);
+        }
+    }
+
+    /** Visible bounds (without the taskbar) of the screen the window is on. */
+    private static Rectangle2D screenOf(Window window) {
+        return Screen.getScreensForRectangle(window.getX(), window.getY(), Math.max(1, window.getWidth()),
+                        Math.max(1, window.getHeight())).stream()
+                .findFirst().orElse(Screen.getPrimary()).getVisualBounds();
     }
 
     /** Left strip with the whole title turned 90° (read bottom to top); dragging it moves the popup. */
@@ -173,7 +287,15 @@ public final class WindowManager {
     public static void fitPopup(Node node) {
         if (node.getScene() != null && node.getScene().getWindow() instanceof Stage stage
                 && Boolean.TRUE.equals(stage.getProperties().get(AUTO_SIZE))) {
-            Platform.runLater(stage::sizeToScene);
+            Platform.runLater(() -> {
+                stage.sizeToScene();
+                fitToScreen(stage);
+                // Grown past the bottom of the screen: move it up
+                Rectangle2D screen = screenOf(stage);
+                if (stage.getY() + stage.getHeight() > screen.getMaxY()) {
+                    stage.setY(Math.max(screen.getMinY(), screen.getMaxY() - stage.getHeight()));
+                }
+            });
         }
     }
 
@@ -222,7 +344,8 @@ public final class WindowManager {
 
     private static Stage newStage() {
         Stage stage = new Stage();
-        stage.setTitle(AppConfig.get().getString("app.name"));
+        // Follows the language (taskbar and title bar)
+        stage.titleProperty().bind(I18n.bind("app.title"));
         AppIcons.apply(stage);
         return stage;
     }

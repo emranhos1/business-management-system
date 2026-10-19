@@ -1,6 +1,5 @@
 package com.eh.bms.service;
 
-import com.eh.bms.model.AppModule;
 import com.eh.bms.model.Unit;
 import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.util.PageResult;
@@ -59,7 +58,7 @@ public class UnitService {
                 u.setNameBn(nameBn);
                 u.setNameEn(nameEn);
                 repository.save(session, u);
-                auditService.created(session, AppModule.PRODUCT, u.getId(), describe(u));
+                auditService.created(session, "UNIT", u.getId(), describe(u));
                 return SaveResult.SAVED;
             }
             Unit u = repository.findById(session, data.id())
@@ -69,10 +68,15 @@ public class UnitService {
             u.setNameEn(nameEn);
             String now = describe(u);
             if (!Objects.equals(old, now)) {
-                auditService.updated(session, AppModule.PRODUCT, u.getId(), old, now);
+                auditService.updated(session, "UNIT", u.getId(), old, now);
             }
             return SaveResult.SAVED;
         });
+    }
+
+    /** True if no product uses the unit, so {@link #delete} would delete it. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
     }
 
     /** Deletes only a unit no product uses (as unit or secondary unit). */
@@ -87,7 +91,7 @@ public class UnitService {
             }
             String old = describe(u);
             repository.delete(session, u);
-            auditService.deleted(session, AppModule.PRODUCT, id, old);
+            auditService.deleted(session, "UNIT", id, old);
             return DeleteResult.DELETED;
         });
     }

@@ -1,6 +1,10 @@
 package com.eh.bms.util;
 
+import javafx.application.Platform;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
@@ -24,6 +28,9 @@ import java.util.Set;
 public final class FormValidator {
 
     private static final String INVALID = "field-invalid";
+    /** Space (px) kept above / below a field scrolled into sight (its label, its error line). */
+    private static final double LABEL_ROOM = 40;
+    private static final double ERROR_ROOM = 30;
 
     /** Field → its error label, in form order. */
     private final Map<Control, Label> fields = new LinkedHashMap<>();
@@ -80,9 +87,48 @@ public final class FormValidator {
         return !invalid.isEmpty();
     }
 
-    /** Moves the cursor to the first wrong field (top of the form first). */
+    /** Moves the cursor to the first wrong field (top of the form first) and scrolls it into sight. */
     public void focusFirstError() {
-        fields.keySet().stream().filter(invalid::contains).findFirst().ifPresent(Control::requestFocus);
+        fields.keySet().stream().filter(invalid::contains).findFirst().ifPresent(field -> {
+            field.requestFocus();
+            // After the error lines are laid out, so the field's position is final
+            Platform.runLater(() -> scrollIntoView(field));
+        });
+    }
+
+    /** Scrolls every scroll pane around the node (page, popup) so the node and its error line show. */
+    private static void scrollIntoView(Node node) {
+        for (Node p = node.getParent(); p != null; p = p.getParent()) {
+            if (p instanceof ScrollPane scroll && scroll.getContent() != null) {
+                Node content = scroll.getContent();
+                Bounds inContent = content.sceneToLocal(node.localToScene(node.getBoundsInLocal()));
+                double extra = content.getBoundsInLocal().getHeight() - scroll.getViewportBounds().getHeight();
+                if (inContent == null || extra <= 0) {
+                    continue;
+                }
+                double top = scroll.getVvalue() * extra;
+                double viewHeight = scroll.getViewportBounds().getHeight();
+                // Room above for the label, below for the error line
+                double want = top;
+                if (inContent.getMinY() - LABEL_ROOM < top) {
+                    want = inContent.getMinY() - LABEL_ROOM;
+                } else if (inContent.getMaxY() + ERROR_ROOM > top + viewHeight) {
+                    want = inContent.getMaxY() + ERROR_ROOM - viewHeight;
+                }
+                scroll.setVvalue(Math.max(0, Math.min(1, want / extra)));
+            }
+        }
+    }
+
+    /**
+     * For a hint or error label whose text is set directly (not through a validator): it takes no space
+     * while its text is empty, so no blank gap stays under the field.
+     */
+    public static void hideWhenEmpty(Label... labels) {
+        for (Label label : labels) {
+            label.visibleProperty().bind(label.textProperty().isNotEmpty());
+            label.managedProperty().bind(label.textProperty().isNotEmpty());
+        }
     }
 
     private static void hide(Label label) {

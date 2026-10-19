@@ -5,13 +5,14 @@ import com.eh.bms.model.Unit;
 import com.eh.bms.service.UnitService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
-import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
+import com.eh.bms.util.Icons;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
 import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.TableHelper;
+import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.UnitUtil;
 import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
@@ -25,15 +26,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Units list ("Units" tab on the right of the Products page, 8.4): add, edit (button or double-click), delete. */
+/** Units list ("Units" tab on the right of the Products page, 8.4): add; edit by the row button (no double-click: there is no view); delete in the edit form. */
 public class UnitsController {
 
     private static final Logger LOG = Logger.getLogger(UnitsController.class.getName());
     private static final String FORM_FXML = "/fxml/views/unit-form.fxml";
 
     @FXML private Button addButton;
-    @FXML private Button editButton;
-    @FXML private Button deleteButton;
     @FXML private StackPane tableHolder;
 
     private final UnitService service = new UnitService();
@@ -45,7 +44,7 @@ public class UnitsController {
 
     @FXML
     private void initialize() {
-        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, editButton, deleteButton);
+        PermissionUtil.applyCrud(AppModule.PRODUCT, addButton, null, null);
 
         table = new PaginatedTable<>(this::loadPage);
         TableView<Unit> view = table.getTableView();
@@ -53,9 +52,11 @@ public class UnitsController {
         view.getColumns().add(TableHelper.column("units.col.products",
                 u -> I18n.digits(String.valueOf(productCounts.getOrDefault(u.getId(), 0L)))));
 
-        TableHelper.needSelection(view, editButton, deleteButton);
         boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.PRODUCT, Action.EDIT);
-        TableHelper.onDoubleClick(view, canEdit, this::openForm);
+        if (canEdit) {
+            view.getColumns().add(TableHelper.actionsColumn("label.actions",
+                    new RowAction<>(Icons.EDIT, "button.edit", "units.form.edit_title", "icon-edit", this::openForm)));
+        }
 
         tableHolder.getChildren().setAll(table);
         table.reload();
@@ -87,38 +88,7 @@ public class UnitsController {
         openForm(null);
     }
 
-    @FXML
-    private void onEdit() {
-        Unit selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            openForm(selected);
-        }
-    }
-
-    @FXML
-    private void onDelete() {
-        Unit selected = table.getTableView().getSelectionModel().getSelectedItem();
-        if (selected == null
-                || !Dialogs.confirmDelete(I18n.get("units.confirm_delete", UnitUtil.name(selected)))) {
-            return;
-        }
-        try {
-            switch (service.delete(selected.getId())) {
-                case DELETED -> {
-                    Notifier.success(I18n.get("msg.deleted"));
-                    onChange.run();
-                }
-                case IN_USE -> Notifier.error(I18n.get("units.error.in_use"));
-                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
-            }
-            table.refresh();
-        } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not delete unit", e);
-            Notifier.error(I18n.get("msg.error"));
-        }
-    }
-
-    /** Add (unit = null) or edit popup; the lists reload after a save. */
+    /** Add (unit = null) or edit popup; the lists reload after a save or delete. */
     private void openForm(Unit unit) {
         FXMLLoader loader = WindowManager.loader(FORM_FXML);
         Parent root = WindowManager.load(loader, FORM_FXML);

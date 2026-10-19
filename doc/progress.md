@@ -119,6 +119,7 @@ Depends on: Stage 5
 | 8.3 | Unit conversion display (e.g. ১ বস্তা = ৫০ kg) | Shows correct conversion | ✅ |
 | 8.4 | Units list (`units` table, Bangla + English name, ~30 common units seeded) with add/edit/delete in a "একক" tab next to categories; product unit / secondary unit picked from it (FK) | Units CRUD works; product form uses the list; old text units migrated | ✅ |
 | 8.5 | Copy button on each product row (opens add form filled in); min stock prefilled with the default (0 = no alert); same name allowed with another pack size | Copy works; same name + other conversion saves | ✅ |
+| 8.6 | Sale prices on each product: retail and wholesale per main unit, optional per secondary unit (blank = main price ÷ conversion); sale screen fills the price by the customer's wholesale/retail type | Prices save and reload; list shows them | ✅ |
 
 ## Stage 9 — Stock ✅
 Depends on: Stage 8
@@ -134,122 +135,128 @@ Depends on: Stage 8
 | 9.7 | Stock valuation view (stock × average cost) | Values match calculation | ✅ |
 | 9.8 | Popups: no window title bar, full title turned 90° on a dark left strip (drag to move), shadow, open centered right of the sidebar; Yes/No uses the same popup; long ledger details show in a tooltip | Popups look and sit right; tooltip shows full note | ✅ |
 
-## Stage 10 — Parties
+## Stage 10 — Parties ✅
 Depends on: Stage 5 (10.5 also needs Stage 7)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 10.1 | Party CRUD with opening balance; phone required (red error if empty or duplicate) | Create/edit/delete works; empty/duplicate phone shows red error | [ ] |
-| 10.2 | Party ledger service (debit/credit/balance) | Balance correct after entries | [ ] |
-| 10.3 | Party ledger view in plain words: columns দিলাম / পেলাম, balance as "৳X পাবো" (green) or "৳X দেবো" (red); never show debit, credit or minus sign | Full history shows; a non-accountant understands it | [ ] |
-| 10.4 | Party list with current balance as "পাবো" (green) / "দেবো" (red) | Balances match ledger | [ ] |
-| 10.5 | Payment/receipt against party (atomic, account linked) | Party and account both update | [ ] |
+| 10.1 | Party CRUD with opening balance; phone required (red error if empty or duplicate) | Create/edit/delete works; empty/duplicate phone shows red error | ✅ |
+| 10.2 | Party ledger service (debit/credit/balance) | Balance correct after entries | ✅ |
+| 10.3 | Party ledger view in plain words: columns দিলাম / পেলাম, balance as "৳X পাবো" (green) or "৳X দেবো" (red); never show debit, credit or minus sign | Full history shows; a non-accountant understands it | ✅ |
+| 10.4 | Party list with current balance as "পাবো" (green) / "দেবো" (red) | Balances match ledger | ✅ |
+| 10.5 | Payment/receipt against party (atomic, account linked) | Party and account both update | ✅ |
 
-## Stage 11 — Sales
+## Stage 11 — Sales ✅
 Depends on: Stages 7, 9, 10
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 11.1 | Sale screen: customer + item rows (qty, unit, price, discount) | Rows add/remove correctly | [ ] |
-| 11.2 | Totals: subtotal, VAT, grand total, due | Matches manual calculation | [ ] |
-| 11.3 | Mixed payment entries (e.g. cash + mobile) | Multiple payments saved | [ ] |
-| 11.4 | Confirm sale (atomic): stock, party, account ledgers | All update; failure rolls back | [ ] |
-| 11.5 | Installment payment on existing sale | Due reduces correctly | [ ] |
-| 11.6 | Sales history with filters (date/party/product) | Filters return right rows | [ ] |
-| 11.7 | Sales return (restores stock, adjusts party ledger) | Stock and balance correct | [ ] |
+| 11.1 | Sale screen: customer + item rows (qty, unit, price, discount) | Rows add/remove correctly | ✅ |
+| 11.2 | Totals: subtotal, VAT, grand total, due | Matches manual calculation | ✅ |
+| 11.3 | Mixed payment entries (e.g. cash + mobile) | Multiple payments saved | ✅ |
+| 11.4 | Confirm sale (atomic): stock, party, account ledgers | All update; failure rolls back | ✅ |
+| 11.5 | Installment payment on existing sale | Due reduces correctly | ✅ |
+| 11.6 | Sales history with filters (date/party/product) | Filters return right rows | ✅ |
+| 11.7 | Sales return (restores stock, adjusts party ledger) | Stock and balance correct | ✅ |
+| 11.8 | Memo serial number saved with each sale (`transactions.memo_no`, never reused); sales list searchable by it | Each sale gets the next number; search by number finds it | ✅ |
 
-## Stage 12 — Purchases
+## Stage 12 — Purchases ✅
 Depends on: Stages 7, 9, 10
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 12.1 | Purchase screen: supplier + item rows | Rows add/remove correctly | [ ] |
-| 12.2 | Confirm purchase (atomic): stock, avg cost, party, account | All update; failure rolls back | [ ] |
-| 12.3 | Purchase history with filters (date/supplier/product) | Filters return right rows | [ ] |
-| 12.4 | Purchase return (deducts stock, adjusts supplier ledger) | Stock and balance correct | [ ] |
+| 12.1 | Purchase screen: supplier + item rows | Rows add/remove correctly | ✅ |
+| 12.2 | Confirm purchase (atomic): stock, avg cost, party, account | All update; failure rolls back | ✅ |
+| 12.3 | Purchase history with filters (date/supplier/product) | Filters return right rows | ✅ |
+| 12.4 | Purchase return (deducts stock, adjusts supplier ledger) | Stock and balance correct | ✅ |
 
-## Stage 13 — Expenses
+## Stage 13 — Expenses ✅
 Depends on: Stage 7
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 13.1 | Expense category CRUD | Create/edit/delete works | [ ] |
-| 13.2 | Add expense (atomic account debit) | Expense saved, account reduced | [ ] |
-| 13.3 | Expense history with date filter | Filter returns right rows | [ ] |
-| 13.4 | Monthly expense summary by category | Totals match | [ ] |
+| 13.1 | Expense category CRUD | Create/edit/delete works | ✅ |
+| 13.2 | Add expense (atomic account debit) | Expense saved, account reduced | ✅ |
+| 13.3 | Expense history with date filter | Filter returns right rows | ✅ |
+| 13.4 | Monthly expense summary by category | Totals match | ✅ |
+| 13.5 | Expenses page as one page: list grouped by category (one table, share per category) beside the categories; month + year and date range filters; five tiles in one line; category type removed | Groups and totals match; arrow opens/closes once | ✅ |
 
-## Stage 14 — Employees & Payroll
+## Stage 14 — Employees & Payroll ✅
 Depends on: Stage 5 (14.4 also needs Stage 7)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 14.1 | Employee CRUD | Create/edit/delete works | [ ] |
-| 14.2 | Daily attendance with in/out time | Attendance saved per day | [ ] |
-| 14.3 | Monthly salary calculation (attendance + deductions + bonus) | Matches manual calculation | [ ] |
-| 14.4 | Salary payment linked to account (atomic) | Salary saved, account reduced | [ ] |
-| 14.5 | Salary history per employee | History shows correctly | [ ] |
+| 14.1 | Employee CRUD; no inactive while salary due or advance left | Create/edit/delete works; inactive blocked with money open | ✅ |
+| 14.2 | Daily attendance with in/out time; present saved automatically each work day (work hours in Settings) | Attendance saved per day; auto rows skip off days, join date, existing rows | ✅ |
+| 14.3 | Monthly salary calculation (attendance + deductions + bonus; paid leave setting) | Matches manual calculation | ✅ |
+| 14.4 | Salary payment linked to account (atomic): advance before the month is worked out, or in parts after; never more than the due unless emergency advance, extra carries to next months (`salary_payments`) | Payment saved, account reduced; over-payment blocked; emergency extra carried forward | ✅ |
+| 14.5 | Salary history per employee | History shows correctly | ✅ |
+| 14.6 | Employees page tabs (list, attendance, salary); salary type column in attendance; times picked on a clock (`TimePicker`), never typed; weekly off days, paid leave and work hours in Settings | Clock picks in/out; settings apply | ✅ |
 
-## Stage 15 — Dashboard
+## Stage 15 — Dashboard ✅
 Depends on: Stages 7–14
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 15.1 | Today's sales, purchases, expenses, net cash | Matches data | [ ] |
-| 15.2 | Total receivable and payable | Matches party balances | [ ] |
-| 15.3 | Stock summary by category | Matches stock | [ ] |
-| 15.4 | Net profit this month | Matches P&L | [ ] |
-| 15.5 | Low stock alerts | Matches alert list | [ ] |
-| 15.6 | Account balances | Matches accounts | [ ] |
+| 15.1 | Today's sales, purchases, expenses, net cash | Matches data | ✅ |
+| 15.2 | Total receivable and payable | Matches party balances | ✅ |
+| 15.3 | Stock summary by category | Matches stock | ✅ |
+| 15.4 | Net profit this month | Matches P&L | ✅ |
+| 15.5 | Low stock alerts | Matches alert list | ✅ |
+| 15.6 | Account balances | Matches accounts | ✅ |
 
-## Stage 16 — Reports (Excel .xlsx export)
+## Stage 16 — Reports (Excel .xlsx export) ✅
 Depends on: 16.1 first; each report depends on its module
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 16.1 | Excel export util (Apache POI) | Sample table exports to .xlsx | [ ] |
-| 16.2 | দৈনিক হিসাব (daily cash summary) | Data and export correct | [ ] |
-| 16.3 | Stock position report | Data and export correct | [ ] |
-| 16.4 | Party ledger report (one or all) | Data and export correct | [ ] |
-| 16.5 | Purchase summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.6 | Sales summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.7 | Expense summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.8 | Due collection report (customers) | Data and export correct | [ ] |
-| 16.9 | Payable report (suppliers) | Data and export correct | [ ] |
-| 16.10 | Salary report (monthly) | Data and export correct | [ ] |
-| 16.11 | Stock valuation report | Data and export correct | [ ] |
-| 16.12 | Profit & Loss (monthly/yearly) | Data and export correct | [ ] |
+| 16.1 | Excel export util (Apache POI) | Sample table exports to .xlsx | ✅ |
+| 16.2 | দৈনিক হিসাব (daily cash summary) | Data and export correct | ✅ |
+| 16.3 | Stock position report | Data and export correct | ✅ |
+| 16.4 | Party ledger report (one or all) | Data and export correct | ✅ |
+| 16.5 | Purchase summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.6 | Sales summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.7 | Expense summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.8 | Due collection report (customers) | Data and export correct | ✅ |
+| 16.9 | Payable report (suppliers) | Data and export correct | ✅ |
+| 16.10 | Salary report (monthly) | Data and export correct | ✅ |
+| 16.11 | Stock valuation report | Data and export correct | ✅ |
+| 16.12 | Profit & Loss (monthly/yearly) | Data and export correct | ✅ |
 
-## Stage 17 — User Management (Admin only)
+## Stage 17 — User Management (Admin only) ✅
 Depends on: Stage 5
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 17.1 | User CRUD with role | Create/edit/delete works | [ ] |
-| 17.2 | Activate/deactivate user | Inactive user cannot log in | [ ] |
-| 17.3 | Permission editor per role and module | Changes apply after re-login | [ ] |
-| 17.4 | Audit log viewer | Shows who did what and when | [ ] |
+| 17.1 | User CRUD with role | Create/edit/delete works | ✅ |
+| 17.2 | Activate/deactivate user | Inactive user cannot log in | ✅ |
+| 17.3 | Permission editor per role and module | Changes apply after re-login | ✅ |
+| 17.4 | Audit log viewer | Shows who did what and when | ✅ |
 
 ## Stage 18 — Auto-Update: GitHub Actions
 Depends on: Stage 0
+Done the finance-app way (user decision): push to `production` (after `dev-emon` → `development` → `stage`) releases only a pom version not yet tagged; Inno Setup installer; SHA-256 file instead of `version.json`; release notes and the version bump are written by Claude.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 18.1 | `release.yml`: trigger on `v*` tag, build JAR | Tag push builds JAR | [ ] |
-| 18.2 | `jpackage` → `BMS-{version}-setup.exe` with bundled JRE | .exe installs on PC without Java | [ ] |
-| 18.3 | Generate `version.json` | File has correct fields | [ ] |
-| 18.4 | Generate `RELEASE_NOTES.md` from commits since last tag | Notes list right commits | [ ] |
-| 18.5 | Create GitHub Release with .exe and `version.json` | Release shows both files | [ ] |
+| 18.1 | `release.yml`: on push to `production`, release only when `v<pom version>` tag does not exist; build `bms.jar` + `lib/` | Same version → nothing built; new version → JAR built | [T] |
+| 18.2 | `jpackage` app image (own Java runtime) + Inno Setup (`packaging/bms.iss`) → `BMS-Update-{version}.exe` | .exe installs on PC without Java; app opens | [T] |
+| 18.3 | `BMS-Update-{version}.exe.sha256` (the app reads the latest release from the GitHub API; no `version.json`) | Hash matches the .exe | [T] |
+| 18.4 | Hand-written `release-notes/v{version}.md` (English, `<!-- bn -->`, Bangla) as release text; missing → build fails | Release shows the notes; missing file stops it | [T] |
+| 18.5 | GitHub Release with .exe and .sha256; creates the `v{version}` tag | Release shows both files and the tag | [T] |
+| 18.6 | Dropped (user decision): the user picks `app.profile`; the build never checks it | — | — |
 
 ## Stage 19 — Auto-Update: In-App
 Depends on: Stage 5, Stage 18
+Done the finance-app way (user decision): the installer's own wizard replaces `updater.bat`.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 19.1 | Background update check (no block, silent fail offline) | Login not delayed; offline no error | [ ] |
-| 19.2 | Update banner on login (version, notes, update, dismiss) | Banner shows for newer version | [ ] |
-| 19.3 | Download to `%TEMP%\BMS_update\` with progress bar | Progress shows, file saved | [ ] |
-| 19.4 | File size check (Content-Length) | Wrong size is rejected | [ ] |
-| 19.5 | `updater.bat`: wait, backup, silent install, relaunch, restore on fail | Update and rollback both work | [ ] |
+| 19.1 | Background update check on the login screen (`UpdateService.check`: `releases/latest` redirect → newest tag; no JSON) | Login not delayed; offline shows nothing | [T] |
+| 19.2 | Banner above the login card: new version and yours, "আপডেট করুন", "কী নতুন" (release text in the app's language) | Banner shows on every PC with an older version | [T] |
+| 19.3 | Ask the download folder (last one, else Downloads) and download with progress; only installers the app downloaded earlier are deleted | Progress shows, file saved in the picked folder | [T] |
+| 19.4 | Size (Content-Length) and SHA-256 check; a bad file is deleted and an error shows under the banner | Wrong file is rejected | [T] |
+| 19.5 | Open the installer's wizard and close the app; it replaces the app (data untouched) and can start BMS at the end | Update installs and BMS opens on the new version | [T] |
 
 ## Stage 20 — Phase 2 (Nice to Have)
 Depends on: Phase 1 done
@@ -261,10 +268,15 @@ Depends on: Phase 1 done
 | 20.3 | Mobile payment summary report | Totals match | [ ] |
 | 20.4 | Barcode/QR generate and print per product (SKU) | Printed code scans correctly | [ ] |
 | 20.5 | Barcode scanner input on sale screen | Scan adds product row | [ ] |
-| 20.6 | Google Drive OAuth2 (`credentials.json` in Settings) | Login to Drive works | [ ] |
-| 20.7 | One-click MySQL dump to Google Drive | Backup file appears in Drive | [ ] |
-| 20.8 | One-click restore from Google Drive | Data restored correctly | [ ] |
-| 20.9 | Auto-backup on app close (if enabled) | Backup runs on close | [ ] |
+|  | **Backup (finance-app way)** |  |  |
+| 20.6 | Local backup: `mysqldump` → `backup_data_<yyyyMMdd.HHmm>.sql` in a picked folder; finds `mysqldump`/`mysql` on the PC itself (PATH, registry, XAMPP/WAMP/Laragon folders) | File made; opens as valid SQL | [ ] |
+| 20.7 | Local restore: pick a `.sql`, confirm, `mysql` imports it | Data restored correctly | [ ] |
+| 20.8 | Google Drive connect / disconnect (OAuth2; `credentials.json` next to `BMS.exe`, never in git; token kept so later backups open no browser) | Connect once; next start needs no sign-in | [ ] |
+| 20.9 | Backup to Drive: dump uploaded into a `BMS` folder on Drive (made the first time); last backup time read from Drive | File appears in Drive → BMS; time shows | [ ] |
+| 20.10 | Restore from Drive: the newest backup in the `BMS` folder, confirm first | Data restored correctly | [ ] |
+| 20.11 | Logout asks: Backup now / Skip & logout / Cancel; Cancel stops a running backup or sign-in and stays logged in. The old hidden `auto_backup` setting ("backup on app close") is removed | All three choices behave right; no auto backup option left | [ ] |
+
+Backup is done exactly the finance-app way (user decision): no backup on app close, only the logout question. Backup and restore buttons are admin only, as in finance-app.
 
 ---
 
@@ -299,7 +311,7 @@ Depends on: Stages 11, 12, 17
 | N2.10 | Staff view of own entries (pending/approved/rejected) by `created_by` | Status shows correctly | [ ] |
 | N2.11 | Audit log for approve/reject | Audit row with admin and time | [ ] |
 
-### N3 — Keep Passwords Out of the Public Repo
+### N3 — Keep Passwords Out of the Public Repo (dropped: replaced by N10; the DB password stays, it is `localhost`)
 `application-{dev,stage,prod}.yml` hold DB and admin passwords; the GitHub repo is public.
 Depends on: before first release (Stage 18)
 
@@ -329,3 +341,51 @@ Depends on: N4.2
 | N5.1 | Splash window: no title bar, centered, icon, app name, version, loading text | Splash shows on launch | ✅ |
 | N5.2 | DB connect + seeding run in background while splash shows each step | Splash text changes per step; window not frozen | ✅ |
 | N5.3 | On success close splash and open login; on failure close splash and show the error dialog | Both paths work (stop MySQL to test failure) | ✅ |
+
+### N6 — Memo Print
+Print a memo (invoice) for a sale, showing its memo number.
+Depends on: Stage 11 (memo number saved with each sale)
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N6.1 | Decide memo layout and paper size (A4 / A5 / thermal roll) | User confirms layout | [ ] |
+| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [ ] |
+| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [ ] |
+
+### N7 — Sale Return Stock Rounding (known bug)
+Part returns of one sale line round the stock quantity on each return, so stock drifts (10 pcs sold as 0.833 dozen, returned 5 + 5, puts back 0.834). `SaleService.returnGoods` should use the cumulative rounding `PurchaseService` already uses (`mainShare(item, returned + qty) − mainShare(item, returned)`).
+Depends on: Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | ✅ |
+
+### N8 — Hide Account Balances From Users Without Accounts Permission
+Account pickers on money forms (purchase, purchase pay, expense, party payment, salary payment) show each account's balance, so a cashier sees balances although the Accounts module is closed to them (user decision). Show only the account name to users without Accounts view permission; saving is still blocked when money is short, but the error then shows no amount. Do it in one shared place for all these forms.
+Depends on: Stage 7
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N8.1 | Account picker shows balance only with Accounts view permission (shared helper used by every money form) | Cashier sees names only; admin/manager see balances | [ ] |
+| N8.2 | Short-balance errors without the amount for users without Accounts permission | Cashier gets the error, no amount shown | [ ] |
+
+### N9 — Coin Rounding on Sale Refunds
+A ৳0.70 piece cannot be paid back in coins: the shop pays ৳1 or nothing. The difference (under ৳1) is a real loss or gain, so it must count in cash and in profit. Done together with N7 (same function, same form).
+Depends on: Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N9.1 | Refund may differ from the goods' value by under ৳1: a walk-in customer more or less, a party more (less stays in its ledger as credit); the difference is added to `returned_amount` and the party's return credit, so profit, cash and ledger all agree | ৳0.70 piece back as ৳1: cash −৳1, profit −৳1 on that sale, party ledger nets 0; back as ৳0 (walk-in): profit +৳0.70 kept | ✅ |
+| N9.2 | Return form: walk-in refund field is editable; a line under it says the difference and that it is a loss (taken off profit) or gain; the confirm question says it too | Hint and confirm text show the difference; over ৳1 off is refused | ✅ |
+| N9.3 | "Still worth" cap of the next return counted from the goods returned, not from `returned_amount` (which now holds roundings) | Second part return of a rounded-up first one keeps its full value | ✅ |
+
+### N10 — First-Login Password Change and the Support Login
+Replaces N3's main need: the admin password in the public repo's yml is known to everyone, so every user picks their own password before getting in. The DB password stays in the yml (the DB is on the same PC: `localhost`). A forgotten password is solved by the support team's hidden login (the recovery-code idea was dropped by the user).
+Depends on: Stages 5, 17 (N3 is dropped by user decision; this is its smaller replacement)
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N10.1 | `users.must_change_password`; the admin made from the yml, and any user the admin creates or sets a password for, must pick their own at the next login (nothing opens before that; same or username-like password refused) | Fresh DB: admin / yml password → "choose your own password" popup; cancel = stays on login; save = in | ✅ |
+| N10.2 | Support login (`SUPER_ADMIN` role, username `emranhos1`): password only as a BCrypt hash in `SupportAccount.PASSWORD_HASH` (made with `SupportHashTool`), created at startup, hidden from the users list and the audit log's user filter, cannot be edited, switched off or deleted; it can do everything an admin can, so it resets any admin's or user's password from the Users page | Support login works; not in the Users page; sets an admin's new password; that admin must pick their own at the next login | ✅ |
+| N10.3 | Login screen says who to ask when a password is forgotten (no self-service reset) | Hint shows under the login button | ✅ |
+| N10.4 | Dev auto-login (`dev.auto-login`, dev profile only) is kept blank (user decision): dev opens the login screen too; set a username there only to skip it | Dev run shows the login screen and the first-login popup | ✅ |

@@ -1,0 +1,86 @@
+# Publishes a new GitHub Release whenever code is merged/pushed to the `production` branch AND
+# pom.xml's <version> has not been released yet. Pushes that keep the same version build nothing.
+# Branch flow: dev-emon -> development -> stage -> production.
+# A release needs release-notes/v<version>.md (English, then "<!-- bn -->", then Bangla) in the same
+# commit: it becomes the release text the login screen shows under "What's new".
+# app.profile is never checked: the user picks it.
+name: Release
+
+on:
+  push:
+    branches: [production]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide whether this push is a new version
+        id: version
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content pom.xml)).project.version
+          "VERSION=$version" >> $env:GITHUB_ENV
+          $existing = git ls-remote --tags origin "refs/tags/v$version"
+          if ($existing) {
+            Write-Host "v$version is already released - nothing to do (bump <version> in pom.xml to release)."
+            "release=false" >> $env:GITHUB_OUTPUT
+          } else {
+            if (-not (Test-Path "release-notes/v$version.md")) { throw "Missing release-notes/v$version.md for new version $version" }
+            # English part first, then the Bangla part after this marker
+            if (-not (Select-String -Path "release-notes/v$version.md" -SimpleMatch "<!-- bn -->" -Quiet)) { throw "release-notes/v$version.md needs an English part, then '<!-- bn -->', then a Bangla part" }
+            "release=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - uses: actions/setup-java@v4
+        if: steps.version.outputs.release == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build jar
+        if: steps.version.outputs.release == 'true'
+        run: mvn -B package -DskipTests
+
+      - name: Build app image with its own Java runtime (jpackage)
+        if: steps.version.outputs.release == 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force target/jpackage-input | Out-Null
+          Copy-Item target/bms.jar target/jpackage-input/
+          Copy-Item target/lib target/jpackage-input/lib -Recurse
+          jpackage --type app-image --name BMS --input target/jpackage-input --main-jar bms.jar `
+            --main-class com.eh.bms.Launcher --dest target/jpackage --app-version $env:VERSION --vendor BMS `
+            --icon packaging/bms.ico --java-options "-Dfile.encoding=UTF-8"
+
+      - name: Build installer (Inno Setup)
+        if: steps.version.outputs.release == 'true'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:VERSION" packaging\bms.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          $exe = "target/installer/BMS-Update-$env:VERSION.exe"
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path "$exe.sha256" -Value "$hash  BMS-Update-$env:VERSION.exe" -Encoding ascii
+
+      - name: Publish GitHub Release (also creates the v<version> tag)
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: BMS v${{ env.VERSION }}
+          body_path: release-notes/v${{ env.VERSION }}.md
+          files: |
+            target/installer/BMS-Update-${{ env.VERSION }}.exe
+            target/installer/BMS-Update-${{ env.VERSION }}.exe.sha256
