@@ -549,6 +549,12 @@
     -fx-font-weight: bold;
 }
 
+/* A long value (a Text, wrapped at a fixed width) */
+.row-tip .tip-long-value {
+    -fx-fill: #111827;
+    -fx-font-size: 14px;
+}
+
 /* Sale screen: white cards, amounts right-aligned, grand total big */
 .sale-card {
     -fx-background-color: #ffffff;
@@ -731,6 +737,8 @@
      add-button    New ... (toolbars)                               blue
      login-button  Login                                            blue
      update-button Update now (login screen, new version)            blue
+     register-button Register (login and registration pages)        green
+     back-button   Back to the login page (registration page)       grey
      edit-button   Edit                                             orange
      delete-button Delete                                           red
      cancel-button Cancel in forms                                  red
@@ -742,7 +750,7 @@
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
 
-.save-button, .add-button, .login-button, .update-button, .edit-button,
+.save-button, .add-button, .login-button, .update-button, .register-button, .back-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
@@ -759,7 +767,7 @@
 }
 
 /* Every button at least 140 wide; a longer label makes it wider instead of cutting the text to "..."
-   (Login fills its card instead). -1 = as wide as its label. */
+   (Login, Register and Back fill their card instead). -1 = as wide as its label. */
 .save-button, .add-button, .update-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-min-width: 140;
@@ -767,8 +775,8 @@
     -fx-max-width: -1;
 }
 
-.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover, .edit-button:hover,
-.delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
+.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover, .register-button:hover,
+.back-button:hover, .edit-button:hover, .delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
     -fx-text-fill: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
 }
@@ -781,6 +789,16 @@
 
 .save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover {
     -fx-background-color: #2563eb;
+}
+
+/* Green: Register */
+.register-button {
+    -fx-border-color: #2f855a;
+    -fx-text-fill: #2f855a;
+}
+
+.register-button:hover {
+    -fx-background-color: #2f855a;
 }
 
 /* Orange: Edit */
@@ -813,14 +831,14 @@
     -fx-background-color: #dc2626;
 }
 
-/* Grey: Previous / Next, No in confirm dialogs (light grey background) */
-.page-button, .no-button {
+/* Grey: Previous / Next, No in confirm dialogs, Back to login (light grey background) */
+.page-button, .no-button, .back-button {
     -fx-background-color: #f3f4f6;
     -fx-border-color: #6b7280;
     -fx-text-fill: #374151;
 }
 
-.page-button:hover, .no-button:hover {
+.page-button:hover, .no-button:hover, .back-button:hover {
     -fx-background-color: #6b7280;
 }
 

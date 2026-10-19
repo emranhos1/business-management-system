@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?><?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.TextField?>
@@ -32,17 +31,17 @@
             <Label fx:id="updateError" styleClass="error-label" wrapText="true"/>
         </VBox>
 
-        <!-- Square card; window is square too, so the margin is equal on all sides -->
+        <!-- The card is as tall as its content (no blank part), centred in the window -->
         <VBox styleClass="login-card" spacing="10" alignment="CENTER_LEFT"
               minWidth="360" prefWidth="360" maxWidth="360"
-              minHeight="410" prefHeight="410" maxHeight="410">
-            <HBox spacing="10" alignment="CENTER_LEFT">
+              minHeight="-Infinity">
+            <HBox spacing="10" alignment="CENTER">
+                <padding><Insets bottom="8"/></padding>
                 <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
                     <Image url="@../icons/bms-64.png"/>
                 </ImageView>
                 <Label fx:id="titleLabel" styleClass="login-title" wrapText="true"/>
             </HBox>
-            <Label fx:id="subtitleLabel" styleClass="login-subtitle"/>
 
             <Label fx:id="usernameLabel" labelFor="$usernameField"/>
             <TextField fx:id="usernameField"/>
@@ -52,8 +51,13 @@
 
             <Label fx:id="errorLabel" styleClass="error-label" wrapText="true" visible="false" managed="false"/>
 
-            <Button fx:id="loginButton" styleClass="login-button" maxWidth="Infinity"
-                    defaultButton="true" onAction="#onLogin"/>
+            <!-- Login and (N1) the registration page, side by side, equal width -->
+            <HBox spacing="10">
+                <Button fx:id="loginButton" styleClass="login-button" maxWidth="Infinity" prefWidth="0"
+                        HBox.hgrow="ALWAYS" defaultButton="true" onAction="#onLogin"/>
+                <Button fx:id="registerButton" styleClass="register-button" maxWidth="Infinity" prefWidth="0"
+                        HBox.hgrow="ALWAYS" onAction="#onRegister"/>
+            </HBox>
 
             <Label fx:id="forgotLabel" styleClass="login-subtitle" wrapText="true"/>
         </VBox>

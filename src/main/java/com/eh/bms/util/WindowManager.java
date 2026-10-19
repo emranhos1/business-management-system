@@ -42,10 +42,11 @@ public final class WindowManager {
 
     private static final String MAIN_CSS = "/css/main.css";
     private static final String LOGIN_FXML = "/fxml/login.fxml";
+    private static final String REGISTER_FXML = "/fxml/register.fxml";
     private static final String MAIN_FXML = "/fxml/main.fxml";
 
     /** Login window width and height; it grows taller only for the update banner (LoginController). */
-    public static final double LOGIN_SIZE = 500;
+    public static final double LOGIN_SIZE = 520;
     /** Restored (not maximized) main window: share of the screen. */
     private static final double RESTORED_WIDTH = 0.90;
     private static final double RESTORED_HEIGHT = 0.85;
@@ -68,6 +69,19 @@ public final class WindowManager {
         Stage stage = newStage();
         stage.setScene(scene(load(LOGIN_FXML), LOGIN_SIZE, LOGIN_SIZE));
         stage.setResizable(false);
+        stage.centerOnScreen();
+        swapTo(stage);
+    }
+
+    /**
+     * The registration page (N1) in place of the login page: same look, its window as tall as the form, and it
+     * grows when field errors show (FormValidator, {@link #AUTO_SIZE}).
+     */
+    public static void showRegister() {
+        Stage stage = newStage();
+        stage.setScene(scene(load(REGISTER_FXML)));
+        stage.setResizable(false);
+        stage.getProperties().put(AUTO_SIZE, Boolean.TRUE);
         stage.centerOnScreen();
         swapTo(stage);
     }

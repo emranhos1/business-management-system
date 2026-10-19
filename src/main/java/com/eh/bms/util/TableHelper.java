@@ -382,14 +382,18 @@ public final class TableHelper {
         for (TipLine line : tip.lines()) {
             Label label = new Label(line.label());
             label.getStyleClass().add("tip-label");
-            Label value = new Label(line.value());
-            value.getStyleClass().add(line.bold() ? "tip-amount" : "tip-value");
-            // Only a long value wraps, and then at a fixed width: a wrapping label with no width makes the
-            // tooltip as tall as the screen
+            Node value;
             if (line.value().length() > LONG_TIP_VALUE) {
-                value.setWrapText(true);
-                value.setPrefWidth(TOOLTIP_WIDTH);
-                value.setMinHeight(Region.USE_PREF_SIZE);
+                // A long value wraps as a Text at a fixed width: a wrapping Label is measured without a width
+                // inside the tooltip, which made the tooltip as tall as the screen
+                Text text = new Text(line.value());
+                text.setWrappingWidth(TOOLTIP_WIDTH);
+                text.getStyleClass().add("tip-long-value");
+                value = text;
+            } else {
+                Label shortValue = new Label(line.value());
+                shortValue.getStyleClass().add(line.bold() ? "tip-amount" : "tip-value");
+                value = shortValue;
             }
             grid.addRow(r++, label, new Label(":"), value);
         }
