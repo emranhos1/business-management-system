@@ -58,7 +58,7 @@ public class StockLedger {
     private BigDecimal quantity;
 
     /** Cost of one main unit. For stock out: the average cost at that time. */
-    @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
+    @Column(name = "unit_price", nullable = false, precision = 16, scale = 4)
     private BigDecimal unitPrice;
 
     /** Stock after this entry (posting order). */
@@ -66,7 +66,7 @@ public class StockLedger {
     private BigDecimal runningBalance;
 
     /** Weighted average cost after this entry (posting order). */
-    @Column(name = "avg_cost_after", nullable = false, precision = 14, scale = 2)
+    @Column(name = "avg_cost_after", nullable = false, precision = 16, scale = 4)
     private BigDecimal avgCostAfter;
 
     /** Set for ADJUSTMENT entries only. */

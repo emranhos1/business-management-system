@@ -25,6 +25,7 @@
     <FlowPane styleClass="toolbar" hgap="8" vgap="8" alignment="CENTER_LEFT">
         <ComboBox fx:id="categoryBox" prefWidth="260"/>
         <Button text="%button.refresh" styleClass="page-button" onAction="#refresh"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearFilter"/>
     </FlowPane>
     <Label text="%stock.value.hint" styleClass="field-hint" wrapText="true"/>
     <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>

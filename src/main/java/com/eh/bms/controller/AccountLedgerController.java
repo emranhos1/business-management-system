@@ -3,6 +3,7 @@ package com.eh.bms.controller;
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
+import com.eh.bms.model.SalaryPayment;
 import com.eh.bms.service.AccountLedgerService;
 import com.eh.bms.service.AccountLedgerService.LedgerRow;
 import com.eh.bms.service.AccountLedgerService.Summary;
@@ -12,6 +13,7 @@ import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
+import com.eh.bms.util.PartyText;
 import com.eh.bms.util.TableHelper;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -20,6 +22,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,6 +38,8 @@ public class AccountLedgerController {
     @FXML private Label totalInLabel;
     @FXML private Label totalOutLabel;
     @FXML private Label balanceLabel;
+    @FXML private Label openingLabel;
+    @FXML private javafx.scene.layout.VBox openingTile;
     @FXML private StackPane tableHolder;
 
     private final AccountLedgerService service = new AccountLedgerService();
@@ -46,7 +52,6 @@ public class AccountLedgerController {
         TableView<LedgerRow> view = table.getTableView();
         view.getColumns().add(TableHelper.column("label.date", r -> DateUtil.format(r.date())));
         TableColumn<LedgerRow, String> details = TableHelper.longTextColumn("ledger.col.details", AccountLedgerController::details);
-        details.setPrefWidth(320);
         view.getColumns().add(details);
         view.getColumns().add(styled(TableHelper.moneyColumn("ledger.col.in", r -> MoneyUtil.format(r.moneyIn())), "money-in"));
         view.getColumns().add(styled(TableHelper.moneyColumn("ledger.col.out", r -> MoneyUtil.format(r.moneyOut())), "money-out"));
@@ -62,6 +67,10 @@ public class AccountLedgerController {
             totalInLabel.setText(MoneyUtil.format(s.totalIn()));
             totalOutLabel.setText(MoneyUtil.format(s.totalOut()));
             balanceLabel.setText(MoneyUtil.format(s.balance()));
+            boolean hasOpening = s.opening() != null && s.opening().signum() != 0;
+            openingLabel.setText(hasOpening ? MoneyUtil.format(s.opening()) : "");
+            openingTile.setVisible(hasOpening);
+            openingTile.setManaged(hasOpening);
             if (s.balance().signum() < 0) {
                 balanceLabel.getStyleClass().add("money-out");
             }
@@ -91,12 +100,36 @@ public class AccountLedgerController {
         if (r.source() == AccountTransactionSource.TRANSFER && r.otherAccount() != null) {
             String other = I18n.pick(r.otherAccount().getName(), r.otherAccount().getNameEn());
             what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.transfer_to" : "ledger.transfer_from", other);
+        } else if (r.source() == AccountTransactionSource.SALE) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.sale_refund" : "ledger.sale_in");
+        } else if (r.source() == AccountTransactionSource.PURCHASE) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.purchase_paid" : "ledger.purchase_refund");
+        } else if (r.source() == AccountTransactionSource.EXPENSE && r.expenseCategory() != null) {
+            what = I18n.get("ledger.expense", ExpenseCategoriesController.nameText(r.expenseCategory()));
+        } else if (r.source() == AccountTransactionSource.PARTY && r.party() != null) {
+            what = I18n.get(r.type() == AccountTransactionType.DEBIT ? "ledger.party_paid" : "ledger.party_received",
+                    PartyText.name(r.party()));
+        } else if (r.source() == AccountTransactionSource.SALARY && r.salaryPayment() != null) {
+            SalaryPayment p = r.salaryPayment();
+            what = I18n.get("ledger.salary", p.getEmployee().getName(), monthText(p.getYear(), p.getMonth()));
         }
         String note = r.note();
+        // A sale or purchase line's note is its memo number ("#3"): "মেমো #3" / "ক্রয় মেমো #3"
+        if (r.source() == AccountTransactionSource.SALE && note != null) {
+            note = I18n.get("ledger.memo_note", note);
+        } else if (r.source() == AccountTransactionSource.PURCHASE && note != null) {
+            note = I18n.get("ledger.purchase_memo_note", note);
+        }
         if (what == null) {
             return note == null ? "—" : note;
         }
         return note == null ? what : what + " — " + note;
+    }
+
+    /** "আগস্ট ২০২৬" / "August 2026". */
+    private static String monthText(int year, int month) {
+        return Month.of(month).getDisplayName(TextStyle.FULL_STANDALONE, I18n.getLocale()) + " "
+                + I18n.digits(String.valueOf(year));
     }
 
     private static <T> TableColumn<T, String> styled(TableColumn<T, String> column, String styleClass) {

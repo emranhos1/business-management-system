@@ -1,6 +1,12 @@
 package com.eh.bms.config;
 
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+import org.yaml.snakeyaml.nodes.Tag;
+import org.yaml.snakeyaml.representer.Representer;
+import org.yaml.snakeyaml.resolver.Resolver;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,11 +60,27 @@ public final class AppConfig {
                 }
                 return new LinkedHashMap<>();
             }
-            Object data = new Yaml().load(in);
+            Object data = stringYaml().load(in);
             return data == null ? new LinkedHashMap<>() : new LinkedHashMap<>((Map<String, Object>) data);
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read config file: " + file, e);
         }
+    }
+
+    /**
+     * A YAML reader that keeps every value as the text written: plain YAML turns "password: 0123" into 83
+     * (octal) and "yes" into true. Only an empty value or ~ stays null. getInt parses the text itself.
+     */
+    private static Yaml stringYaml() {
+        LoaderOptions loader = new LoaderOptions();
+        DumperOptions dumper = new DumperOptions();
+        Resolver textOnly = new Resolver() {
+            @Override
+            protected void addImplicitResolvers() {
+                addImplicitResolver(Tag.NULL, NULL, "~nN\0");
+            }
+        };
+        return new Yaml(new SafeConstructor(loader), new Representer(dumper), dumper, loader, textOnly);
     }
 
     @SuppressWarnings("unchecked")

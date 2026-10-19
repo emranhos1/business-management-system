@@ -15,10 +15,10 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** An expense paid from an account. */
+/** An expense paid from an account (13.2); its account ledger entry has source EXPENSE and points back here. */
 @Entity
 @Table(name = "expenses",
-        indexes = @Index(name = "idx_expenses_date", columnList = "date"))
+        indexes = @Index(name = "idx_expenses_date_category", columnList = "date, category_id"))
 public class Expense {
 
     @Id

@@ -43,12 +43,17 @@ public class UnitRepository {
         return existsBy(session, "nameEn", name, excludeId);
     }
 
-    /** True if any product uses this unit, as its unit or its secondary unit. */
+    /** True if any product uses this unit (as its unit or secondary unit), or any past sale line was in it. */
     public boolean isUsed(Session session, long id) {
-        return session.createSelectionQuery("select count(p) from Product p"
+        long products = session.createSelectionQuery("select count(p) from Product p"
                         + " where p.unit.id = :id or p.secondaryUnit.id = :id", Long.class)
                 .setParameter("id", id)
-                .getSingleResult() > 0;
+                .getSingleResult();
+        long lines = session.createSelectionQuery("select count(i) from TransactionItem i where i.unitRef.id = :id",
+                        Long.class)
+                .setParameter("id", id)
+                .getSingleResult();
+        return products + lines > 0;
     }
 
     /** Number of products using each unit (as unit or secondary unit); units with none are left out. */

@@ -17,6 +17,11 @@
             <Label text="%ledger.current" styleClass="stat-label"/>
             <Label fx:id="balanceLabel" styleClass="stat-value"/>
         </VBox>
+        <!-- Only when the account was opened with money, so in/out and the balance add up -->
+        <VBox fx:id="openingTile" styleClass="stat-tile" visible="false" managed="false">
+            <Label text="%ledger.opening" styleClass="stat-label"/>
+            <Label fx:id="openingLabel" styleClass="stat-value"/>
+        </VBox>
         <VBox styleClass="stat-tile">
             <Label text="%ledger.total_in" styleClass="stat-label"/>
             <Label fx:id="totalInLabel" styleClass="stat-value, money-in"/>

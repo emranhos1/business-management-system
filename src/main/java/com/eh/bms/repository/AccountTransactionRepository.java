@@ -1,6 +1,7 @@
 package com.eh.bms.repository;
 
 import com.eh.bms.model.AccountTransaction;
+import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
 import org.hibernate.Session;
 
@@ -86,6 +87,30 @@ public class AccountTransactionRepository {
         return net == null ? BigDecimal.ZERO : net;
     }
 
+    /** Net of the entries dated on or before this date. */
+    public BigDecimal netUpTo(Session session, long accountId, LocalDate date) {
+        BigDecimal net = session.createSelectionQuery(
+                        "select " + SIGNED + " from AccountTransaction t where t.account.id = :id and t.date <= :date",
+                        BigDecimal.class)
+                .setParameter("credit", AccountTransactionType.CREDIT)
+                .setParameter("id", accountId)
+                .setParameter("date", date)
+                .getSingleResult();
+        return net == null ? BigDecimal.ZERO : net;
+    }
+
+    /** Each entry dated after this date as a signed amount (in +, out -), in (date, id) order. */
+    public List<BigDecimal> signedAfter(Session session, long accountId, LocalDate date) {
+        return session.createSelectionQuery(
+                        "select case when t.type = :credit then t.amount else -t.amount end"
+                                + " from AccountTransaction t where t.account.id = :id and t.date > :date"
+                                + " order by t.date, t.id", BigDecimal.class)
+                .setParameter("credit", AccountTransactionType.CREDIT)
+                .setParameter("id", accountId)
+                .setParameter("date", date)
+                .getResultList();
+    }
+
     /** Entries by id, with their account loaded (e.g. the other side of transfers). */
     public Map<Long, AccountTransaction> findByIds(Session session, Collection<Long> ids) {
         Map<Long, AccountTransaction> result = new HashMap<>();
@@ -100,7 +125,22 @@ public class AccountTransactionRepository {
         return result;
     }
 
+    /** The entries one record made (e.g. the expense's money out), oldest first. */
+    public List<AccountTransaction> findBySource(Session session, AccountTransactionSource source, long referenceId) {
+        return session.createSelectionQuery(
+                        "from AccountTransaction t where t.source = :source and t.referenceId = :ref order by t.id",
+                        AccountTransaction.class)
+                .setParameter("source", source)
+                .setParameter("ref", referenceId)
+                .getResultList();
+    }
+
     public void save(Session session, AccountTransaction entry) {
         session.persist(entry);
+    }
+
+    /** Only for a record that may be changed or deleted later (an expense); other ledgers are never edited. */
+    public void delete(Session session, AccountTransaction entry) {
+        session.remove(entry);
     }
 }

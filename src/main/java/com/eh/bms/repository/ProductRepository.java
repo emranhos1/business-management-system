@@ -23,7 +23,7 @@ public class ProductRepository {
     public List<Product> search(Session session, String text, int offset, int limit) {
         String like = likePattern(text);
         var query = session.createSelectionQuery("from Product p join fetch p.category left join fetch p.unit"
-                + " left join fetch p.secondaryUnit" + searchWhere(like) + " order by p.name", Product.class);
+                + " left join fetch p.secondaryUnit" + searchWhere(like) + " order by p.name, p.id", Product.class);
         if (like != null) {
             query.setParameter("term", like);
         }

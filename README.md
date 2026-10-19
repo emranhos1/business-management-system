@@ -65,3 +65,6 @@ doc/
 
 ## Versioning
 The version in `pom.xml` is the single source of truth. It is copied into `application.yml` at build time.
+
+## Release
+Bump the version, add `release-notes/v<version>.md`, push to `production`. GitHub Actions builds `BMS-Update-<version>.exe` (own Java runtime, Inno Setup) and publishes the release. See [release-notes/README.md](release-notes/README.md).

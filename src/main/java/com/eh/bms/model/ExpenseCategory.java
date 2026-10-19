@@ -2,19 +2,22 @@ package com.eh.bms.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
+/**
+ * An expense category the user manages (13.1): Bangla and English name.
+ * The old {@code type} column is left in the table unused (user decision: no category type).
+ */
 @Entity
 @Table(name = "expense_categories",
-        uniqueConstraints = @UniqueConstraint(name = "uk_expense_categories_name", columnNames = "name"))
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_expense_categories_name", columnNames = "name"),
+                @UniqueConstraint(name = "uk_expense_categories_name_en", columnNames = "name_en")
+        })
 public class ExpenseCategory {
 
     @Id
@@ -24,10 +27,9 @@ public class ExpenseCategory {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR) // VARCHAR, not MySQL ENUM
-    @Column(name = "type", nullable = false, length = 20)
-    private ExpenseCategoryType type;
+    /** English name (doc/CLAUDE.md: master data has a Bangla and an English name). */
+    @Column(name = "name_en", length = 100)
+    private String nameEn;
 
     public Long getId() {
         return id;
@@ -41,11 +43,11 @@ public class ExpenseCategory {
         this.name = name;
     }
 
-    public ExpenseCategoryType getType() {
-        return type;
+    public String getNameEn() {
+        return nameEn;
     }
 
-    public void setType(ExpenseCategoryType type) {
-        this.type = type;
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
     }
 }

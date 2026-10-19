@@ -5,6 +5,8 @@ import com.eh.bms.config.DataSeeder;
 import com.eh.bms.config.DatabaseConfig;
 import com.eh.bms.controller.SplashController;
 import com.eh.bms.service.AppConfigService;
+import com.eh.bms.service.AttendanceService;
+import com.eh.bms.service.AuthService;
 import com.eh.bms.util.AppIcons;
 import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.I18n;
@@ -20,6 +22,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import java.time.LocalDate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,6 +33,17 @@ public class BmsApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        // Anything that fails before the startup task (e.g. a wrong app.profile) still gets an error dialog
+        try {
+            startWithSplash();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Startup failed", e);
+            showStartupError(e, "startup.error.header", "startup.error.content");
+            Platform.exit();
+        }
+    }
+
+    private void startWithSplash() {
         FXMLLoader splashLoader = WindowManager.loader(SPLASH_FXML);
         Parent splashRoot = WindowManager.load(splashLoader, SPLASH_FXML);
         SplashController splash = splashLoader.getController();
@@ -60,6 +74,12 @@ public class BmsApplication extends Application {
                 } catch (RuntimeException e) {
                     throw new StartupException("Startup seeding failed", "seed.error.header", "seed.error.content", e);
                 }
+                try {
+                    // Auto attendance: present for every active employee up to today (never stops the start)
+                    new AttendanceService().autoFill(LocalDate.now());
+                } catch (RuntimeException e) {
+                    LOG.log(Level.WARNING, "Auto attendance failed", e);
+                }
                 DateUtil.reload();
                 return new AppConfigService().language();
             }
@@ -73,7 +93,28 @@ public class BmsApplication extends Application {
             } catch (IllegalArgumentException e) {
                 LOG.warning("Unknown default_language in app_config: " + startup.getValue());
             }
-            WindowManager.showLogin();
+            // dev profile only (dev.auto-login): straight to the dashboard; otherwise the login screen
+            boolean autoLoggedIn;
+            try {
+                autoLoggedIn = new AuthService().devAutoLogin();
+            } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "dev auto-login failed; showing the login screen", e);
+                autoLoggedIn = false;
+            }
+            try {
+                if (autoLoggedIn) {
+                    WindowManager.showMain();
+                } else {
+                    WindowManager.showLogin();
+                }
+            } catch (RuntimeException e) {
+                // The window could not open: say so instead of leaving the splash on screen
+                LOG.log(Level.SEVERE, "Could not open the first window", e);
+                showStartupError(e, "startup.error.header", "startup.error.content");
+                splashStage.close();
+                Platform.exit();
+                return;
+            }
             splashStage.close();
         });
         startup.setOnFailed(event -> {
@@ -82,8 +123,9 @@ public class BmsApplication extends Application {
                 LOG.log(Level.SEVERE, se.getMessage(), se.getCause());
                 showStartupError(se.getCause(), se.headerKey, se.contentKey);
             } else {
+                // Not a DB or seeding step: do not blame MySQL
                 LOG.log(Level.SEVERE, "Startup failed", e);
-                showStartupError(e, "db.error.header", "db.error.content");
+                showStartupError(e, "startup.error.header", "startup.error.content");
             }
             splashStage.close();
             Platform.exit();
@@ -108,9 +150,19 @@ public class BmsApplication extends Application {
         AppIcons.apply(alert.getDialogPane().getScene().getWindow());
         alert.setTitle(I18n.get("db.error.title"));
         alert.setHeaderText(I18n.get(headerKey));
-        alert.setContentText(I18n.get(contentKey, AppConfig.get().getProfile())
-                + "\n\n" + root.getMessage());
+        // A message may be missing (shown as its kind instead of "null")
+        String detail = root.getMessage() == null ? root.getClass().getSimpleName() : root.getMessage();
+        alert.setContentText(I18n.get(contentKey, profileOrUnknown()) + "\n\n" + detail);
         alert.showAndWait();
+    }
+
+    /** The configured profile; "?" when the config itself could not be read (e.g. a wrong app.profile). */
+    private static String profileOrUnknown() {
+        try {
+            return AppConfig.get().getProfile();
+        } catch (RuntimeException e) {
+            return "?";
+        }
     }
 
     /** A startup step failure, with the i18n keys for its error dialog. */

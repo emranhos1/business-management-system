@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.eh.bms.util.DateRangePicker?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TreeTableView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Expenses (13.2-13.4), grouped by category: a date range (this month at first); the totals of those dates on top,
+     one line of tiles; one row per category (total, share) with its expenses under it; edit on each expense
+     (delete in the edit form). -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ExpensesListController" spacing="12">
+    <!-- FlowPane: wraps to a second line when the page is narrow -->
+    <FlowPane styleClass="toolbar" hgap="12" vgap="8" alignment="CENTER_LEFT">
+        <ComboBox fx:id="monthBox" prefWidth="125"/>
+        <ComboBox fx:id="yearBox" prefWidth="90"/>
+        <DateRangePicker fx:id="dateRange" prefWidth="230"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearFilters"/>
+        <Button fx:id="addButton" text="%expense.add" styleClass="add-button" onAction="#onAdd"/>
+    </FlowPane>
+    <!-- Five tiles on one line (stat-tile-fit: no fixed minimum width, they share the width) -->
+    <HBox spacing="12">
+        <VBox styleClass="stat-tile, stat-tile-main, stat-tile-fit" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="%expense.total" styleClass="stat-label"/>
+            <Label fx:id="totalLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="%expense.count" styleClass="stat-label"/>
+            <Label fx:id="countLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="%expense.today" styleClass="stat-label"/>
+            <Label fx:id="todayLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="%expense.daily_average" styleClass="stat-label"/>
+            <Label fx:id="averageLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile, stat-tile-fit" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="%expense.top_category" styleClass="stat-label"/>
+            <Label fx:id="topNameLabel" styleClass="stat-value"/>
+            <Label fx:id="topAmountLabel" styleClass="stat-label"/>
+        </VBox>
+    </HBox>
+    <TreeTableView fx:id="tree" VBox.vgrow="ALWAYS"/>
+</VBox>

@@ -19,7 +19,9 @@ import java.util.StringJoiner;
 public class ProductService {
 
     public enum SaveResult {
-        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU
+        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU,
+        /** Unit, secondary unit or conversion changed on a product that has stock or history. */
+        PACK_LOCKED
     }
 
     public enum DeleteResult {
@@ -29,10 +31,13 @@ public class ProductService {
     /**
      * Values from the form. {@code id} is null for a new product. Blank SKU is saved as null; null
      * {@code secondaryUnitId} = no secondary unit, and then the conversion factor is dropped.
-     * Min stock 0 = no low-stock alert for the product.
+     * Min stock 0 = no low-stock alert for the product. Prices may be null (not set); the secondary-unit
+     * prices are dropped when there is no secondary unit.
      */
     public record ProductData(Long id, String nameBn, String nameEn, long categoryId, String sku, long unitId,
-                              Long secondaryUnitId, BigDecimal conversionFactor, BigDecimal minStockAlert) {
+                              Long secondaryUnitId, BigDecimal conversionFactor, BigDecimal minStockAlert,
+                              BigDecimal retailPrice, BigDecimal wholesalePrice,
+                              BigDecimal retailPriceSecondary, BigDecimal wholesalePriceSecondary) {
     }
 
     private final ProductRepository repository = new ProductRepository();
@@ -79,6 +84,10 @@ public class ProductService {
             } else {
                 p = repository.findById(session, data.id())
                         .orElseThrow(() -> new IllegalStateException("Product not found: " + data.id()));
+                // Stock and past lines are kept in the main unit: a used product keeps its pack
+                if (packChanged(p, unit, secondaryUnit, factor) && repository.isUsed(session, p.getId())) {
+                    return SaveResult.PACK_LOCKED;
+                }
                 old = describe(p);
             }
             p.setName(nameBn);
@@ -89,6 +98,10 @@ public class ProductService {
             p.setSecondaryUnit(secondaryUnit);
             p.setConversionFactor(secondaryUnit == null ? null : data.conversionFactor());
             p.setMinStockAlert(data.minStockAlert());
+            p.setRetailPrice(data.retailPrice());
+            p.setWholesalePrice(data.wholesalePrice());
+            p.setRetailPriceSecondary(secondaryUnit == null ? null : data.retailPriceSecondary());
+            p.setWholesalePriceSecondary(secondaryUnit == null ? null : data.wholesalePriceSecondary());
 
             if (data.id() == null) {
                 repository.save(session, p);
@@ -101,6 +114,20 @@ public class ProductService {
             }
             return SaveResult.SAVED;
         });
+    }
+
+    /** True if the product has no stock entries and no transaction items, so {@link #delete} would delete it. */
+    private static boolean packChanged(Product p, Unit unit, Unit secondary, BigDecimal factor) {
+        long oldSecondary = p.getSecondaryUnit() == null ? -1 : p.getSecondaryUnit().getId();
+        long newSecondary = secondary == null ? -1 : secondary.getId();
+        boolean factorSame = p.getConversionFactor() == null ? factor == null
+                : factor != null && p.getConversionFactor().compareTo(factor) == 0;
+        return p.getUnit() == null || !p.getUnit().getId().equals(unit.getId())
+                || oldSecondary != newSecondary || !factorSame;
+    }
+
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> !repository.isUsed(session, id));
     }
 
     /** Deletes only a product with no stock entries and no transaction items. */
@@ -147,6 +174,10 @@ public class ProductService {
                 .add("secondaryUnit=" + unitName(p.getSecondaryUnit()))
                 .add("conversion=" + plain(p.getConversionFactor()))
                 .add("minStock=" + plain(p.getMinStockAlert()))
+                .add("retail=" + plain(p.getRetailPrice()))
+                .add("wholesale=" + plain(p.getWholesalePrice()))
+                .add("retailSecondary=" + plain(p.getRetailPriceSecondary()))
+                .add("wholesaleSecondary=" + plain(p.getWholesalePriceSecondary()))
                 .toString();
     }
 }

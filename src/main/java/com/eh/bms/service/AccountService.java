@@ -95,14 +95,22 @@ public class AccountService {
         });
     }
 
-    /** Deletes only an account nothing uses. */
+    /** True if {@link #delete} would delete the account: nothing uses it and its opening balance is 0. */
+    public boolean canDelete(long id) {
+        return TransactionHelper.inTransaction(session -> {
+            Account a = repository.findById(session, id).orElse(null);
+            return a != null && !repository.isUsed(session, id) && a.getOpeningBalance().signum() == 0;
+        });
+    }
+
+    /** Deletes only an account nothing uses, with opening balance 0 (money in it is history too). */
     public DeleteResult delete(long id) {
         return TransactionHelper.inTransaction(session -> {
             Account a = repository.findById(session, id).orElse(null);
             if (a == null) {
                 return DeleteResult.NOT_FOUND;
             }
-            if (repository.isUsed(session, id)) {
+            if (repository.isUsed(session, id) || a.getOpeningBalance().signum() != 0) {
                 return DeleteResult.IN_USE;
             }
             String old = describe(a);

@@ -6,6 +6,7 @@ import com.eh.bms.model.UserRole;
 import org.hibernate.Session;
 
 import java.util.List;
+import java.util.Optional;
 
 /** Database access for {@code permissions}. */
 public class PermissionRepository {
@@ -16,6 +17,14 @@ public class PermissionRepository {
                 .setParameter("role", role)
                 .setParameter("module", module)
                 .getSingleResult() > 0;
+    }
+
+    public Optional<Permission> find(Session session, UserRole role, AppModule module) {
+        return session.createSelectionQuery("from Permission p where p.role = :role and p.module = :module",
+                        Permission.class)
+                .setParameter("role", role)
+                .setParameter("module", module)
+                .uniqueResultOptional();
     }
 
     public List<Permission> findByRole(Session session, UserRole role) {
