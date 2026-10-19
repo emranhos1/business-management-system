@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Payment on a purchase's due (Stage 12). One field per row (label 200 px, input fills the rest). -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.PurchasePayFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <HBox styleClass="form-row">
+        <Label text="%purchase.supplier" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <Label fx:id="customerLabel" styleClass="form-label" wrapText="true"/>
+            <Label fx:id="dueLabel" styleClass="money-out" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%party.pay.account" styleClass="form-label, required, form-row-label" wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="accountBox" maxWidth="Infinity"/>
+            <Label fx:id="accountError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.amount" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="amountField" maxWidth="Infinity"/>
+            <Label fx:id="amountError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.date" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <DatePicker fx:id="datePicker" maxWidth="Infinity"/>
+            <Label fx:id="dateError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.note" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextArea fx:id="noteField" maxWidth="Infinity" prefRowCount="2" wrapText="true"/>
+            <Label fx:id="noteError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button text="%party.pay" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>

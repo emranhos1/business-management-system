@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.eh.bms.util.TwoColumnLayout?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- New purchase (12.1-12.2): supplier, item lines on the left; totals and money paid on the right. -->
+<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                 fx:controller="com.eh.bms.controller.PurchaseEntryController">
+
+    <VBox spacing="12">
+        <!-- Supplier and date on one row; the cash-purchase tick and the supplier's memo no. under it -->
+        <VBox styleClass="sale-card" spacing="8">
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label text="%purchase.supplier" styleClass="form-label, required" minWidth="-Infinity"/>
+                <StackPane styleClass="picker-box" HBox.hgrow="ALWAYS" minWidth="160">
+                    <TextField fx:id="partyField" promptText="%sale.customer.prompt"/>
+                    <Region styleClass="picker-arrow" StackPane.alignment="CENTER_RIGHT" mouseTransparent="true"/>
+                </StackPane>
+                <Label text="%label.date" styleClass="form-label, required" minWidth="-Infinity"/>
+                <DatePicker fx:id="datePicker" prefWidth="150" minWidth="130"/>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <CheckBox fx:id="cashCheck" text="%purchase.cash" minWidth="-Infinity"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="%purchase.supplier_memo" styleClass="form-label" minWidth="-Infinity"/>
+                <TextField fx:id="supplierMemoField" prefWidth="150" minWidth="90"/>
+            </HBox>
+            <Label fx:id="partyInfo" styleClass="field-hint" wrapText="true" visible="false" managed="false"/>
+            <HBox fx:id="sellerBox" spacing="12" visible="false" managed="false">
+                <TextField fx:id="sellerNameField" promptText="%purchase.seller.name" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="sellerPhoneField" promptText="%sale.walk_in.phone" prefWidth="200"/>
+            </HBox>
+            <Label fx:id="partyError" styleClass="field-error" wrapText="true"/>
+            <Label fx:id="dateError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+
+        <!-- One item line: picked product, unit, quantity, cost, discount -->
+        <VBox styleClass="sale-card" spacing="6">
+            <GridPane hgap="8" vgap="4">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="90"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
+                    <ColumnConstraints minWidth="-Infinity"/>
+                </columnConstraints>
+                <Label text="%sale.product" styleClass="form-label, required" GridPane.columnSpan="5"/>
+                <StackPane styleClass="picker-box" GridPane.rowIndex="1" GridPane.columnSpan="5">
+                    <TextField fx:id="productField" promptText="%sale.product.prompt"/>
+                    <Region styleClass="picker-arrow" StackPane.alignment="CENTER_RIGHT" mouseTransparent="true"/>
+                </StackPane>
+
+                <Label text="%sale.unit" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <Label text="%sale.quantity" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                <Label text="%purchase.price" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="2"/>
+                <Label text="%sale.discount_unit" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="3"/>
+
+                <ComboBox fx:id="unitBox" maxWidth="Infinity" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                <TextField fx:id="qtyField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                <TextField fx:id="priceField" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
+                <TextField fx:id="discountField" promptText="0" GridPane.rowIndex="3" GridPane.columnIndex="3"/>
+                <Button text="%sale.add_line" styleClass="add-button" onAction="#onAddLine"
+                        GridPane.rowIndex="3" GridPane.columnIndex="4"/>
+            </GridPane>
+            <Label fx:id="stockHint" styleClass="field-hint" wrapText="true"/>
+            <Label fx:id="linePreview" styleClass="field-hint" wrapText="true"/>
+            <Label fx:id="lineError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+
+        <TableView fx:id="itemsTable" VBox.vgrow="ALWAYS" minHeight="200"/>
+    </VBox>
+
+    <!-- Totals and money paid -->
+    <VBox styleClass="sale-card" spacing="10">
+        <Label text="%sale.summary" styleClass="section-title"/>
+        <GridPane hgap="12" vgap="8">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints minWidth="140" halignment="RIGHT"/>
+            </columnConstraints>
+            <!-- Shown only when lines have a discount (already taken off the lines' total) -->
+            <Label fx:id="lineDiscountRowLabel" text="%sale.line_discount_total" styleClass="field-hint"
+                   wrapText="true" GridPane.rowIndex="0"/>
+            <Label fx:id="lineDiscountLabel" styleClass="field-hint" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <Label text="%sale.subtotal" GridPane.rowIndex="1"/>
+            <Label fx:id="subtotalLabel" styleClass="sale-amount" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            <Label text="%sale.bill_discount" GridPane.rowIndex="2"/>
+            <TextField fx:id="billDiscountField" promptText="0" maxWidth="140" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            <Label text="%sale.grand_total" styleClass="sale-grand" GridPane.rowIndex="3"/>
+            <Label fx:id="grandLabel" styleClass="sale-grand" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        </GridPane>
+        <Label fx:id="billDiscountError" styleClass="field-error" wrapText="true"/>
+
+        <Label text="%purchase.paid_from" styleClass="form-label, required"/>
+        <VBox fx:id="paymentsBox" spacing="6"/>
+        <HBox spacing="8">
+            <Button fx:id="addPaymentButton" text="%sale.add_account" styleClass="add-button" onAction="#onAddPayment"/>
+            <Button text="%sale.full_amount" styleClass="add-button" onAction="#onFullAmount"/>
+        </HBox>
+        <Label fx:id="paymentError" styleClass="field-error" wrapText="true"/>
+        <Label fx:id="extraHint" styleClass="field-hint" wrapText="true"/>
+
+        <GridPane hgap="12" vgap="6">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints minWidth="140" halignment="RIGHT"/>
+            </columnConstraints>
+            <Label text="%purchase.paid" GridPane.rowIndex="0"/>
+            <Label fx:id="paidLabel" styleClass="sale-amount" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <Label text="%sale.due" GridPane.rowIndex="1"/>
+            <Label fx:id="dueLabel" styleClass="sale-amount" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        </GridPane>
+
+        <Label text="%label.note" styleClass="form-label"/>
+        <TextArea fx:id="noteField" prefRowCount="2" wrapText="true"/>
+
+        <Region VBox.vgrow="ALWAYS"/>
+        <HBox spacing="8" alignment="CENTER_RIGHT">
+            <Button text="%sale.clear" styleClass="cancel-button" onAction="#onClear"/>
+            <Button text="%purchase.confirm" styleClass="save-button" onAction="#onConfirm"/>
+        </HBox>
+    </VBox>
+</TwoColumnLayout>

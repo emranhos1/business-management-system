@@ -31,3 +31,6 @@ desktop.ini
 # Packaged installers (built by GitHub Actions)
 *.exe
 *.msi
+
+# Claude Code (agents, local settings)
+.claude/

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
+<?import com.eh.bms.util.PageTabs?>
+<?import javafx.scene.control.Tab?>
 
-<!-- Placeholder; the real view comes with its own stage. -->
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      styleClass="placeholder-view" alignment="CENTER" spacing="8">
-    <Label text="%menu.purchases" styleClass="placeholder-title"/>
-    <Label text="%page.coming_soon" styleClass="placeholder-text"/>
-</VBox>
+<!-- Purchases page (Stage 12): new purchase, and the purchases list (search, view, payment, return). -->
+<PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+          fx:controller="com.eh.bms.controller.PurchasesController"
+          fx:id="tabs" tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">
+    <Tab fx:id="entryTab" text="%purchase.tab.new">
+        <fx:include fx:id="entry" source="purchase-entry.fxml"/>
+    </Tab>
+    <Tab fx:id="listTab" text="%purchase.tab.list">
+        <fx:include fx:id="list" source="purchases-list.fxml"/>
+    </Tab>
+</PageTabs>

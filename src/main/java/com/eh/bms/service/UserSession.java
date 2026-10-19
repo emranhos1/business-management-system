@@ -93,8 +93,9 @@ public final class UserSession {
         return role;
     }
 
+    /** An admin, or the support team's hidden login: both can do everything. */
     public boolean isAdmin() {
-        return role == UserRole.ADMIN;
+        return role == UserRole.ADMIN || role == UserRole.SUPER_ADMIN;
     }
 
     /** Permission for a module. A module with no row in the table gets no permission. */

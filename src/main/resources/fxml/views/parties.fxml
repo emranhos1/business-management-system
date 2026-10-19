@@ -1,11 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Placeholder; the real view comes with its own stage. -->
+<!-- Parties page (10.1-10.5): active customers and suppliers with what is due (পাবো / দেবো); each row has
+     icon buttons for ledger, money received / paid and inactive. Inactive parties are listed below. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      styleClass="placeholder-view" alignment="CENTER" spacing="8">
-    <Label text="%menu.parties" styleClass="placeholder-title"/>
-    <Label text="%page.coming_soon" styleClass="placeholder-text"/>
+      fx:controller="com.eh.bms.controller.PartiesController" spacing="12">
+
+    <!-- One line: title on the left; search, then New party on the right -->
+    <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+        <Label text="%party.section" styleClass="section-title" minWidth="-Infinity"/>
+        <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+        <TextField fx:id="searchField" promptText="%party.search" prefWidth="360" minWidth="160"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
+        <Button fx:id="addButton" text="%party.add" styleClass="add-button" onAction="#onAdd"/>
+    </HBox>
+    <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="260"/>
+
+    <Label text="%party.section.inactive" styleClass="section-title"/>
+    <StackPane fx:id="inactiveHolder" minHeight="220" prefHeight="240"/>
 </VBox>

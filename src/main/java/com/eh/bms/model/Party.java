@@ -28,8 +28,13 @@ public class Party {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Bangla name. */
     @Column(name = "name", nullable = false, length = 150)
     private String name;
+
+    /** English name; null for parties saved before it was added (the Bangla name shows then). */
+    @Column(name = "name_en", length = 150)
+    private String nameEn;
 
     /** Required and unique. */
     @Column(name = "phone", nullable = false, length = 30)
@@ -56,6 +61,12 @@ public class Party {
     @Column(name = "balance_type", nullable = false, length = 20)
     private BalanceType balanceType;
 
+    /** Nullable only because the column was added later; DataSeeder data fix v3 fills old rows with ACTIVE. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "status", length = 20)
+    private PartyStatus status = PartyStatus.ACTIVE;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -70,6 +81,14 @@ public class Party {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
     }
 
     public String getPhone() {
@@ -118,6 +137,14 @@ public class Party {
 
     public void setBalanceType(BalanceType balanceType) {
         this.balanceType = balanceType;
+    }
+
+    public PartyStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PartyStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

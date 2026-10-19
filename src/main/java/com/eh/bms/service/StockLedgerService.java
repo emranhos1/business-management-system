@@ -31,7 +31,8 @@ import java.util.Set;
  * and writes its own audit row (post does not, same as {@link AccountLedgerService#post}).
  * <p>
  * Average cost: stock in with a price gives new avg = (old qty x old avg + in qty x in price) / (old qty + in qty);
- * with no stock left this is simply the in price. Stock out keeps the average and is recorded at it.
+ * with no stock left this is simply the in price. Stock out keeps the average and is recorded at it; a purchase
+ * return goes out at its purchase price instead: avg = (old qty x old avg - out qty x price) / qty left.
  * Each entry stores the stock and average after it (posting order), so the newest entry gives both.
  */
 public class StockLedgerService {
@@ -56,8 +57,8 @@ public class StockLedgerService {
 
     /** Quantities are DECIMAL(14,3). */
     private static final int QTY_SCALE = 3;
-    /** Prices and average cost are DECIMAL(14,2), like money everywhere (MoneyUtil). */
-    private static final int COST_SCALE = 2;
+    /** Cost is kept to 4 decimals so averages do not lose paisa; money shown is still rounded to 2. */
+    private static final int COST_SCALE = 4;
 
     /** Types that only add stock / only take it out. RETURN and ADJUSTMENT may do either. */
     private static final Set<StockLedgerType> IN_ONLY =
@@ -73,6 +74,17 @@ public class StockLedgerService {
 
     public BigDecimal currentStock(Session session, long productId) {
         return repository.totals(session, productId).net();
+    }
+
+    /** Most that can go out on {@code date}: the lowest stock from the end of that day on (main unit). */
+    public BigDecimal availableOn(Session session, long productId, LocalDate date) {
+        BigDecimal running = repository.netUpTo(session, productId, date);
+        BigDecimal lowest = running;
+        for (BigDecimal qty : repository.quantitiesAfter(session, productId, date)) {
+            running = running.add(qty);
+            lowest = lowest.min(running);
+        }
+        return lowest;
     }
 
     /** Current stock of each product, in one query; a product with no entries gets 0. */
@@ -147,7 +159,8 @@ public class StockLedgerService {
      *
      * @param signedQuantity + stock in, - stock out, in the main unit; not zero
      * @param unitPrice      cost of one main unit for stock in; null = current average cost (average unchanged).
-     *                       Ignored for stock out: it is always recorded at the current average cost.
+     *                       Stock out is recorded at the current average cost, except a purchase return with a
+     *                       price: it leaves at that price and the average of the stock left is worked out again.
      * @return INSUFFICIENT_STOCK (nothing written) when stock out is more than the current stock
      */
     public Result post(Session session, long productId, LocalDate date, StockLedgerType type,
@@ -179,11 +192,22 @@ public class StockLedgerService {
         BigDecimal price;
         BigDecimal newAvg;
         if (qty.signum() < 0) {
-            if (before.compareTo(qty.negate()) < 0) {
-                return new Result(Status.INSUFFICIENT_STOCK, before, null);
+            // A back-dated stock out must not make the stock negative on that day or any later day
+            BigDecimal available = availableOn(session, productId, date);
+            if (available.compareTo(qty.negate()) < 0) {
+                return new Result(Status.INSUFFICIENT_STOCK, available.max(BigDecimal.ZERO), null);
             }
-            price = oldAvg;
-            newAvg = oldAvg;
+            if (type == StockLedgerType.PURCHASE_RETURN && unitPrice != null) {
+                // Goods sent back leave at what they cost; the rest of the stock carries the remaining value
+                price = unitPrice.setScale(COST_SCALE, RoundingMode.HALF_UP);
+                BigDecimal after = before.add(qty);
+                newAvg = after.signum() <= 0 ? oldAvg
+                        : before.multiply(oldAvg).add(qty.multiply(price)).max(BigDecimal.ZERO)
+                                .divide(after, COST_SCALE, RoundingMode.HALF_UP);
+            } else {
+                price = oldAvg;
+                newAvg = oldAvg;
+            }
         } else {
             price = unitPrice == null ? oldAvg : unitPrice.setScale(COST_SCALE, RoundingMode.HALF_UP);
             newAvg = before.signum() <= 0 ? price

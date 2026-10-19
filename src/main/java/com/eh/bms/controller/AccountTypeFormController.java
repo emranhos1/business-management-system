@@ -2,6 +2,9 @@ package com.eh.bms.controller;
 
 import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.AccountType;
+import com.eh.bms.model.AppModule;
+import com.eh.bms.service.UserSession;
+import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.service.AccountTypeService;
 import com.eh.bms.service.AccountTypeService.TypeData;
 import com.eh.bms.util.Dialogs;
@@ -10,6 +13,7 @@ import com.eh.bms.util.I18n;
 import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.Notifier;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -30,6 +34,7 @@ public class AccountTypeFormController {
     @FXML private Label nameEnError;
     @FXML private ComboBox<AccountNumberRule> ruleBox;
     @FXML private Label ruleError;
+    @FXML private Button deleteButton;
 
     private final AccountTypeService service = new AccountTypeService();
     private FormValidator form;
@@ -68,6 +73,11 @@ public class AccountTypeFormController {
         nameBnField.setText(type.getNameBn());
         nameEnField.setText(type.getNameEn());
         ruleBox.setValue(type.getNumberRule());
+        // Delete only a type no account uses (and the user may delete)
+        boolean deletable = UserSession.isLoggedIn() && UserSession.get().can(AppModule.ACCOUNT, Action.DELETE)
+                && service.canDelete(typeId);
+        deleteButton.setVisible(deletable);
+        deleteButton.setManaged(deletable);
     }
 
     public boolean isSaved() {
@@ -121,6 +131,28 @@ public class AccountTypeFormController {
             }
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not save account type", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+    }
+
+    @FXML
+    private void onDelete() {
+        if (typeId == null || !Dialogs.confirmDelete(I18n.get("types.confirm_delete",
+                I18n.pick(text(nameBnField), text(nameEnField))))) {
+            return;
+        }
+        try {
+            switch (service.delete(typeId)) {
+                case DELETED -> {
+                    saved = true;
+                    close();
+                    Notifier.success(I18n.get("msg.deleted"));
+                }
+                case IN_USE -> Notifier.error(I18n.get("types.error.in_use"));
+                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not delete account type", e);
             Notifier.error(I18n.get("msg.error"));
         }
     }

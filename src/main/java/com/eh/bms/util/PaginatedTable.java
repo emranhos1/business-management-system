@@ -44,10 +44,7 @@ public class PaginatedTable<T> extends VBox {
         this.loader = loader;
         this.pageSize = Math.max(1, pageSize);
 
-        Label empty = new Label();
-        empty.textProperty().bind(I18n.bind("msg.no_data"));
-        tableView.setPlaceholder(empty);
-        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        TableHelper.setUp(tableView);
         VBox.setVgrow(tableView, Priority.ALWAYS);
 
         previousButton.textProperty().bind(I18n.bind("pagination.previous"));
@@ -103,6 +100,7 @@ public class PaginatedTable<T> extends VBox {
         }
         page = Math.max(1, Math.min(target, totalPages));
         tableView.getItems().setAll(result.items());
+        TableHelper.fitColumns(tableView);
         updateBar();
     }
 

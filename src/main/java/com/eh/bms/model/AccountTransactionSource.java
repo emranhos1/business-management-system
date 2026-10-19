@@ -6,5 +6,15 @@ package com.eh.bms.model;
  */
 public enum AccountTransactionSource {
     /** Money moved between two accounts; {@code reference_id} is the other side's entry. */
-    TRANSFER
+    TRANSFER,
+    /** Money paid to or received from a party (10.5); {@code reference_id} is the party ledger entry. */
+    PARTY,
+    /** Money for a sale (paid at the sale, installment, or refund on a return); {@code reference_id} is the sale. */
+    SALE,
+    /** Money for a purchase (paid at the purchase, a later payment, or money back on a return); {@code reference_id} is the purchase. */
+    PURCHASE,
+    /** Money paid for an expense (13.2); {@code reference_id} is the expense. */
+    EXPENSE,
+    /** A salary payment (14.4): an advance or part of a month's salary; {@code reference_id} is the salary payment. */
+    SALARY
 }

@@ -73,6 +73,12 @@ public class StockValuationController {
         loadRows();
     }
 
+    /** Back to all categories. */
+    @FXML
+    private void onClearFilter() {
+        categoryBox.setValue(null);
+    }
+
     /** Reloads categories and values (stock changes on the other tabs); keeps the chosen category if it still exists. */
     @FXML
     public void refresh() {

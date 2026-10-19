@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
+<?import com.eh.bms.util.TwoColumnLayout?>
 
-<!-- Placeholder; the real view comes with its own stage. -->
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      styleClass="placeholder-view" alignment="CENTER" spacing="8">
-    <Label text="%menu.expenses" styleClass="placeholder-title"/>
-    <Label text="%page.coming_soon" styleClass="placeholder-text"/>
-</VBox>
+<!-- Expenses page (Stage 13), one page, no tabs (user decision): the month's expenses grouped by category on the left,
+     the expense categories on the right; stacked on a narrow window. -->
+<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+                 fx:controller="com.eh.bms.controller.ExpensesController" mainPercent="68">
+    <fx:include fx:id="list" source="expenses-list.fxml"/>
+    <fx:include fx:id="categories" source="expense-categories.fxml"/>
+</TwoColumnLayout>

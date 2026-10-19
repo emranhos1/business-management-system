@@ -1,6 +1,5 @@
 package com.eh.bms.service;
 
-import com.eh.bms.model.AppModule;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.repository.BusinessProfileRepository;
 import com.eh.bms.util.TransactionHelper;
@@ -42,7 +41,7 @@ public class BusinessProfileService {
 
             String now = describe(p);
             if (!Objects.equals(old, now)) {
-                auditService.updated(session, AppModule.SETTINGS, p.getId(), old, now);
+                auditService.updated(session, "BUSINESS_PROFILE", p.getId(), old, now);
             }
         });
     }

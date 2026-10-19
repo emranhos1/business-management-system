@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Employees list tab (14.1): active employees; each row has icon buttons for edit, salary history and
+     inactive. Inactive employees are listed below. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.EmployeesListController" spacing="12">
+
+    <!-- One line: title on the left; search, then New employee on the right -->
+    <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
+        <Label text="%employee.section" styleClass="section-title" minWidth="-Infinity"/>
+        <Region HBox.hgrow="ALWAYS" minWidth="8"/>
+        <TextField fx:id="searchField" promptText="%employee.search" prefWidth="360" minWidth="160"/>
+        <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
+        <Button fx:id="addButton" text="%employee.add" styleClass="add-button" onAction="#onAdd"/>
+    </HBox>
+    <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="260"/>
+
+    <Label text="%employee.section.inactive" styleClass="section-title"/>
+    <StackPane fx:id="inactiveHolder" minHeight="220" prefHeight="240"/>
+</VBox>
