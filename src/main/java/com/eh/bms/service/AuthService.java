@@ -27,6 +27,8 @@ public class AuthService {
         INVALID_CREDENTIALS,
         /** Right password but the user is deactivated. */
         INACTIVE,
+        /** Right password but the registration is not approved by an admin yet (N1). */
+        PENDING,
         /**
          * Right password, but it is one somebody else chose: no session is started until the user picks their
          * own ({@link #setFirstPassword}, then {@link #startSession}).
@@ -65,6 +67,9 @@ public class AuthService {
         User user = found.get();
         if (!BCrypt.checkpw(password, user.getPasswordHash())) {
             return new LoginResult(Status.INVALID_CREDENTIALS, null);
+        }
+        if (user.getStatus() == UserStatus.PENDING) {
+            return new LoginResult(Status.PENDING, null);
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
             return new LoginResult(Status.INACTIVE, null);

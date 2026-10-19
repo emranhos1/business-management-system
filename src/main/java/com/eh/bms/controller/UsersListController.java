@@ -21,31 +21,50 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Users list (17.1, 17.2): active users with edit and deactivate buttons on each row; inactive users in a second
+ * Users list (17.1, 17.2): registrations waiting for approval on top, with approve and reject (N1, shown only while
+ * there are any); active users with edit and deactivate buttons on each row; inactive users in a second
  * table below, with edit and activate. Search by name or username while typing. Delete is in the edit form.
  */
 public class UsersListController {
 
     private static final Logger LOG = Logger.getLogger(UsersListController.class.getName());
     private static final String FORM_FXML = "/fxml/views/user-form.fxml";
+    private static final String APPROVE_FXML = "/fxml/views/approve-user-form.fxml";
 
     @FXML private TextField searchField;
     @FXML private Button addButton;
     @FXML private StackPane tableHolder;
     @FXML private StackPane inactiveHolder;
+    @FXML private VBox pendingBox;
+    @FXML private StackPane pendingHolder;
 
     private final UserService service = new UserService();
     private PaginatedTable<User> table;
     private PaginatedTable<User> inactiveTable;
+    private PaginatedTable<User> pendingTable;
 
     @FXML
     private void initialize() {
+        // N1: no role column, the admin picks the role when approving
+        pendingTable = new PaginatedTable<>((offset, limit) -> {
+            PageResult<User> page = loadPage(UserStatus.PENDING, offset, limit);
+            pendingBox.setVisible(page.total() > 0);
+            pendingBox.setManaged(page.total() > 0);
+            return page;
+        });
+        pendingTable.getTableView().getColumns().add(TableHelper.column("user.col.name", User::getName));
+        pendingTable.getTableView().getColumns().add(TableHelper.column("user.col.username", User::getUsername));
+        pendingTable.getTableView().getColumns().add(actionsColumn(
+                new RowAction<User>(Icons.ACTIVATE, "user.approve", "icon-on", this::approve),
+                new RowAction<User>(Icons.REMOVE, "user.reject", "icon-out", this::reject)));
+
         table = new PaginatedTable<>((offset, limit) -> loadPage(UserStatus.ACTIVE, offset, limit));
         addInfoColumns(table.getTableView());
         table.getTableView().getColumns().add(actionsColumn(
@@ -65,13 +84,44 @@ public class UsersListController {
 
         tableHolder.getChildren().setAll(table);
         inactiveHolder.getChildren().setAll(inactiveTable);
+        pendingHolder.getChildren().setAll(pendingTable);
         reload();
     }
 
-    /** Loads both lists again. */
+    /** Loads all lists again. */
     public void reload() {
+        pendingTable.reload();
         table.reload();
         inactiveTable.reload();
+    }
+
+    /** Opens the approve popup, where the admin picks the role. */
+    private void approve(User user) {
+        FXMLLoader loader = WindowManager.loader(APPROVE_FXML);
+        Parent root = WindowManager.load(loader, APPROVE_FXML);
+        ApproveUserFormController form = loader.getController();
+        form.setUp(user);
+        WindowManager.dialog(root, I18n.get("user.approve_title")).showAndWait();
+        if (form.isSaved()) {
+            reload();
+        }
+    }
+
+    /** Rejecting deletes the registration, so the username is free again. */
+    private void reject(User user) {
+        if (!Dialogs.confirmDelete(I18n.get("user.confirm_reject", user.getName()))) {
+            return;
+        }
+        try {
+            switch (service.reject(user.getId())) {
+                case DELETED -> Notifier.success(I18n.get("user.rejected"));
+                case IN_USE, SELF, LAST_ADMIN, NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+            reload();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not reject user", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
     }
 
     private static void addInfoColumns(TableView<User> view) {

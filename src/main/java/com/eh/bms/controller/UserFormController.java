@@ -31,10 +31,11 @@ import java.util.regex.Pattern;
 public class UserFormController {
 
     private static final Logger LOG = Logger.getLogger(UserFormController.class.getName());
-    private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9._-]{3,50}");
+    /** Also used by the registration form (N1). */
+    static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9._-]{3,50}");
     private static final int PASSWORD_MIN = 6;
     /** BCrypt reads only the first 72 bytes, so a longer password would be cut silently. */
-    private static final int PASSWORD_MAX = 50;
+    static final int PASSWORD_MAX = 50;
 
     @FXML private TextField nameField;
     @FXML private Label nameError;
