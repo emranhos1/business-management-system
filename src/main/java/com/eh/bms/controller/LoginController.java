@@ -37,6 +37,8 @@ public class LoginController {
     private static final Logger LOG = Logger.getLogger(LoginController.class.getName());
 
     private static final String CHANGE_PASSWORD_FXML = "/fxml/views/change-password-form.fxml";
+    /** Shown once by the next login page (set by {@link #showNoticeOnOpen}). */
+    private static String noticeOnOpen;
     /** Release notes hold an English part, then the Bangla part after this marker (release-notes/README.md). */
     private static final String BANGLA_MARKER = "<!-- bn -->";
     private static final double NOTES_WIDTH = 480;
@@ -44,7 +46,6 @@ public class LoginController {
     private final AuthService authService = new AuthService();
 
     @FXML private Label titleLabel;
-    @FXML private Label subtitleLabel;
     @FXML private Label usernameLabel;
     @FXML private Label passwordLabel;
     @FXML private TextField usernameField;
@@ -52,6 +53,7 @@ public class LoginController {
     @FXML private Label errorLabel;
     @FXML private Button loginButton;
     @FXML private Label forgotLabel;
+    @FXML private Button registerButton;
     @FXML private VBox updateBanner;
     @FXML private Label updateLabel;
     @FXML private Button updateButton;
@@ -71,8 +73,12 @@ public class LoginController {
         checkForUpdate();
 
         forgotLabel.textProperty().bind(I18n.bind("login.forgot_hint"));
-        titleLabel.textProperty().bind(I18n.bind("app.title"));
-        subtitleLabel.textProperty().bind(I18n.bind("login.subtitle"));
+        registerButton.textProperty().bind(I18n.bind("register.open"));
+        if (noticeOnOpen != null) {
+            showMessage(noticeOnOpen, false);
+            noticeOnOpen = null;
+        }
+        titleLabel.textProperty().bind(I18n.bind("login.button"));
         usernameLabel.textProperty().bind(I18n.bind("login.username"));
         passwordLabel.textProperty().bind(I18n.bind("login.password"));
         usernameField.promptTextProperty().bind(I18n.bind("login.username"));
@@ -119,6 +125,10 @@ public class LoginController {
             }
             case INACTIVE -> {
                 showError(I18n.get("login.error.inactive"));
+                passwordField.clear();
+            }
+            case PENDING -> {
+                showError(I18n.get("login.error.pending"));
                 passwordField.clear();
             }
             case SUCCESS -> WindowManager.showMain();
@@ -263,7 +273,25 @@ public class LoginController {
         worker.start();
     }
 
+    /** The registration page (N1) in place of this one. */
+    @FXML
+    private void onRegister() {
+        WindowManager.showRegister();
+    }
+
+    /** A green notice the next login page shows once, e.g. after a registration (N1). */
+    static void showNoticeOnOpen(String notice) {
+        noticeOnOpen = notice;
+    }
+
     private void showError(String message) {
+        showMessage(message, true);
+    }
+
+    /** The one message line on the card: red for an error, green for a notice (no message bar on this screen). */
+    private void showMessage(String message, boolean error) {
+        errorLabel.getStyleClass().removeAll("error-label", "success-label");
+        errorLabel.getStyleClass().add(error ? "error-label" : "success-label");
         errorLabel.setText(message);
         errorLabel.setVisible(true);
         errorLabel.setManaged(true);

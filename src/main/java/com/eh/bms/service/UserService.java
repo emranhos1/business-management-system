@@ -140,6 +140,40 @@ public class UserService {
         });
     }
 
+    /** Approves a registration (N1): the admin picks its role and it can log in with its own password. */
+    public StatusResult approve(long id, UserRole role) {
+        requireAdmin();
+        if (role == UserRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("The support role cannot be given to a user");
+        }
+        return TransactionHelper.inTransaction(session -> {
+            User u = find(session, id).filter(p -> p.getStatus() == UserStatus.PENDING).orElse(null);
+            if (u == null) {
+                return StatusResult.NOT_FOUND;
+            }
+            String old = describe(u);
+            u.setRole(role);
+            u.setStatus(UserStatus.ACTIVE);
+            auditService.updated(session, AppModule.USER, u.getId(), old, describe(u) + ", registration approved");
+            return StatusResult.DONE;
+        });
+    }
+
+    /** Rejects a registration (N1): it is deleted, so the username is free again. */
+    public DeleteResult reject(long id) {
+        requireAdmin();
+        return TransactionHelper.inTransaction(session -> {
+            User u = find(session, id).filter(p -> p.getStatus() == UserStatus.PENDING).orElse(null);
+            if (u == null) {
+                return DeleteResult.NOT_FOUND;
+            }
+            String old = describe(u);
+            repository.delete(session, u);
+            auditService.deleted(session, AppModule.USER, id, old + ", registration rejected");
+            return DeleteResult.DELETED;
+        });
+    }
+
     /** True if {@link #delete} would delete the user: not yourself, not the last admin, no history. */
     public boolean canDelete(long id) {
         requireAdmin();

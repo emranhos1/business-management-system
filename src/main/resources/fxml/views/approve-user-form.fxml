@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Approve a registration (N1): the admin picks its role; the user then logs in with their own password. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ApproveUserFormController"
+      styleClass="dialog-form" spacing="12" prefWidth="540">
+
+    <HBox styleClass="form-row">
+        <Label text="%user.name" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nameField" maxWidth="Infinity" disable="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%user.username" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="usernameField" maxWidth="Infinity" disable="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%user.role" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="roleBox" maxWidth="Infinity"/>
+            <Label fx:id="roleError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.cancel" styleClass="cancel-button" cancelButton="true" onAction="#onCancel"/>
+        <Button text="%user.approve" styleClass="save-button" defaultButton="true" onAction="#onSave"/>
+    </HBox>
+</VBox>
