@@ -8,7 +8,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Users (17.1, 17.2): active users with edit and deactivate buttons on each row; inactive users listed below. -->
+<!-- Users (17.1, 17.2): three lists side by side, equal width: registrations waiting for approval (N1, only while
+     there are any), active users with edit and deactivate buttons on each row, inactive users. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.UsersListController" spacing="12">
 
@@ -20,8 +21,20 @@
         <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
         <Button fx:id="addButton" text="%user.add" styleClass="add-button" onAction="#onAdd"/>
     </HBox>
-    <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="260"/>
 
-    <Label text="%user.section.inactive" styleClass="section-title"/>
-    <StackPane fx:id="inactiveHolder" minHeight="220" prefHeight="240"/>
+    <!-- prefWidth 0 + grow: the shown lists share the width equally -->
+    <HBox spacing="16" VBox.vgrow="ALWAYS" minHeight="320">
+        <VBox fx:id="pendingBox" spacing="12" HBox.hgrow="ALWAYS" prefWidth="0" visible="false" managed="false">
+            <Label text="%user.section.pending" styleClass="section-title"/>
+            <StackPane fx:id="pendingHolder" VBox.vgrow="ALWAYS"/>
+        </VBox>
+        <VBox spacing="12" HBox.hgrow="ALWAYS" prefWidth="0">
+            <Label text="%user.section.active" styleClass="section-title"/>
+            <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
+        </VBox>
+        <VBox spacing="12" HBox.hgrow="ALWAYS" prefWidth="0">
+            <Label text="%user.section.inactive" styleClass="section-title"/>
+            <StackPane fx:id="inactiveHolder" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </HBox>
 </VBox>

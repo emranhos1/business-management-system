@@ -233,30 +233,29 @@ Depends on: Stage 5
 | 17.3 | Permission editor per role and module | Changes apply after re-login | ✅ |
 | 17.4 | Audit log viewer | Shows who did what and when | ✅ |
 
-## Stage 18 — Auto-Update: GitHub Actions
+## Stage 18 — Auto-Update: GitHub Actions ✅
 Depends on: Stage 0
 Done the finance-app way (user decision): push to `production` (after `dev-emon` → `development` → `stage`) releases only a pom version not yet tagged; Inno Setup installer; SHA-256 file instead of `version.json`; release notes and the version bump are written by Claude.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 18.1 | `release.yml`: on push to `production`, release only when `v<pom version>` tag does not exist; build `bms.jar` + `lib/` | Same version → nothing built; new version → JAR built | [T] |
-| 18.2 | `jpackage` app image (own Java runtime) + Inno Setup (`packaging/bms.iss`) → `BMS-Update-{version}.exe` | .exe installs on PC without Java; app opens | [T] |
-| 18.3 | `BMS-Update-{version}.exe.sha256` (the app reads the latest release from the GitHub API; no `version.json`) | Hash matches the .exe | [T] |
-| 18.4 | Hand-written `release-notes/v{version}.md` (English, `<!-- bn -->`, Bangla) as release text; missing → build fails | Release shows the notes; missing file stops it | [T] |
-| 18.5 | GitHub Release with .exe and .sha256; creates the `v{version}` tag | Release shows both files and the tag | [T] |
-| 18.6 | Dropped (user decision): the user picks `app.profile`; the build never checks it | — | — |
+| 18.1 | `release.yml`: on push to `production`, release only when `v<pom version>` tag does not exist; build `bms.jar` + `lib/` | Same version → nothing built; new version → JAR built | ✅ |
+| 18.2 | `jpackage` app image (own Java runtime) + Inno Setup (`packaging/bms.iss`) → `BMS-Update-{version}.exe` | .exe installs on PC without Java; app opens | ✅ |
+| 18.3 | `BMS-Update-{version}.exe.sha256` (the app reads the latest release from the GitHub API; no `version.json`) | Hash matches the .exe | ✅ |
+| 18.4 | Hand-written `release-notes/v{version}.md` (English, `<!-- bn -->`, Bangla) as release text; missing → build fails | Release shows the notes; missing file stops it | ✅ |
+| 18.5 | GitHub Release with .exe and .sha256; creates the `v{version}` tag | Release shows both files and the tag | ✅ |
 
-## Stage 19 — Auto-Update: In-App
+## Stage 19 — Auto-Update: In-App ✅
 Depends on: Stage 5, Stage 18
 Done the finance-app way (user decision): the installer's own wizard replaces `updater.bat`.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 19.1 | Background update check on the login screen (`UpdateService.check`: `releases/latest` redirect → newest tag; no JSON) | Login not delayed; offline shows nothing | [T] |
-| 19.2 | Banner above the login card: new version and yours, "আপডেট করুন", "কী নতুন" (release text in the app's language) | Banner shows on every PC with an older version | [T] |
-| 19.3 | Ask the download folder (last one, else Downloads) and download with progress; only installers the app downloaded earlier are deleted | Progress shows, file saved in the picked folder | [T] |
-| 19.4 | Size (Content-Length) and SHA-256 check; a bad file is deleted and an error shows under the banner | Wrong file is rejected | [T] |
-| 19.5 | Open the installer's wizard and close the app; it replaces the app (data untouched) and can start BMS at the end | Update installs and BMS opens on the new version | [T] |
+| 19.1 | Background update check on the login screen (`UpdateService.check`: `releases/latest` redirect → newest tag; no JSON) | Login not delayed; offline shows nothing | ✅ |
+| 19.2 | Banner above the login card: new version and yours, "আপডেট করুন", "কী নতুন" (release text in the app's language) | Banner shows on every PC with an older version | ✅ |
+| 19.3 | Ask the download folder (last one, else Downloads) and download with progress; only installers the app downloaded earlier are deleted | Progress shows, file saved in the picked folder | ✅ |
+| 19.4 | Size (Content-Length) and SHA-256 check; a bad file is deleted and an error shows under the banner | Wrong file is rejected | ✅ |
+| 19.5 | Open the installer's wizard and close the app; it replaces the app (data untouched) and can start BMS at the end | Update installs and BMS opens on the new version | ✅ |
 
 ## Stage 20 — Phase 2 (Nice to Have)
 Depends on: Phase 1 done
@@ -283,33 +282,15 @@ Backup is done exactly the finance-app way (user decision): no backup on app clo
 ## New Ideas
 Add ideas here in order (N1, N2, ...). Split each into small tasks.
 
-### N1 — User Registration
+### N1 — User Registration ✅
 Depends on: Stages 5, 17
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N1.1 | Decide rules: who can register, needs admin approval or not, default role | User confirms rules | [ ] |
-| N1.2 | Registration screen (FXML + controller), opened from login screen | Screen opens and validates input | [ ] |
-| N1.3 | Registration service: validate, unique username, BCrypt, save per N1.1 rules | New user saved, password hashed | [ ] |
-| N1.4 | Admin approve/reject for registered users (only if N1.1 needs it) | Approved user can log in; rejected cannot | [ ] |
-
-### N2 — Staff Transactions with Admin Approval
-Staff can buy/sell when the owner is absent. Entries are saved in `transactions` with status `pending` until admin approves.
-Depends on: Stages 11, 12, 17
-
-| ID | Task | Test | Status |
-|----|------|------|--------|
-| N2.1 | Decide which actions staff can do (to be given by user) | User confirms list | [ ] |
-| N2.2 | Decide stock rule while pending (block overselling or not) | User confirms rule | [ ] |
-| N2.3 | Add `pending` and `rejected` to transaction status | Status values saved and read correctly | [ ] |
-| N2.4 | Add to `transactions`: `created_by` (FK → users), `approved_by` (FK → users), `approved_at`, `reject_reason` | Columns and FKs created; entry saves creator | [ ] |
-| N2.5 | Link login to employee: `users.employee_id` (FK → employees, optional, unique) | User saved with/without employee; one employee → at most one user | [ ] |
-| N2.6 | Staff sale/purchase saves with status `pending` (no ledger change) | Entry in pending; stock/party/account unchanged | [ ] |
-| N2.7 | Admin pending list view (shows who entered) | All pending entries listed with creator | [ ] |
-| N2.8 | Admin approve (atomic): status → `confirmed`, set `approved_by`/`approved_at`, update stock/party/account | Status confirmed; ledgers correct; failure rolls back | [ ] |
-| N2.9 | Admin reject with reason: status → `rejected`, set `approved_by`/`approved_at`/`reject_reason` | Entry marked rejected; no ledger change | [ ] |
-| N2.10 | Staff view of own entries (pending/approved/rejected) by `created_by` | Status shows correctly | [ ] |
-| N2.11 | Audit log for approve/reject | Audit row with admin and time | [ ] |
+| N1.1 | Rules (user decisions): anyone registers from the login screen; the user waits as `PENDING` until an admin approves; the admin picks the role when approving; reject deletes the registration | User confirms rules | ✅ |
+| N1.2 | Login page has Login and রেজিস্ট্রেশন buttons; রেজিস্ট্রেশন opens a registration page in place of the login page (name, username, password twice; same rules as the user form) with a back-to-login button | Page opens, shows every error, back returns to login | ✅ |
+| N1.3 | `RegistrationService`: unique username (support name kept), BCrypt, status `PENDING`, own password (no change at first login); login says "not approved yet" | New user saved, password hashed; login refused with that message | ✅ |
+| N1.4 | Users page: three lists side by side (waiting for approval, only while any; active; inactive); approve (pick role) and reject (deletes) | Approved user logs in with the picked role; rejected one is gone and the username is free | ✅ |
 
 ### N3 — Keep Passwords Out of the Public Repo (dropped: replaced by N10; the DB password stays, it is `localhost`)
 `application-{dev,stage,prod}.yml` hold DB and admin passwords; the GitHub repo is public.
@@ -352,7 +333,7 @@ Depends on: Stage 11 (memo number saved with each sale)
 | N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [ ] |
 | N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [ ] |
 
-### N7 — Sale Return Stock Rounding (known bug)
+### N7 — Sale Return Stock Rounding (known bug) ✅
 Part returns of one sale line round the stock quantity on each return, so stock drifts (10 pcs sold as 0.833 dozen, returned 5 + 5, puts back 0.834). `SaleService.returnGoods` should use the cumulative rounding `PurchaseService` already uses (`mainShare(item, returned + qty) − mainShare(item, returned)`).
 Depends on: Stage 11
 
@@ -360,16 +341,7 @@ Depends on: Stage 11
 |----|------|------|--------|
 | N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | ✅ |
 
-### N8 — Hide Account Balances From Users Without Accounts Permission
-Account pickers on money forms (purchase, purchase pay, expense, party payment, salary payment) show each account's balance, so a cashier sees balances although the Accounts module is closed to them (user decision). Show only the account name to users without Accounts view permission; saving is still blocked when money is short, but the error then shows no amount. Do it in one shared place for all these forms.
-Depends on: Stage 7
-
-| ID | Task | Test | Status |
-|----|------|------|--------|
-| N8.1 | Account picker shows balance only with Accounts view permission (shared helper used by every money form) | Cashier sees names only; admin/manager see balances | [ ] |
-| N8.2 | Short-balance errors without the amount for users without Accounts permission | Cashier gets the error, no amount shown | [ ] |
-
-### N9 — Coin Rounding on Sale Refunds
+### N9 — Coin Rounding on Sale Refunds ✅
 A ৳0.70 piece cannot be paid back in coins: the shop pays ৳1 or nothing. The difference (under ৳1) is a real loss or gain, so it must count in cash and in profit. Done together with N7 (same function, same form).
 Depends on: Stage 11
 
@@ -379,7 +351,7 @@ Depends on: Stage 11
 | N9.2 | Return form: walk-in refund field is editable; a line under it says the difference and that it is a loss (taken off profit) or gain; the confirm question says it too | Hint and confirm text show the difference; over ৳1 off is refused | ✅ |
 | N9.3 | "Still worth" cap of the next return counted from the goods returned, not from `returned_amount` (which now holds roundings) | Second part return of a rounded-up first one keeps its full value | ✅ |
 
-### N10 — First-Login Password Change and the Support Login
+### N10 — First-Login Password Change and the Support Login ✅
 Replaces N3's main need: the admin password in the public repo's yml is known to everyone, so every user picks their own password before getting in. The DB password stays in the yml (the DB is on the same PC: `localhost`). A forgotten password is solved by the support team's hidden login (the recovery-code idea was dropped by the user).
 Depends on: Stages 5, 17 (N3 is dropped by user decision; this is its smaller replacement)
 
