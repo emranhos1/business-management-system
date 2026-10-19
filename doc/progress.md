@@ -205,23 +205,23 @@ Depends on: Stages 7–14
 | 15.5 | Low stock alerts | Matches alert list | ✅ |
 | 15.6 | Account balances | Matches accounts | ✅ |
 
-## Stage 16 — Reports (Excel .xlsx export)
+## Stage 16 — Reports (Excel .xlsx export) ✅
 Depends on: 16.1 first; each report depends on its module
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 16.1 | Excel export util (Apache POI) | Sample table exports to .xlsx | [ ] |
-| 16.2 | দৈনিক হিসাব (daily cash summary) | Data and export correct | [ ] |
-| 16.3 | Stock position report | Data and export correct | [ ] |
-| 16.4 | Party ledger report (one or all) | Data and export correct | [ ] |
-| 16.5 | Purchase summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.6 | Sales summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.7 | Expense summary (daily/monthly/yearly) | Data and export correct | [ ] |
-| 16.8 | Due collection report (customers) | Data and export correct | [ ] |
-| 16.9 | Payable report (suppliers) | Data and export correct | [ ] |
-| 16.10 | Salary report (monthly) | Data and export correct | [ ] |
-| 16.11 | Stock valuation report | Data and export correct | [ ] |
-| 16.12 | Profit & Loss (monthly/yearly) | Data and export correct | [ ] |
+| 16.1 | Excel export util (Apache POI) | Sample table exports to .xlsx | ✅ |
+| 16.2 | দৈনিক হিসাব (daily cash summary) | Data and export correct | ✅ |
+| 16.3 | Stock position report | Data and export correct | ✅ |
+| 16.4 | Party ledger report (one or all) | Data and export correct | ✅ |
+| 16.5 | Purchase summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.6 | Sales summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.7 | Expense summary (daily/monthly/yearly) | Data and export correct | ✅ |
+| 16.8 | Due collection report (customers) | Data and export correct | ✅ |
+| 16.9 | Payable report (suppliers) | Data and export correct | ✅ |
+| 16.10 | Salary report (monthly) | Data and export correct | ✅ |
+| 16.11 | Stock valuation report | Data and export correct | ✅ |
+| 16.12 | Profit & Loss (monthly/yearly) | Data and export correct | ✅ |
 
 ## Stage 17 — User Management (Admin only)
 Depends on: Stage 5
@@ -351,7 +351,7 @@ Depends on: Stage 11
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | [ ] |
+| N7.1 | Cumulative rounding in sale returns | Part returns of a line add up to its stock quantity exactly | [T] |
 
 ### N8 — Hide Account Balances From Users Without Accounts Permission
 Account pickers on money forms (purchase, purchase pay, expense, party payment, salary payment) show each account's balance, so a cashier sees balances although the Accounts module is closed to them (user decision). Show only the account name to users without Accounts view permission; saving is still blocked when money is short, but the error then shows no amount. Do it in one shared place for all these forms.
@@ -361,3 +361,13 @@ Depends on: Stage 7
 |----|------|------|--------|
 | N8.1 | Account picker shows balance only with Accounts view permission (shared helper used by every money form) | Cashier sees names only; admin/manager see balances | [ ] |
 | N8.2 | Short-balance errors without the amount for users without Accounts permission | Cashier gets the error, no amount shown | [ ] |
+
+### N9 — Coin Rounding on Sale Refunds
+A ৳0.70 piece cannot be paid back in coins: the shop pays ৳1 or nothing. The difference (under ৳1) is a real loss or gain, so it must count in cash and in profit. Done together with N7 (same function, same form).
+Depends on: Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N9.1 | Refund may differ from the goods' value by under ৳1: a walk-in customer more or less, a party more (less stays in its ledger as credit); the difference is added to `returned_amount` and the party's return credit, so profit, cash and ledger all agree | ৳0.70 piece back as ৳1: cash −৳1, profit −৳1 on that sale, party ledger nets 0; back as ৳0 (walk-in): profit +৳0.70 kept | [T] |
+| N9.2 | Return form: walk-in refund field is editable; a line under it says the difference and that it is a loss (taken off profit) or gain; the confirm question says it too | Hint and confirm text show the difference; over ৳1 off is refused | [T] |
+| N9.3 | "Still worth" cap of the next return counted from the goods returned, not from `returned_amount` (which now holds roundings) | Second part return of a rounded-up first one keeps its full value | [T] |

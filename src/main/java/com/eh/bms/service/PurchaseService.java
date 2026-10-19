@@ -448,7 +448,7 @@ public class PurchaseService {
     }
 
     /** Main-unit quantity of {@code qty} (in the line's unit) of a line. */
-    private static BigDecimal mainShare(TransactionItem item, BigDecimal qty) {
+    static BigDecimal mainShare(TransactionItem item, BigDecimal qty) {
         return item.getMainQuantity().multiply(qty).divide(item.getQuantity(), QTY_SCALE, RoundingMode.HALF_UP);
     }
 

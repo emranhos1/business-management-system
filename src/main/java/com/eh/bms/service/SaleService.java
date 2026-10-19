@@ -326,8 +326,12 @@ public class SaleService {
                 String memoNote = "#" + sale.getMemoNo() + (note == null || note.isBlank() ? "" : " — " + note.trim());
 
                 BigDecimal value = BigDecimal.ZERO;
+                // What the goods returned in earlier returns were worth, to keep the total within the bill
+                BigDecimal earlier = BigDecimal.ZERO;
                 boolean anyBack = false;
                 for (TransactionItem item : items) {
+                    BigDecimal netPrice = item.getUnitPrice().subtract(item.getDiscountPerUnit());
+                    earlier = earlier.add(item.getReturnedQuantity().multiply(netPrice));
                     BigDecimal qty = quantities.get(item.getId());
                     if (qty == null || qty.signum() <= 0) {
                         continue;
@@ -336,17 +340,20 @@ public class SaleService {
                     if (qty.compareTo(left) > 0) {
                         throw new Abort(new Result(Status.TOO_MUCH, null, item.getProduct().getId(), null, left));
                     }
-                    BigDecimal mainQty = item.getMainQuantity().multiply(qty)
-                            .divide(item.getQuantity(), QTY_SCALE, RoundingMode.HALF_UP);
+                    // Worked out on the total returned so far, so part returns add up to the line's stock exactly (N7)
+                    BigDecimal mainQty = PurchaseService.mainShare(item, item.getReturnedQuantity().add(qty))
+                            .subtract(PurchaseService.mainShare(item, item.getReturnedQuantity()));
                     stockLedger.post(session, item.getProduct().getId(), date, StockLedgerType.SALE_RETURN,
                             mainQty, null, null, sale.getId(), memoNote);
                     item.setReturnedQuantity(item.getReturnedQuantity().add(qty));
                     anyBack = true;
-                    value = value.add(qty.multiply(item.getUnitPrice().subtract(item.getDiscountPerUnit())));
+                    value = value.add(qty.multiply(netPrice));
                 }
                 value = value.multiply(factor).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
-                // Never more than what the sale is still worth (rounding on the last return)
-                value = value.min(sale.getGrandTotal().subtract(sale.getReturnedAmount())).max(BigDecimal.ZERO);
+                // Never more than what the sale is still worth (rounding on the last return). Counted from the
+                // goods, not from returned_amount, which also holds the refund roundings of earlier returns
+                BigDecimal earlierValue = earlier.multiply(factor).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+                value = value.min(sale.getGrandTotal().subtract(earlierValue)).max(BigDecimal.ZERO);
                 if (!anyBack) {
                     throw new IllegalArgumentException("Nothing to return");
                 }
@@ -355,17 +362,20 @@ public class SaleService {
                 BigDecimal back = refund == null ? BigDecimal.ZERO : refund;
                 // The goods first clear what is still due; only money actually paid can go back
                 BigDecimal maxRefund = maxRefund(value, sale.getDueAmount());
-                if (back.compareTo(maxRefund) > 0) {
-                    throw new Abort(new Result(Status.TOO_MUCH, null, null, null, maxRefund));
+                BigDecimal rounding = refundRounding(value, back, party != null, sale.getDueAmount());
+                if (rounding == null) {
+                    // A walk-in customer has no ledger: the whole value goes back in cash (give or take under ৳1)
+                    throw new Abort(party == null
+                            ? new Result(Status.DUE_WITHOUT_PARTY, null, null, null, value)
+                            : new Result(Status.TOO_MUCH, null, null, null, maxRefund));
                 }
-                if (party == null && back.compareTo(value) != 0) {
-                    // A walk-in customer has no ledger: the whole value goes back in cash
-                    throw new Abort(new Result(Status.DUE_WITHOUT_PARTY, null, null, null, value));
-                }
+                // What the return is worth in money: the goods' value and the coin rounding of the refund.
+                // The rounding is a real loss (or gain), so it counts in returned_amount and with it in the profit
+                BigDecimal settled = value.add(rounding);
                 // Goods worth 0 (a free line) only come back to stock
-                if (party != null && value.signum() > 0) {
+                if (party != null && settled.signum() > 0) {
                     partyLedger.post(session, party.getId(), date, PartyLedgerType.RETURN,
-                            BigDecimal.ZERO, value, sale.getId(), memoNote);
+                            BigDecimal.ZERO, settled, sale.getId(), memoNote);
                 }
                 if (back.signum() > 0) {
                     if (refundAccountId == null) {
@@ -384,12 +394,12 @@ public class SaleService {
                     }
                 }
                 // What was not paid back lowers the sale's due (what is left over stays in the party's ledger)
-                BigDecimal credit = value.subtract(back);
+                BigDecimal credit = settled.subtract(back);
                 sale.setDueAmount(sale.getDueAmount().subtract(credit).max(BigDecimal.ZERO));
-                sale.setReturnedAmount(sale.getReturnedAmount().add(value));
+                sale.setReturnedAmount(sale.getReturnedAmount().add(settled));
 
                 auditService.created(session, AppModule.SALE, sale.getId(), "return memo=" + sale.getMemoNo()
-                        + " value=" + value + " refund=" + back + " date=" + date);
+                        + " value=" + value + " refund=" + back + " rounding=" + rounding + " date=" + date);
                 return new Result(Status.DONE, sale.getMemoNo(), null, null, value);
             });
         } catch (Abort a) {
@@ -451,6 +461,24 @@ public class SaleService {
     /** An inactive party's ledger must not move (it is hidden from money screens); make it active first. */
     private static boolean isInactive(BusinessTransaction sale) {
         return sale.getParty() != null && sale.getParty().getStatus() == PartyStatus.INACTIVE;
+    }
+
+    /**
+     * The coin rounding of a refund: money paid beyond the goods' value (+) or kept short of it (−), always under
+     * ৳1, so a ৳0.70 piece can go back as ৳1 or as nothing. A walk-in customer (no ledger) may get a little more or
+     * less than the value; a party only a little more, and only when the sale has no due (less stays in its
+     * ledger as credit anyway). Null = the refund is not allowed.
+     */
+    public static BigDecimal refundRounding(BigDecimal value, BigDecimal back, boolean hasParty, BigDecimal due) {
+        if (!hasParty) {
+            BigDecimal diff = back.subtract(value);
+            return diff.abs().compareTo(BigDecimal.ONE) < 0 ? diff : null;
+        }
+        if (back.compareTo(maxRefund(value, due)) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal extra = back.subtract(value);
+        return due.signum() == 0 && extra.signum() > 0 && extra.compareTo(BigDecimal.ONE) < 0 ? extra : null;
     }
 
     /** Most money that can go back on a return worth {@code value}: the part above what is still due. */

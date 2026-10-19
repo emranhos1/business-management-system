@@ -901,3 +901,13 @@
 .view-button:hover {
     -fx-background-color: #0d9488;
 }
+
+/* Reports page (Stage 16): the list of reports, and the totals row of a report table */
+.report-list .list-cell {
+    -fx-padding: 10 12;
+    -fx-font-size: 14px;
+}
+
+.report-total-row .table-cell {
+    -fx-font-weight: bold;
+}

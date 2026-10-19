@@ -69,6 +69,10 @@ public class SaleReturnFormController {
     /** Quantity field of each line (line id → field), in the sale's line order. */
     private final Map<Long, TextField> qtyFields = new LinkedHashMap<>();
     private final Map<Long, TransactionItem> items = new HashMap<>();
+    /** What the goods already returned were worth (from the lines; not returned_amount, which holds roundings too). */
+    private BigDecimal earlierValue = BigDecimal.ZERO;
+    /** The hint under the refund field without the rounding line. */
+    private String baseHint = "";
     private boolean saved;
 
     @FXML
@@ -95,7 +99,10 @@ public class SaleReturnFormController {
                 throw new UnsupportedOperationException();
             }
         });
-        refundField.textProperty().addListener((obs, old, now) -> showAccountRow());
+        refundField.textProperty().addListener((obs, old, now) -> {
+            showAccountRow();
+            updateHint();
+        });
         form = new FormValidator()
                 .add(refundField, refundError)
                 .add(accountBox, accountError)
@@ -126,6 +133,11 @@ public class SaleReturnFormController {
         linesGrid.addRow(0, header("sale.product"), header("sale.return.sold"), header("sale.return.back"),
                 header("sale.return.now"));
         int row = 1;
+        BigDecimal earlier = BigDecimal.ZERO;
+        for (TransactionItem i : d.items()) {
+            earlier = earlier.add(i.getReturnedQuantity().multiply(i.getUnitPrice().subtract(i.getDiscountPerUnit())));
+        }
+        earlierValue = earlier.multiply(billFactor()).setScale(2, RoundingMode.HALF_UP);
         for (TransactionItem i : d.items()) {
             BigDecimal left = i.getQuantity().subtract(i.getReturnedQuantity());
             if (left.signum() <= 0) {
@@ -148,9 +160,6 @@ public class SaleReturnFormController {
             Notifier.error(I18n.get("sale.error.all_returned"));
             return false;
         }
-        // A walk-in customer has no ledger, so the money is paid back in full
-        refundHint.setText(I18n.get(sale.getParty() == null ? "sale.return.refund_walk_in" : "sale.return.refund_party"));
-        refundField.setDisable(sale.getParty() == null);
         showValue();
         return true;
     }
@@ -177,6 +186,12 @@ public class SaleReturnFormController {
         return result;
     }
 
+    /** The share of the bill discount and VAT that each line's money carries. */
+    private BigDecimal billFactor() {
+        return sale.getSubtotal().signum() == 0 ? BigDecimal.ONE
+                : sale.getGrandTotal().divide(sale.getSubtotal(), 10, RoundingMode.HALF_UP);
+    }
+
     /** Same sum as the sale service: lines at their net price, with the sale's discount and VAT shared out. */
     private BigDecimal value(Map<Long, BigDecimal> quantities) {
         BigDecimal sum = BigDecimal.ZERO;
@@ -184,17 +199,16 @@ public class SaleReturnFormController {
             TransactionItem i = items.get(e.getKey());
             sum = sum.add(e.getValue().multiply(i.getUnitPrice().subtract(i.getDiscountPerUnit())));
         }
-        BigDecimal factor = sale.getSubtotal().signum() == 0 ? BigDecimal.ONE
-                : sale.getGrandTotal().divide(sale.getSubtotal(), 10, RoundingMode.HALF_UP);
-        return sum.multiply(factor).setScale(2, RoundingMode.HALF_UP)
-                .min(sale.getGrandTotal().subtract(sale.getReturnedAmount()));
+        return sum.multiply(billFactor()).setScale(2, RoundingMode.HALF_UP)
+                .min(sale.getGrandTotal().subtract(earlierValue)).max(BigDecimal.ZERO);
     }
 
     private void showValue() {
         BigDecimal value = value(quantities());
         valueLabel.setText(I18n.get("sale.return.value", MoneyUtil.format(value)));
         if (sale.getParty() == null) {
-            refundHint.setText(I18n.get("sale.return.refund_walk_in"));
+            // No ledger: the money goes back now, the value to the paisa unless the coins are short (under ৳1 more or less)
+            baseHint = I18n.get("sale.return.refund_walk_in");
             refundField.setText(value.signum() == 0 ? "" : value.stripTrailingZeros().toPlainString());
         } else {
             // What is still due is cleared first; only the rest can be paid back in money. While the goods only
@@ -206,10 +220,26 @@ public class SaleReturnFormController {
                 form.clear(refundField);
             }
             refundField.setDisable(dueOnly);
-            refundHint.setText(dueOnly ? I18n.get("sale.return.off_due")
-                    : I18n.get("sale.return.refund_party_max", MoneyUtil.format(max)));
+            baseHint = dueOnly ? I18n.get("sale.return.off_due")
+                    : I18n.get("sale.return.refund_party_max", MoneyUtil.format(max));
         }
         showAccountRow();
+        updateHint();
+    }
+
+    /**
+     * The hint under the refund field: what may be paid back, and when the amount differs from the goods' value
+     * (coins short) what the difference is: a loss when more is paid, a gain when less.
+     */
+    private void updateHint() {
+        BigDecimal value = value(quantities());
+        BigDecimal back = number(refundField);
+        BigDecimal rounding = back == null ? BigDecimal.ZERO
+                : SaleService.refundRounding(value, back, sale.getParty() != null, sale.getDueAmount());
+        String note = rounding == null || rounding.signum() == 0 ? ""
+                : "\n" + I18n.get(rounding.signum() > 0 ? "sale.return.rounding_loss" : "sale.return.rounding_gain",
+                MoneyUtil.format(rounding.abs()));
+        refundHint.setText(baseHint + note);
     }
 
     /** The account row matters only when money is paid back. */
@@ -244,8 +274,11 @@ public class SaleReturnFormController {
         BigDecimal refund = number(refundField);
         BigDecimal back = refund == null ? BigDecimal.ZERO : refund;
         BigDecimal maxRefund = SaleService.maxRefund(value, sale.getDueAmount());
-        if (back.compareTo(maxRefund) > 0) {
-            form.error(refundField, I18n.get("sale.error.refund_too_much", MoneyUtil.format(maxRefund)));
+        BigDecimal rounding = SaleService.refundRounding(value, back, sale.getParty() != null, sale.getDueAmount());
+        if (rounding == null) {
+            form.error(refundField, sale.getParty() == null
+                    ? I18n.get("sale.error.refund_walk_in", MoneyUtil.format(value))
+                    : I18n.get("sale.error.refund_too_much", MoneyUtil.format(maxRefund)));
         }
         Account account = accountBox.getValue();
         if (back.signum() > 0 && account == null) {
@@ -263,7 +296,11 @@ public class SaleReturnFormController {
             form.focusFirstError();
             return;
         }
-        if (!Dialogs.confirm(I18n.get("sale.return.confirm", MoneyUtil.format(value), MoneyUtil.format(back)))) {
+        String question = rounding.signum() == 0
+                ? I18n.get("sale.return.confirm", MoneyUtil.format(value), MoneyUtil.format(back))
+                : I18n.get(rounding.signum() > 0 ? "sale.return.confirm_loss" : "sale.return.confirm_gain",
+                MoneyUtil.format(value), MoneyUtil.format(back), MoneyUtil.format(rounding.abs()));
+        if (!Dialogs.confirm(question)) {
             return;
         }
         try {

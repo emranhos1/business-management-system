@@ -29,7 +29,7 @@ public class TwoColumnLayout extends GridPane {
 
     /** Page width (px) below which the two parts stack. */
     private static final double STACK_BELOW = 1000;
-    /** Height (px) each part keeps while stacked. */
+    /** Height (px) each part keeps while stacked, unless {@link #setPartMinHeight} says otherwise. */
     private static final double PART_MIN_HEIGHT = 450;
     private static final double GAP = 24;
 
@@ -37,6 +37,8 @@ public class TwoColumnLayout extends GridPane {
     private Boolean stacked;
     /** Width share (%) of the main part side by side; the side part gets the rest. */
     private double mainPercent = 62;
+    /** Height each part keeps while stacked. */
+    private double partMinHeight = PART_MIN_HEIGHT;
 
     public TwoColumnLayout() {
         setHgap(GAP);
@@ -57,6 +59,19 @@ public class TwoColumnLayout extends GridPane {
         this.mainPercent = mainPercent;
         stacked = null;
         arrange();
+    }
+
+    public double getPartMinHeight() {
+        return partMinHeight;
+    }
+
+    /**
+     * FXML: {@code <TwoColumnLayout partMinHeight="0">} when the parts are already as tall as their content (the
+     * dashboard's cards and fixed-height tables), so stacking adds no empty space under them.
+     */
+    public void setPartMinHeight(double partMinHeight) {
+        this.partMinHeight = partMinHeight;
+        requestLayout();
     }
 
     private void arrange() {
@@ -128,7 +143,7 @@ public class TwoColumnLayout extends GridPane {
         double height = snappedTopInset() + snappedBottomInset();
         List<Node> parts = getManagedChildren();
         for (Node part : parts) {
-            height += Math.max(PART_MIN_HEIGHT, part.minHeight(-1));
+            height += Math.max(partMinHeight, part.minHeight(-1));
         }
         return height + Math.max(0, parts.size() - 1) * getVgap();
     }

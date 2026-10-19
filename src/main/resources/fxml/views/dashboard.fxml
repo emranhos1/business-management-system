@@ -51,7 +51,8 @@
         </VBox>
     </FlowPane>
 
-    <TwoColumnLayout mainPercent="50">
+    <!-- partMinHeight 0: stacked on a narrow window, each part is only as tall as its content (no empty space) -->
+    <TwoColumnLayout mainPercent="50" partMinHeight="0">
         <!-- Profit of the range, line by line; only as tall as its lines -->
         <VBox styleClass="form-card" spacing="12" maxHeight="-Infinity" GridPane.valignment="TOP">
             <Label fx:id="profitTitle" styleClass="section-title" wrapText="true"/>
@@ -86,7 +87,7 @@
         </VBox>
     </TwoColumnLayout>
 
-    <TwoColumnLayout mainPercent="50">
+    <TwoColumnLayout mainPercent="50" partMinHeight="0">
         <!-- Stock value per category -->
         <VBox spacing="8">
             <HBox spacing="8" alignment="CENTER_LEFT">
