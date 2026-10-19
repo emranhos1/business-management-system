@@ -235,26 +235,28 @@ Depends on: Stage 5
 
 ## Stage 18 — Auto-Update: GitHub Actions
 Depends on: Stage 0
+Done the finance-app way (user decision): push to `production` (after `dev-emon` → `development` → `stage`) releases only a pom version not yet tagged; Inno Setup installer; SHA-256 file instead of `version.json`; release notes and the version bump are written by Claude.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 18.1 | `release.yml`: trigger on `v*` tag, build JAR | Tag push builds JAR | [ ] |
-| 18.2 | `jpackage` → `BMS-{version}-setup.exe` with bundled JRE | .exe installs on PC without Java | [ ] |
-| 18.3 | Generate `version.json` | File has correct fields | [ ] |
-| 18.4 | Generate `RELEASE_NOTES.md` from commits since last tag | Notes list right commits | [ ] |
-| 18.5 | Create GitHub Release with .exe and `version.json` | Release shows both files | [ ] |
-| 18.6 | Release build fails unless `app.profile` is `prod` (so dev-only login skip never ships) | Tag with dev profile → build fails | [ ] |
+| 18.1 | `release.yml`: on push to `production`, release only when `v<pom version>` tag does not exist; build `bms.jar` + `lib/` | Same version → nothing built; new version → JAR built | [T] |
+| 18.2 | `jpackage` app image (own Java runtime) + Inno Setup (`packaging/bms.iss`) → `BMS-Update-{version}.exe` | .exe installs on PC without Java; app opens | [T] |
+| 18.3 | `BMS-Update-{version}.exe.sha256` (the app reads the latest release from the GitHub API; no `version.json`) | Hash matches the .exe | [T] |
+| 18.4 | Hand-written `release-notes/v{version}.md` (English, `<!-- bn -->`, Bangla) as release text; missing → build fails | Release shows the notes; missing file stops it | [T] |
+| 18.5 | GitHub Release with .exe and .sha256; creates the `v{version}` tag | Release shows both files and the tag | [T] |
+| 18.6 | Dropped (user decision): the user picks `app.profile`; the build never checks it | — | — |
 
 ## Stage 19 — Auto-Update: In-App
 Depends on: Stage 5, Stage 18
+Done the finance-app way (user decision): the installer's own wizard replaces `updater.bat`.
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 19.1 | Background update check (no block, silent fail offline) | Login not delayed; offline no error | [ ] |
-| 19.2 | Update banner on login (version, notes, update, dismiss) | Banner shows for newer version | [ ] |
-| 19.3 | Download to `%TEMP%\BMS_update\` with progress bar | Progress shows, file saved | [ ] |
-| 19.4 | File size check (Content-Length) | Wrong size is rejected | [ ] |
-| 19.5 | `updater.bat`: wait, backup, silent install, relaunch, restore on fail | Update and rollback both work | [ ] |
+| 19.1 | Background update check on the login screen (`UpdateService.check`: `releases/latest` redirect → newest tag; no JSON) | Login not delayed; offline shows nothing | [T] |
+| 19.2 | Banner above the login card: new version and yours, "আপডেট করুন", "কী নতুন" (release text in the app's language) | Banner shows on every PC with an older version | [T] |
+| 19.3 | Ask the download folder (last one, else Downloads) and download with progress; only installers the app downloaded earlier are deleted | Progress shows, file saved in the picked folder | [T] |
+| 19.4 | Size (Content-Length) and SHA-256 check; a bad file is deleted and an error shows under the banner | Wrong file is rejected | [T] |
+| 19.5 | Open the installer's wizard and close the app; it replaces the app (data untouched) and can start BMS at the end | Update installs and BMS opens on the new version | [T] |
 
 ## Stage 20 — Phase 2 (Nice to Have)
 Depends on: Phase 1 done
@@ -266,10 +268,15 @@ Depends on: Phase 1 done
 | 20.3 | Mobile payment summary report | Totals match | [ ] |
 | 20.4 | Barcode/QR generate and print per product (SKU) | Printed code scans correctly | [ ] |
 | 20.5 | Barcode scanner input on sale screen | Scan adds product row | [ ] |
-| 20.6 | Google Drive OAuth2 (`credentials.json` in Settings) | Login to Drive works | [ ] |
-| 20.7 | One-click MySQL dump to Google Drive | Backup file appears in Drive | [ ] |
-| 20.8 | One-click restore from Google Drive | Data restored correctly | [ ] |
-| 20.9 | Auto-backup on app close (if enabled) | Backup runs on close | [ ] |
+|  | **Backup (finance-app way)** |  |  |
+| 20.6 | Local backup: `mysqldump` → `backup_data_<yyyyMMdd.HHmm>.sql` in a picked folder; finds `mysqldump`/`mysql` on the PC itself (PATH, registry, XAMPP/WAMP/Laragon folders) | File made; opens as valid SQL | [ ] |
+| 20.7 | Local restore: pick a `.sql`, confirm, `mysql` imports it | Data restored correctly | [ ] |
+| 20.8 | Google Drive connect / disconnect (OAuth2; `credentials.json` next to `BMS.exe`, never in git; token kept so later backups open no browser) | Connect once; next start needs no sign-in | [ ] |
+| 20.9 | Backup to Drive: dump uploaded into a `BMS` folder on Drive (made the first time); last backup time read from Drive | File appears in Drive → BMS; time shows | [ ] |
+| 20.10 | Restore from Drive: the newest backup in the `BMS` folder, confirm first | Data restored correctly | [ ] |
+| 20.11 | Logout asks: Backup now / Skip & logout / Cancel; Cancel stops a running backup or sign-in and stays logged in. The old hidden `auto_backup` setting ("backup on app close") is removed | All three choices behave right; no auto backup option left | [ ] |
+
+Backup is done exactly the finance-app way (user decision): no backup on app close, only the logout question. Backup and restore buttons are admin only, as in finance-app.
 
 ---
 

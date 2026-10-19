@@ -44,7 +44,8 @@ public final class WindowManager {
     private static final String LOGIN_FXML = "/fxml/login.fxml";
     private static final String MAIN_FXML = "/fxml/main.fxml";
 
-    private static final double LOGIN_SIZE = 500;
+    /** Login window width and height; it grows taller only for the update banner (LoginController). */
+    public static final double LOGIN_SIZE = 500;
     /** Restored (not maximized) main window: share of the screen. */
     private static final double RESTORED_WIDTH = 0.90;
     private static final double RESTORED_HEIGHT = 0.85;

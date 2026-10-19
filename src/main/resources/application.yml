@@ -2,5 +2,6 @@ app:
   name: Business Management System
   version: "@project.version@"
   profile: dev
+  # GitHub repo whose releases the login screen checks for updates
   github:
-    api: https://api.github.com/repos/{owner}/{repo}
+    repo: emranhos1/business-management-system

@@ -152,7 +152,7 @@
                 <Label fx:id="lowStockError" styleClass="field-error" wrapText="true"/>
             </VBox>
 
-            <!-- Hidden until auto backup works (20.9) -->
+            <!-- Hidden until backup works (Stage 20 backup, decided at 20.11) -->
             <Label text="%settings.auto_backup" styleClass="form-label" wrapText="true" visible="false" managed="false"
                    GridPane.rowIndex="5" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
             <HBox styleClass="check-row" alignment="CENTER_LEFT" GridPane.rowIndex="5" GridPane.columnIndex="1"

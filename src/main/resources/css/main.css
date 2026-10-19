@@ -254,6 +254,20 @@
     -fx-padding: 0 0 8 0;
 }
 
+/* New version notice above the login card */
+.update-banner {
+    -fx-background-color: #fff4d6;
+    -fx-border-color: #e8c46a;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 12;
+}
+
+.update-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2933;
+}
+
 .error-label {
     -fx-text-fill: #d64545;
 }
@@ -716,6 +730,7 @@
      save-button   Save (forms, Settings), Yes in confirm dialogs   blue
      add-button    New ... (toolbars)                               blue
      login-button  Login                                            blue
+     update-button Update now (login screen, new version)            blue
      edit-button   Edit                                             orange
      delete-button Delete                                           red
      cancel-button Cancel in forms                                  red
@@ -727,7 +742,7 @@
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
 
-.save-button, .add-button, .login-button, .edit-button,
+.save-button, .add-button, .login-button, .update-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
@@ -745,26 +760,26 @@
 
 /* Every button at least 140 wide; a longer label makes it wider instead of cutting the text to "..."
    (Login fills its card instead). -1 = as wide as its label. */
-.save-button, .add-button, .edit-button,
+.save-button, .add-button, .update-button, .edit-button,
 .delete-button, .cancel-button, .page-button, .view-button, .no-button {
     -fx-min-width: 140;
     -fx-pref-width: -1;
     -fx-max-width: -1;
 }
 
-.save-button:hover, .add-button:hover, .login-button:hover, .edit-button:hover,
+.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover, .edit-button:hover,
 .delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
     -fx-text-fill: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
 }
 
-/* Blue: Save / Add / Login */
-.save-button, .add-button, .login-button {
+/* Blue: Save / Add / Login / Update */
+.save-button, .add-button, .login-button, .update-button {
     -fx-border-color: #2563eb;
     -fx-text-fill: #2563eb;
 }
 
-.save-button:hover, .add-button:hover, .login-button:hover {
+.save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover {
     -fx-background-color: #2563eb;
 }
 
