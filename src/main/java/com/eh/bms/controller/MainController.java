@@ -48,7 +48,6 @@ public class MainController {
             new Page(AppModule.PARTY, "menu.parties", "/fxml/views/parties.fxml"),
             new Page(AppModule.ACCOUNT, "menu.accounts", "/fxml/views/accounts.fxml"),
             new Page(AppModule.EXPENSE, "menu.expenses", "/fxml/views/expenses.fxml"),
-            new Page(AppModule.EMPLOYEE, "menu.employees", "/fxml/views/employees.fxml"),
             new Page(AppModule.REPORT, "menu.reports", "/fxml/views/reports.fxml"),
             new Page(AppModule.USER, "menu.users", "/fxml/views/users.fxml"),
             new Page(AppModule.SETTINGS, "menu.settings", "/fxml/views/settings.fxml"));

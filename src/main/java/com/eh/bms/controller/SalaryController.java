@@ -1,13 +1,11 @@
 package com.eh.bms.controller;
 
-import com.eh.bms.model.AppModule;
-import com.eh.bms.model.Employee;
 import com.eh.bms.model.SalaryType;
+import com.eh.bms.model.User;
 import com.eh.bms.service.SalaryService;
 import com.eh.bms.service.SalaryService.MonthSheet;
 import com.eh.bms.service.SalaryService.SheetRow;
 import com.eh.bms.service.UserSession;
-import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Icons;
 import com.eh.bms.util.MoneyUtil;
@@ -19,13 +17,9 @@ import com.eh.bms.util.TableHelper;
 import com.eh.bms.util.TableHelper.RowAction;
 import com.eh.bms.util.TableHelper.RowTip;
 import com.eh.bms.util.TableHelper.TipLine;
-import com.eh.bms.util.WindowManager;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
 import javafx.util.StringConverter;
@@ -40,21 +34,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Salary tab (14.3 - 14.5): one month's salary for every active employee (and anyone with a sheet or payment
- * that month): net (or "not worked out"), advance carried from earlier months, paid and due (or advance left),
- * with the month's totals. Each row: work out / change the
- * salary, pay (an advance before it is worked out), history. Double-click opens the history.
+ * Salary tab of the users page (14.3 - 14.5, N12, admin only): one month's salary for every active user with a
+ * salary (and anyone with a sheet or payment that month): net (or "not worked out"), advance carried from earlier
+ * months, paid and due (or advance left), with the month's totals. Each row: salary (work out and pay in one popup)
+ * and history. Double-click opens the history.
  */
 public class SalaryController {
 
     private static final Logger LOG = Logger.getLogger(SalaryController.class.getName());
-    private static final String PROCESS_FXML = "/fxml/views/salary-process-form.fxml";
-    /** Years in the month pickers: this many back from this year, and next year (advances). */
+    /** Years in the month pickers: this many back from this year. */
     private static final int YEARS_BACK = 5;
 
     @FXML private ComboBox<Month> monthBox;
     @FXML private ComboBox<Integer> yearBox;
-    @FXML private Label workingDaysLabel;
     @FXML private Label totalNetLabel;
     @FXML private Label totalCarryLabel;
     @FXML private Label totalPaidLabel;
@@ -72,8 +64,9 @@ public class SalaryController {
     private void initialize() {
         table = new PaginatedTable<>(this::loadPage);
         TableView<SheetRow> view = table.getTableView();
-        view.getColumns().add(TableHelper.column("salary.col.employee", r -> r.employee().getName()));
-        view.getColumns().add(TableHelper.column("salary.col.type", r -> typeText(r.employee().getSalaryType())));
+        view.getColumns().add(TableHelper.column("salary.col.employee", r -> r.user().getName()));
+        view.getColumns().add(TableHelper.column("user.col.role", r -> roleText(r.user())));
+        view.getColumns().add(TableHelper.column("salary.col.type", r -> typeText(r.user().getSalaryType())));
         view.getColumns().add(TableHelper.styledColumn("salary.col.net",
                 r -> r.processed() ? MoneyUtil.format(r.sheet().getNetSalary()) : I18n.get("salary.not_processed"),
                 r -> null));
@@ -81,21 +74,12 @@ public class SalaryController {
         view.getColumns().add(TableHelper.moneyColumn("salary.col.paid", r -> MoneyUtil.format(r.paid())));
         view.getColumns().add(TableHelper.styledColumn("salary.col.due",
                 r -> r.processed() ? dueCell(r.due(), r.advanceLeft()) : "—", r -> dueStyle(r.due())));
-
-        boolean canProcess = can(Action.CREATE) || can(Action.EDIT);
-        List<RowAction<SheetRow>> actions = new ArrayList<>();
-        if (canProcess) {
-            actions.add(new RowAction<>(Icons.EDIT, "salary.action.process", "salary.action.process_tip", "icon-edit",
-                    this::openProcess));
-        }
-        if (can(Action.CREATE)) {
-            actions.add(new RowAction<>(Icons.MONEY_OUT, "salary.action.pay", "salary.action.pay_tip", "icon-out",
-                    this::openPayment));
-        }
-        actions.add(new RowAction<>(Icons.LEDGER, "button.view", "salary.action.history_tip", "icon-view",
-                r -> openHistory(r.employee())));
-        view.getColumns().add(actionsColumn(actions));
-        TableHelper.onDoubleClick(view, true, r -> openHistory(r.employee()));
+        view.getColumns().add(TableHelper.actionsColumn("label.actions",
+                new RowAction<SheetRow>(Icons.MONEY_OUT, "salary.action.salary", "salary.action.salary_tip",
+                        "icon-out", r -> openSalary(r.user())),
+                new RowAction<SheetRow>(Icons.LEDGER, "button.view", "salary.action.history_tip", "icon-view",
+                        r -> openHistory(r.user()))));
+        TableHelper.onDoubleClick(view, true, r -> openHistory(r.user()));
         TableHelper.rowTooltip(view, SalaryController::rowTip);
 
         monthConverter(monthBox);
@@ -115,12 +99,7 @@ public class SalaryController {
         setMonth(YearMonth.now());
     }
 
-    @SuppressWarnings("unchecked")
-    private static TableColumn<SheetRow, SheetRow> actionsColumn(List<RowAction<SheetRow>> actions) {
-        return TableHelper.actionsColumn("label.actions", actions.toArray(new RowAction[0]));
-    }
-
-    /** Loads the chosen month again (the Employees page calls it when this tab opens). */
+    /** Loads the chosen month again (the users page calls it when this tab opens). */
     @FXML
     public void reload() {
         loadRows();
@@ -160,11 +139,10 @@ public class SalaryController {
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not load the salary sheet", e);
             Notifier.error(I18n.get("msg.error"));
-            sheet = new MonthSheet(month, 0, List.of(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+            sheet = new MonthSheet(month, List.of(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                     BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
         rows = sheet.rows();
-        workingDaysLabel.setText(I18n.digits(String.valueOf(sheet.workingDays())));
         totalNetLabel.setText(MoneyUtil.format(sheet.totalNet()));
         totalCarryLabel.setText(MoneyUtil.format(sheet.totalCarry()));
         totalPaidLabel.setText(MoneyUtil.format(sheet.totalPaid()));
@@ -179,42 +157,19 @@ public class SalaryController {
         return new PageResult<>(rows.subList(from, to), rows.size());
     }
 
-    // ---------------------------------------------------------------- popups
-
-    /** Work out (or change) the employee's salary for the chosen month. */
-    private void openProcess(SheetRow row) {
-        if (!can(row.processed() ? Action.EDIT : Action.CREATE)) {
-            Notifier.error(I18n.get("msg.no_permission"));
-            return;
-        }
-        YearMonth month = chosenMonth();
-        FXMLLoader loader = WindowManager.loader(PROCESS_FXML);
-        Parent root = WindowManager.load(loader, PROCESS_FXML);
-        SalaryProcessFormController form = loader.getController();
-        if (!form.setUp(row.employee().getId(), month)) {
-            return;
-        }
-        WindowManager.dialog(root, I18n.get("salary.process.title", row.employee().getName(), monthText(month)))
-                .showAndWait();
-        if (form.isSaved()) {
+    private void openSalary(User user) {
+        if (SalaryFormController.open(user, chosenMonth())) {
             loadRows();
         }
     }
 
-    /** Pay the employee for the chosen month (an advance when it is not worked out yet). */
-    private void openPayment(SheetRow row) {
-        if (SalaryPaymentFormController.open(row.employee(), chosenMonth(), null)) {
-            loadRows();
-        }
-    }
-
-    private void openHistory(Employee employee) {
-        SalaryHistoryController.open(employee);
-        // A payment may have been changed or deleted there
+    private void openHistory(User user) {
+        SalaryHistoryController.open(user);
+        // A payment may have been deleted there
         loadRows();
     }
 
-    // ---------------------------------------------------------------- shared texts (salary forms and history)
+    // ---------------------------------------------------------------- shared texts (salary popup, history, users)
 
     /** Advance carried from earlier months, or "—". */
     static String carryText(BigDecimal carryIn) {
@@ -235,16 +190,17 @@ public class SalaryController {
     }
 
     private static RowTip rowTip(SheetRow r) {
-        Employee e = r.employee();
+        User u = r.user();
         List<TipLine> lines = new ArrayList<>();
-        if (e.getDesignation() != null && !e.getDesignation().isBlank()) {
-            lines.add(new TipLine(I18n.get("salary.designation"), e.getDesignation(), false));
-        }
-        lines.add(new TipLine(I18n.get("salary.col.type"), typeText(e.getSalaryType()), false));
-        lines.add(new TipLine(I18n.get("salary.base"), baseText(e), true));
+        lines.add(new TipLine(I18n.get("user.col.role"), roleText(u), false));
+        lines.add(new TipLine(I18n.get("salary.col.type"), typeText(u.getSalaryType()), false));
+        lines.add(new TipLine(I18n.get("salary.base"), baseText(u), true));
         if (r.processed()) {
             lines.add(new TipLine(I18n.get("salary.gross"), MoneyUtil.format(r.sheet().getGrossSalary()), true));
             lines.add(new TipLine(I18n.get("salary.deductions"), MoneyUtil.format(r.sheet().getDeductions()), true));
+            if (r.sheet().getNote() != null) {
+                lines.add(new TipLine(I18n.get("salary.reason"), r.sheet().getNote(), false));
+            }
             lines.add(new TipLine(I18n.get("salary.bonus"), MoneyUtil.format(r.sheet().getBonus()), true));
             lines.add(new TipLine(I18n.get("salary.net"), MoneyUtil.format(r.sheet().getNetSalary()), true));
             lines.add(new TipLine(I18n.get("salary.col.carry"), carryText(r.carryIn()), true));
@@ -255,7 +211,7 @@ public class SalaryController {
             lines.add(new TipLine(I18n.get("salary.col.carry"), carryText(r.carryIn()), true));
             lines.add(new TipLine(I18n.get("salary.advance"), MoneyUtil.format(r.paid()), true));
         }
-        return new RowTip(e.getName(), lines);
+        return new RowTip(u.getName(), lines);
     }
 
     /** Red while something is still due. */
@@ -271,14 +227,25 @@ public class SalaryController {
         }
     }
 
-    /** "মাসিক" / "দৈনিক" / "ঘণ্টা ভিত্তিক". */
-    static String typeText(SalaryType type) {
-        return type == null ? "" : I18n.get("salary.type." + type.name());
+    /** "অ্যাডমিন" / "ক্যাশিয়ার" ... */
+    static String roleText(User u) {
+        return u.getRole() == null ? "—" : I18n.get("role." + u.getRole().name());
     }
 
-    /** Base salary with its period, e.g. "৳ 500.00 / দিন". */
-    static String baseText(Employee e) {
-        return I18n.get("salary.base." + e.getSalaryType().name(), MoneyUtil.format(e.getBaseSalary()));
+    /** "মাসিক" / "দৈনিক" / "ঘণ্টা ভিত্তিক"; "—" when not set yet. */
+    static String typeText(SalaryType type) {
+        return type == null ? "—" : I18n.get("salary.type." + type.name());
+    }
+
+    /** Label of the salary amount by type: per month / per day / per hour. */
+    static String baseSalaryKey(SalaryType type) {
+        return type == null ? "employee.base_salary" : "employee.base_salary." + type.name();
+    }
+
+    /** Salary with its period, e.g. "৳ 500.00 / দিন"; "—" when not set yet. */
+    static String baseText(User u) {
+        return u.hasSalary() ? I18n.get("salary.base." + u.getSalaryType().name(), MoneyUtil.format(u.getBaseSalary()))
+                : "—";
     }
 
     /** e.g. "অক্টোবর ২০২৬". */
@@ -323,17 +290,18 @@ public class SalaryController {
         });
     }
 
-    /** Next year down to {@link #YEARS_BACK} years ago, plus {@code month}'s year if it is older. */
+    /** This year down to {@link #YEARS_BACK} years ago, plus {@code month}'s year if it is older. */
     static List<Integer> years(YearMonth month) {
         int now = YearMonth.now().getYear();
         List<Integer> years = new ArrayList<>();
-        for (int y = now + 1; y >= Math.min(now - YEARS_BACK, month.getYear()); y--) {
+        for (int y = now; y >= Math.min(now - YEARS_BACK, month.getYear()); y--) {
             years.add(y);
         }
         return years;
     }
 
-    static boolean can(Action action) {
-        return UserSession.isLoggedIn() && UserSession.get().can(AppModule.EMPLOYEE, action);
+    /** Salary is on the users page: the admin's alone. */
+    static boolean isAdmin() {
+        return UserSession.isLoggedIn() && UserSession.get().isAdmin();
     }
 }

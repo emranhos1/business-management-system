@@ -1,10 +1,12 @@
 package com.eh.bms.controller;
 
+import com.eh.bms.model.SalaryType;
 import com.eh.bms.model.User;
 import com.eh.bms.model.UserRole;
 import com.eh.bms.service.UserService;
 import com.eh.bms.service.UserService.UserData;
 import com.eh.bms.service.UserSession;
+import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
@@ -13,20 +15,26 @@ import com.eh.bms.util.Notifier;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
- * Add / edit user popup (17.1). A new user needs a password (at least 6 characters, typed twice); when editing,
- * a blank password keeps the old one. The username is fixed after saving, and you cannot change your own role.
- * Delete shows only for a user added by mistake (no history, not you, not the last admin).
+ * Add / edit user popup (17.1, N12: every user is staff). Name, mobile (11 digits), role (পদ), salary type and
+ * salary are required; NID must not belong to another user. A new user needs a password (at least 6 characters,
+ * typed twice); when editing, a blank password keeps the old one. The username is fixed after saving, and you
+ * cannot change your own role. Delete shows only for a user added by mistake (no history, not you, not the last
+ * admin).
  */
 public class UserFormController {
 
@@ -39,6 +47,11 @@ public class UserFormController {
 
     @FXML private TextField nameField;
     @FXML private Label nameError;
+    @FXML private TextField phoneField;
+    @FXML private Label phoneError;
+    @FXML private TextField nidField;
+    @FXML private Label nidError;
+    @FXML private TextField addressField;
     @FXML private TextField usernameField;
     @FXML private Label usernameError;
     @FXML private Label usernameHint;
@@ -52,6 +65,13 @@ public class UserFormController {
     @FXML private ComboBox<UserRole> roleBox;
     @FXML private Label roleError;
     @FXML private Label roleHint;
+    @FXML private DatePicker joinDatePicker;
+    @FXML private Label joinDateError;
+    @FXML private ComboBox<SalaryType> salaryTypeBox;
+    @FXML private Label salaryTypeError;
+    @FXML private Label baseSalaryLabel;
+    @FXML private TextField baseSalaryField;
+    @FXML private Label baseSalaryError;
     @FXML private Button deleteButton;
 
     private final UserService service = new UserService();
@@ -62,39 +82,49 @@ public class UserFormController {
 
     @FXML
     private void initialize() {
-        InputFilters.maxLength(nameField, 150);
+        InputFilters.maxLength(nameField, UserService.NAME_MAX);
+        InputFilters.digits(phoneField, UserService.PHONE_LENGTH);
+        InputFilters.maxLength(nidField, UserService.NID_MAX);
+        InputFilters.maxLength(addressField, UserService.ADDRESS_MAX);
         InputFilters.maxLength(usernameField, 50);
         InputFilters.maxLength(passwordField, PASSWORD_MAX);
         InputFilters.maxLength(confirmField, PASSWORD_MAX);
+        InputFilters.decimal(baseSalaryField, 12, 2);
+        DateUtil.apply(joinDatePicker);
+        joinDatePicker.setValue(LocalDate.now());
 
         // The support login's role is not for the shop to give
-        roleBox.getItems().setAll(UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER);
-        roleBox.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(UserRole role) {
-                return role == null ? "" : I18n.get("role." + role.name());
-            }
-
-            @Override
-            public UserRole fromString(String text) {
-                throw new UnsupportedOperationException();
-            }
-        });
+        roleBox.getItems().setAll(UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.EMPLOYEE);
+        roleBox.setConverter(converter(role -> I18n.get("role." + role.name())));
         // A new user starts with the role that can do the least
-        roleBox.setValue(UserRole.CASHIER);
+        roleBox.setValue(UserRole.EMPLOYEE);
+
+        salaryTypeBox.getItems().setAll(SalaryType.values());
+        salaryTypeBox.setConverter(converter(SalaryController::typeText));
+        salaryTypeBox.valueProperty().addListener((obs, old, type) ->
+                baseSalaryLabel.setText(I18n.get(SalaryController.baseSalaryKey(type))));
+        salaryTypeBox.setValue(SalaryType.MONTHLY);
 
         form = new FormValidator()
                 .add(nameField, nameError)
+                .add(phoneField, phoneError)
+                .add(nidField, nidError)
                 .add(usernameField, usernameError)
                 .add(passwordField, passwordError)
                 .add(confirmField, confirmError)
-                .add(roleBox, roleError);
+                .add(roleBox, roleError)
+                .add(joinDatePicker, joinDateError)
+                .add(salaryTypeBox, salaryTypeError)
+                .add(baseSalaryField, baseSalaryError);
     }
 
     /** Fills the form for editing; call before showing. Leave it uncalled to add a new user. */
     public void edit(User user) {
         userId = user.getId();
         nameField.setText(user.getName());
+        phoneField.setText(user.getPhone());
+        nidField.setText(user.getNid());
+        addressField.setText(user.getAddress());
         usernameField.setText(user.getUsername());
         usernameField.setDisable(true);
         show(usernameHint, true);
@@ -107,6 +137,14 @@ public class UserFormController {
         roleBox.setValue(user.getRole());
         roleBox.setDisable(self);
         show(roleHint, self);
+        joinDatePicker.setValue(user.getJoinDate());
+        if (user.getJoinDate() == null) {
+            joinDatePicker.getEditor().clear();
+        }
+        // A registration not set up yet has no salary: monthly, blank amount, for the admin to fill in
+        salaryTypeBox.setValue(user.getSalaryType() == null ? SalaryType.MONTHLY : user.getSalaryType());
+        baseSalaryField.setText(user.getBaseSalary() == null ? ""
+                : user.getBaseSalary().stripTrailingZeros().toPlainString());
         boolean deletable = service.canDelete(userId);
         deleteButton.setVisible(deletable);
         deleteButton.setManaged(deletable);
@@ -121,14 +159,24 @@ public class UserFormController {
     private void onSave() {
         form.clearAll();
         String name = text(nameField);
+        String phone = text(phoneField);
         String username = text(usernameField);
         String password = passwordField.getText() == null ? "" : passwordField.getText();
         String confirm = confirmField.getText() == null ? "" : confirmField.getText();
         UserRole role = roleBox.getValue();
+        SalaryType salaryType = salaryTypeBox.getValue();
+        BigDecimal baseSalary = amount(text(baseSalaryField));
+        String typedDate = joinDatePicker.getEditor().getText();
+        LocalDate joinDate = typedDate == null || typedDate.isBlank() ? null : DateUtil.parse(typedDate);
         boolean adding = userId == null;
 
         if (name.isEmpty()) {
             form.error(nameField, I18n.get("msg.required_field", I18n.get("user.name")));
+        }
+        if (phone.isEmpty()) {
+            form.error(phoneField, I18n.get("msg.required_field", I18n.get("party.phone")));
+        } else if (phone.length() != UserService.PHONE_LENGTH) {
+            form.error(phoneField, I18n.get("msg.invalid_mobile"));
         }
         if (adding) {
             if (username.isEmpty()) {
@@ -151,6 +199,21 @@ public class UserFormController {
         if (role == null) {
             form.error(roleBox, I18n.get("msg.required_field", I18n.get("user.role")));
         }
+        if (typedDate != null && !typedDate.isBlank()) {
+            if (joinDate == null) {
+                form.error(joinDatePicker, I18n.get("party.error.date"));
+            } else {
+                joinDatePicker.setValue(joinDate);
+            }
+        }
+        if (salaryType == null) {
+            form.error(salaryTypeBox, I18n.get("msg.required_field", I18n.get("employee.salary_type")));
+        }
+        if (baseSalary == null) {
+            form.error(baseSalaryField, I18n.get("msg.required_field", baseSalaryLabel.getText()));
+        } else if (baseSalary.signum() <= 0) {
+            form.error(baseSalaryField, I18n.get("employee.error.zero_salary"));
+        }
         if (form.hasErrors()) {
             form.focusFirstError();
             return;
@@ -160,7 +223,9 @@ public class UserFormController {
         }
 
         try {
-            switch (service.save(new UserData(userId, name, username, password, role))) {
+            UserData data = new UserData(userId, name, username, password, role, phone, text(nidField),
+                    text(addressField), joinDate, salaryType, baseSalary);
+            switch (service.save(data)) {
                 case SAVED -> {
                     saved = true;
                     close();
@@ -168,6 +233,10 @@ public class UserFormController {
                 }
                 case DUPLICATE_USERNAME -> {
                     form.error(usernameField, I18n.get("user.error.duplicate"));
+                    form.focusFirstError();
+                }
+                case DUPLICATE_NID -> {
+                    form.error(nidField, I18n.get("employee.error.duplicate_nid"));
                     form.focusFirstError();
                 }
                 case OWN_ROLE -> {
@@ -216,6 +285,28 @@ public class UserFormController {
 
     private void close() {
         ((Stage) nameField.getScene().getWindow()).close();
+    }
+
+    private static <T> StringConverter<T> converter(Function<T, String> toText) {
+        return new StringConverter<>() {
+            @Override
+            public String toString(T value) {
+                return value == null ? "" : toText.apply(value);
+            }
+
+            @Override
+            public T fromString(String text) {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    /** The typed amount, or null when empty. */
+    private static BigDecimal amount(String text) {
+        if (text.isEmpty() || text.equals(".")) {
+            return null;
+        }
+        return new BigDecimal(text.endsWith(".") ? text + "0" : text.startsWith(".") ? "0" + text : text);
     }
 
     private static void show(Label label, boolean shown) {

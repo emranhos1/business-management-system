@@ -323,23 +323,38 @@ Depends on: N4.2
 | N5.2 | DB connect + seeding run in background while splash shows each step | Splash text changes per step; window not frozen | ✅ |
 | N5.3 | On success close splash and open login; on failure close splash and show the error dialog | Both paths work (stop MySQL to test failure) | ✅ |
 
-### N6 — Memo Print
+### N6 — Memo Print ✅
 Print a memo (invoice) for a sale, showing its memo number.
 Depends on: Stage 11 (memo number saved with each sale)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
 | N6.1 | Decide memo layout and paper size: A4 / A5 / 80 mm roll picked in Settings (default A5); app's language; preview, then print; party's earlier and present balance, accounts paid into, thanks, signatures | User confirms layout | ✅ |
-| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [T] |
-| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [T] |
+| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | ✅ |
+| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | ✅ |
 
-### N11 — Warn When a Sale Has No Money
+### N11 — Warn When a Sale Has No Money ✅
 Money is often forgotten before "বিক্রি করুন"; the sale then goes all on credit without a word.
 Depends on: Stage 11
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N11.1 | No money typed and total above 0: ask "No money was taken. Sell all ৳X on credit?" before the sale question; No = back to the money field | Sale with no money asks first; No saves nothing; Yes goes on as before | [T] |
+| N11.1 | No money typed and total above 0: ask "No money was taken. Sell all ৳X on credit?" before the sale question; No = back to the money field | Sale with no money asks first; No saves nothing; Yes goes on as before | ✅ |
+
+### N12 — Users and Employees Are One ✅
+Every person is a user: admin, manager, cashier and employee all get a salary. No separate employee record anywhere.
+Depends on: Stages 14, 17, N1
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N12.1 | Rules (user decisions): one `users` table holds the employee details too; role (পদ) = admin / manager / cashier / employee, what each may do is set in Permissions; admin gets a salary too; attendance is removed; a salary cut needs a reason; registration unchanged (admin approves, then edits role and salary); old employee and salary data is test data and is dropped | User confirms rules | ✅ |
+| N12.2 | DB: `users` gets mobile, NID, address, join date, salary type, salary; role EMPLOYEE added; salary rows point at the user; `employees` and `attendance` tables dropped at startup | Startup: tables changed, no error on second run | ✅ |
+| N12.3 | Attendance removed: its tab, service, auto fill and its settings (weekly off, work time, paid leave); daily / hourly pay takes days / hours typed in | No attendance anywhere; daily pay works with typed days | ✅ |
+| N12.4 | User form: name, username, password, mobile, NID, address, join date, role, salary type, salary; create and edit | User saves with salary; old rules still hold (last admin, own role) | ✅ |
+| N12.5 | Users list: role and salary columns; row actions edit, active / inactive (blocked while salary is due or advance is left), salary, view (salary history) | Each action works | ✅ |
+| N12.6 | Salary in one popup: work out the month and pay together (parts, advance, emergency advance as before); a cut shows a required reason | Pay works; cut without reason refused | ✅ |
+| N12.7 | Users page tabs: users, salary, permissions, audit log; "কর্মচারী" leaves the sidebar; employee role in the permission editor | Tabs show; employee permissions save | ✅ |
+| N12.8 | Salary report, profit and loss, dashboard and account ledger read salary from users | Figures match | ✅ |
 
 ### N7 — Sale Return Stock Rounding (known bug) ✅
 Part returns of one sale line round the stock quantity on each return, so stock drifts (10 pcs sold as 0.833 dozen, returned 5 + 5, puts back 0.834). `SaleService.returnGoods` should use the cumulative rounding `PurchaseService` already uses (`mainShare(item, returned + qty) − mainShare(item, returned)`).

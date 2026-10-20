@@ -2,7 +2,7 @@ package com.eh.bms.service;
 
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransactionType;
-import com.eh.bms.model.Employee;
+import com.eh.bms.model.User;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
 import com.eh.bms.model.PartyLedgerType;
@@ -354,15 +354,15 @@ public class ReportService {
 
     // ------------------------------------------------------------ 16.10 Salary
 
-    /** Every employee's salary for the month: gross, deductions, bonus, net, advance carried in, paid, due. */
+    /** Every user's salary for the month: gross, deductions, bonus, net, advance carried in, paid, due. */
     public ReportTable salary(YearMonth month) {
         MonthSheet sheet = salaryService.monthSheet(month);
         List<List<Object>> rows = new ArrayList<>();
         for (SheetRow r : sheet.rows()) {
-            Employee e = r.employee();
+            User u = r.user();
             SalaryProcessing s = r.sheet();
-            rows.add(row(e.getName(), e.getDesignation() == null ? "" : e.getDesignation(),
-                    I18n.get("salary.type." + e.getSalaryType().name()),
+            rows.add(row(u.getName(), I18n.get("role." + u.getRole().name()),
+                    u.getSalaryType() == null ? "" : I18n.get("salary.type." + u.getSalaryType().name()),
                     s == null ? null : s.getGrossSalary(), s == null ? null : s.getDeductions(),
                     s == null ? null : s.getBonus(), s == null ? null : s.getNetSalary(), r.carryIn(), r.paid(),
                     r.due(), I18n.get(s == null ? "report.salary.not_done" : "report.salary.done")));

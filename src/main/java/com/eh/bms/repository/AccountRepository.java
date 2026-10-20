@@ -55,7 +55,7 @@ public class AccountRepository {
     public boolean isUsed(Session session, long id) {
         return count(session, "select count(t) from AccountTransaction t where t.account.id = :id", id)
                 + count(session, "select count(e) from Expense e where e.account.id = :id", id)
-                + count(session, "select count(s) from SalaryProcessing s where s.account.id = :id", id) > 0;
+                + count(session, "select count(s) from SalaryPayment s where s.account.id = :id", id) > 0;
     }
 
     /** True if the account has ledger entries (its opening balance is then fixed). */

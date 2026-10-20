@@ -38,7 +38,7 @@ public class AccountLedgerService {
     /**
      * One ledger line. {@code otherAccount} is set for transfers (the account on the other side),
      * {@code party} for money paid to or received from a party, {@code expenseCategory} for an expense,
-     * {@code salaryPayment} (employee loaded) for a salary payment.
+     * {@code salaryPayment} (user loaded) for a salary payment.
      */
     public record LedgerRow(long id, LocalDate date, AccountTransactionType type, BigDecimal amount,
                             BigDecimal balance, AccountTransactionSource source, Account otherAccount,
@@ -141,7 +141,7 @@ public class AccountLedgerService {
                     .map(AccountTransaction::getReferenceId)
                     .toList();
             Map<Long, Expense> expenses = expenseRepository.findByIds(session, expenseIds);
-            // Salary payments: the payment names the employee and the salary month
+            // Salary payments: the payment names the user and the salary month
             List<Long> salaryIds = entries.stream()
                     .filter(t -> t.getSource() == AccountTransactionSource.SALARY && t.getReferenceId() != null)
                     .map(AccountTransaction::getReferenceId)

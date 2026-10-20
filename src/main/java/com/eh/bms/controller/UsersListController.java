@@ -3,14 +3,18 @@ package com.eh.bms.controller;
 import com.eh.bms.model.User;
 import com.eh.bms.model.UserStatus;
 import com.eh.bms.service.UserService;
+import com.eh.bms.util.DateUtil;
 import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Icons;
+import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PageResult;
 import com.eh.bms.util.PaginatedTable;
 import com.eh.bms.util.TableHelper;
 import com.eh.bms.util.TableHelper.RowAction;
+import com.eh.bms.util.TableHelper.RowTip;
+import com.eh.bms.util.TableHelper.TipLine;
 import com.eh.bms.util.WindowManager;
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
@@ -20,17 +24,22 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Users list (17.1, 17.2): registrations waiting for approval on top, with approve and reject (N1, shown only while
- * there are any); active users with edit and deactivate buttons on each row; inactive users in a second
- * table below, with edit and activate. Search by name or username while typing. Delete is in the edit form.
+ * Users list (17.1, 17.2, N12: every user is staff): registrations waiting for approval, with approve and reject
+ * (N1, shown only while there are any); active users with edit, salary (work out and pay), salary history and
+ * deactivate on each row; inactive users with edit, history and activate. Search by name, username, mobile or NID
+ * while typing. Delete is in the edit form. Double-click opens the salary history.
  */
 public class UsersListController {
 
@@ -44,6 +53,9 @@ public class UsersListController {
     @FXML private StackPane inactiveHolder;
     @FXML private VBox pendingBox;
     @FXML private StackPane pendingHolder;
+    @FXML private HBox listsRow;
+    @FXML private VBox activeBox;
+    @FXML private VBox inactiveBox;
 
     private final UserService service = new UserService();
     private PaginatedTable<User> table;
@@ -69,13 +81,18 @@ public class UsersListController {
         addInfoColumns(table.getTableView());
         table.getTableView().getColumns().add(actionsColumn(
                 new RowAction<User>(Icons.EDIT, "button.edit", "user.form.edit_title", "icon-edit", this::openForm),
+                new RowAction<User>(Icons.MONEY_OUT, "salary.action.salary_tip", "icon-out", this::openSalary),
+                new RowAction<User>(Icons.LEDGER, "salary.action.history_tip", "icon-view", this::openHistory),
                 new RowAction<User>(Icons.DEACTIVATE, "user.deactivate", "icon-off", this::deactivate)));
+        TableHelper.onDoubleClick(table.getTableView(), true, this::openHistory);
 
         inactiveTable = new PaginatedTable<>((offset, limit) -> loadPage(UserStatus.INACTIVE, offset, limit));
         addInfoColumns(inactiveTable.getTableView());
         inactiveTable.getTableView().getColumns().add(actionsColumn(
                 new RowAction<User>(Icons.EDIT, "button.edit", "user.form.edit_title", "icon-edit", this::openForm),
+                new RowAction<User>(Icons.LEDGER, "salary.action.history_tip", "icon-view", this::openHistory),
                 new RowAction<User>(Icons.ACTIVATE, "user.activate", "icon-on", this::activate)));
+        TableHelper.onDoubleClick(inactiveTable.getTableView(), true, this::openHistory);
 
         // Search (both lists) while typing, after a short pause
         PauseTransition pause = new PauseTransition(Duration.millis(300));
@@ -85,7 +102,20 @@ public class UsersListController {
         tableHolder.getChildren().setAll(table);
         inactiveHolder.getChildren().setAll(inactiveTable);
         pendingHolder.getChildren().setAll(pendingTable);
+        listsRow.widthProperty().addListener((obs, old, w) -> sizeLists());
+        pendingBox.managedProperty().addListener((obs, old, shown) -> sizeLists());
         reload();
+    }
+
+    /** Active 60 %, inactive 40 %; while registrations wait, their list takes a third and the rest is split so. */
+    private void sizeLists() {
+        boolean pending = pendingBox.isManaged();
+        double free = listsRow.getWidth() - listsRow.getSpacing() * (pending ? 2 : 1);
+        double pendingWidth = pending ? free / 3 : 0;
+        double rest = free - pendingWidth;
+        pendingBox.setPrefWidth(pendingWidth);
+        activeBox.setPrefWidth(rest * 0.6);
+        inactiveBox.setPrefWidth(rest * 0.4);
     }
 
     /** Loads all lists again. */
@@ -126,8 +156,43 @@ public class UsersListController {
 
     private static void addInfoColumns(TableView<User> view) {
         view.getColumns().add(TableHelper.column("user.col.name", User::getName));
-        view.getColumns().add(TableHelper.column("user.col.username", User::getUsername));
-        view.getColumns().add(TableHelper.column("user.col.role", u -> I18n.get("role." + u.getRole().name())));
+        view.getColumns().add(TableHelper.column("user.col.role", SalaryController::roleText));
+        view.getColumns().add(TableHelper.column("party.phone", u -> orDash(u.getPhone())));
+        view.getColumns().add(TableHelper.moneyColumn("salary.base", SalaryController::baseText));
+        TableHelper.rowTooltip(view, UsersListController::details);
+    }
+
+    /** Row tooltip: every detail, including those the table leaves out. */
+    private static RowTip details(User u) {
+        List<TipLine> lines = new ArrayList<>();
+        lines.add(line("user.col.username", u.getUsername()));
+        lines.add(line("user.col.role", SalaryController.roleText(u)));
+        lines.add(line("party.phone", orDash(u.getPhone())));
+        lines.add(line("employee.nid", orDash(u.getNid())));
+        lines.add(line("label.address", orDash(u.getAddress())));
+        lines.add(line("employee.join_date", u.getJoinDate() == null ? "—" : DateUtil.format(u.getJoinDate())));
+        lines.add(line("employee.salary_type", SalaryController.typeText(u.getSalaryType())));
+        lines.add(new TipLine(I18n.get("salary.base"), SalaryController.baseText(u), true));
+        return new RowTip(u.getName(), lines);
+    }
+
+    private static TipLine line(String labelKey, String value) {
+        return new TipLine(I18n.get(labelKey), value, false);
+    }
+
+    private static String orDash(String s) {
+        return s == null || s.isBlank() ? "—" : s;
+    }
+
+    /** Work out and pay this month's salary (any month can be picked in the popup). */
+    private void openSalary(User user) {
+        if (SalaryFormController.open(user, YearMonth.now())) {
+            reload();
+        }
+    }
+
+    private void openHistory(User user) {
+        SalaryHistoryController.open(user);
     }
 
     @SafeVarargs
@@ -171,10 +236,13 @@ public class UsersListController {
 
     private void changeStatus(User user, UserStatus status, String doneKey) {
         try {
-            switch (service.setStatus(user.getId(), status)) {
+            UserService.StatusOutcome r = service.setStatus(user.getId(), status);
+            switch (r.status()) {
                 case DONE -> Notifier.success(I18n.get(doneKey));
                 case SELF -> Notifier.error(I18n.get("user.error.self"));
                 case LAST_ADMIN -> Notifier.error(I18n.get("user.error.last_admin"));
+                case HAS_DUE -> Notifier.error(I18n.get("employee.error.has_due", MoneyUtil.format(r.amount())));
+                case HAS_ADVANCE -> Notifier.error(I18n.get("employee.error.has_advance", MoneyUtil.format(r.amount())));
                 case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
             }
             reload();

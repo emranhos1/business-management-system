@@ -6,10 +6,8 @@ import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.AppModule;
-import com.eh.bms.model.AttendanceStatus;
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.BusinessProfile;
-import com.eh.bms.model.EmployeeStatus;
 import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.model.PartyStatus;
@@ -35,13 +33,12 @@ import com.eh.bms.repository.ProductRepository;
 import com.eh.bms.repository.SchemaRepository;
 import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.repository.UserRepository;
-import com.eh.bms.service.AppConfigService;
 import com.eh.bms.util.TransactionHelper;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -65,11 +62,7 @@ public final class DataSeeder {
             {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
             {"dashboard_rows", "5", "Dashboard table rows per page"},
-            {"auto_backup", "false", "Auto backup on app close"},
-            {"weekly_off_days", "FRIDAY", "Weekly off days (comma list of day names, empty = none)"},
-            {"paid_leave", "false", "Leave days are paid for daily and hourly employees"},
-            {"work_start_time", "09:00", "Work day start (HH:mm)"},
-            {"work_end_time", "17:00", "Work day end (HH:mm)"}
+            {"auto_backup", "false", "Auto backup on app close"}
     };
 
     private static final String DEFAULT_BUSINESS_NAME = "আমার ব্যবসা";
@@ -87,6 +80,10 @@ public final class DataSeeder {
     /** Cashier view only. No HR, reports, settings, users or accounts (user decision). */
     private static final Set<AppModule> CASHIER_VIEW_ONLY =
             EnumSet.of(AppModule.DASHBOARD, AppModule.PRODUCT, AppModule.STOCK);
+
+    /** Settings of the attendance removed in N12. */
+    private static final List<String> ATTENDANCE_SETTINGS = List.of("weekly_off_days", "paid_leave",
+            "work_start_time", "work_end_time", "attendance_auto_from");
 
     /** app_config key: number of one-time data fixes already applied (see {@link #migrateData()}). */
     private static final String DATA_VERSION = "data_version";
@@ -206,9 +203,6 @@ public final class DataSeeder {
             {"account_types", "number_rule", AccountNumberRule.class},
             {"account_transactions", "type", AccountTransactionType.class},
             {"account_transactions", "source", AccountTransactionSource.class},
-            {"attendance", "status", AttendanceStatus.class},
-            {"employees", "salary_type", SalaryType.class},
-            {"employees", "status", EmployeeStatus.class},
             {"parties", "type", PartyType.class},
             {"parties", "party_type", PartyTradeType.class},
             {"parties", "balance_type", BalanceType.class},
@@ -223,7 +217,8 @@ public final class DataSeeder {
             {"transactions", "status", TransactionStatus.class},
             {"transaction_payments", "payment_method", PaymentMethod.class},
             {"users", "role", UserRole.class},
-            {"users", "status", UserStatus.class}
+            {"users", "status", UserStatus.class},
+            {"users", "salary_type", SalaryType.class}
     };
 
     /** Drops enum CHECKs that miss a newer enum value (e.g. account_transactions.source PARTY). Safe every startup. */
@@ -349,6 +344,15 @@ public final class DataSeeder {
                 done = 3;
             }
 
+            if (done < 4) {
+                // v4 (N12): attendance is gone, and with it its settings
+                int changed = session.createMutationQuery("delete from AppConfigEntry e where e.configKey in :keys")
+                        .setParameter("keys", ATTENDANCE_SETTINGS)
+                        .executeUpdate();
+                LOG.info("Data fix v4: " + changed + " attendance setting(s) removed");
+                done = 4;
+            }
+
             if (version == null) {
                 version = new AppConfigEntry();
                 version.setConfigKey(DATA_VERSION);
@@ -397,15 +401,6 @@ public final class DataSeeder {
                     APP_CONFIG_REPO.save(session, e);
                     LOG.info("Seeded app_config: " + row[0]);
                 }
-            }
-            // Auto attendance starts the day it first runs, so older history is never filled
-            if (!APP_CONFIG_REPO.existsByKey(session, AppConfigService.ATTENDANCE_AUTO_FROM)) {
-                AppConfigEntry e = new AppConfigEntry();
-                e.setConfigKey(AppConfigService.ATTENDANCE_AUTO_FROM);
-                e.setConfigValue(LocalDate.now().toString());
-                e.setDescription("First day auto attendance may fill (yyyy-MM-dd)");
-                APP_CONFIG_REPO.save(session, e);
-                LOG.info("Seeded app_config: " + AppConfigService.ATTENDANCE_AUTO_FROM);
             }
         });
     }
@@ -534,9 +529,15 @@ public final class DataSeeder {
                 create = view;
                 editDelete = view;
             }
-            default -> {
+            case CASHIER -> {
                 create = CASHIER_CREATE.contains(module);
                 view = create || CASHIER_VIEW_ONLY.contains(module);
+                editDelete = false;
+            }
+            // Employee (N12): nothing until the admin ticks it in the permission editor
+            default -> {
+                view = false;
+                create = false;
                 editDelete = false;
             }
         }

@@ -2,6 +2,7 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
@@ -9,8 +10,9 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Add / edit user popup (17.1). One field per row. The password is required for a new user; when editing,
-     blank keeps the old one. The username cannot change after the user is saved. -->
+<!-- Add / edit user popup (17.1, N12: every user is staff). One field per row: the person, the login, the role
+     (পদ) and the salary. The password is required for a new user; when editing, blank keeps the old one. The
+     username cannot change after the user is saved. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.UserFormController"
       styleClass="dialog-form" spacing="12" prefWidth="540">
@@ -20,6 +22,29 @@
         <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
             <TextField fx:id="nameField" maxWidth="Infinity"/>
             <Label fx:id="nameError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%party.phone" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="phoneField" maxWidth="Infinity" promptText="01XXXXXXXXX"/>
+            <Label fx:id="phoneError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%employee.nid" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="nidField" maxWidth="Infinity"/>
+            <Label fx:id="nidError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%label.address" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="addressField" maxWidth="Infinity"/>
         </VBox>
     </HBox>
 
@@ -57,6 +82,32 @@
             <Label fx:id="roleError" styleClass="field-error" wrapText="true"/>
             <Label fx:id="roleHint" text="%user.role.hint_self" styleClass="field-hint" wrapText="true"
                    visible="false" managed="false"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%employee.join_date" styleClass="form-label, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <DatePicker fx:id="joinDatePicker" maxWidth="Infinity"/>
+            <Label fx:id="joinDateError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <Label text="%employee.salary_type" styleClass="form-label, required, form-row-label"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="salaryTypeBox" maxWidth="Infinity"/>
+            <Label fx:id="salaryTypeError" styleClass="field-error" wrapText="true"/>
+        </VBox>
+    </HBox>
+
+    <HBox styleClass="form-row">
+        <!-- Text set by the salary type: per month / per day / per hour -->
+        <Label fx:id="baseSalaryLabel" text="%employee.base_salary" styleClass="form-label, required, form-row-label"
+               wrapText="true"/>
+        <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
+            <TextField fx:id="baseSalaryField" maxWidth="Infinity"/>
+            <Label fx:id="baseSalaryError" styleClass="field-error" wrapText="true"/>
         </VBox>
     </HBox>
 

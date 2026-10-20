@@ -1,12 +1,12 @@
 package com.eh.bms.controller;
 
-import com.eh.bms.model.Employee;
 import com.eh.bms.model.SalaryPayment;
+import com.eh.bms.model.User;
 import com.eh.bms.service.SalaryService;
 import com.eh.bms.service.SalaryService.History;
 import com.eh.bms.service.SalaryService.MonthRow;
-import com.eh.bms.service.UserSession.Action;
 import com.eh.bms.util.DateUtil;
+import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Icons;
 import com.eh.bms.util.MoneyUtil;
@@ -20,22 +20,20 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * One employee's salary history (14.5): total net, paid, due and advance left; each month (newest first) with
- * gross, deductions, bonus, net, advance carried in, paid and due (or advance left); every payment (newest first), each with an edit button for users who
- * may do that (delete sits in the payment form).
+ * One user's salary history (14.5, N12): total net, paid, due and advance left; each month (newest first) with
+ * gross, deductions and their reason, bonus, net, advance carried in, paid and due (or advance left); every payment
+ * (newest first), each with a delete button (its money goes back to the account).
  */
 public class SalaryHistoryController {
 
@@ -56,15 +54,15 @@ public class SalaryHistoryController {
     private PaginatedTable<SalaryPayment> paymentsTable;
     private List<MonthRow> months = List.of();
     private List<SalaryPayment> payments = List.of();
-    private Employee employee;
+    private User user;
 
-    /** Opens the employee's salary history in a list popup. */
-    public static void open(Employee employee) {
+    /** Opens the user's salary history in a list popup. */
+    public static void open(User user) {
         FXMLLoader loader = WindowManager.loader(FXML_PATH);
         Parent root = WindowManager.load(loader, FXML_PATH);
         SalaryHistoryController history = loader.getController();
-        history.show(employee);
-        Stage stage = WindowManager.dialog(root, I18n.get("salary.history.title", employee.getName()));
+        history.show(user);
+        Stage stage = WindowManager.dialog(root, I18n.get("salary.history.title", user.getName()));
         // A list window: a fixed size (capped to the screen), not a form that fits its content
         WindowManager.sizeListWindow(stage, WIDTH, HEIGHT);
         stage.showAndWait();
@@ -77,6 +75,8 @@ public class SalaryHistoryController {
         mv.getColumns().add(TableHelper.column("salary.month", r -> SalaryController.monthText(r.month())));
         mv.getColumns().add(TableHelper.moneyColumn("salary.gross", r -> MoneyUtil.format(r.gross())));
         mv.getColumns().add(TableHelper.moneyColumn("salary.deductions", r -> MoneyUtil.format(r.deductions())));
+        mv.getColumns().add(TableHelper.longTextColumn("salary.reason",
+                r -> r.sheet() == null || r.sheet().getNote() == null ? "—" : r.sheet().getNote()));
         mv.getColumns().add(TableHelper.moneyColumn("salary.bonus", r -> MoneyUtil.format(r.bonus())));
         mv.getColumns().add(TableHelper.styledColumn("salary.col.net",
                 r -> r.processed() ? MoneyUtil.format(r.net()) : I18n.get("salary.not_processed"), r -> null));
@@ -97,31 +97,22 @@ public class SalaryHistoryController {
         pv.getColumns().add(TableHelper.moneyColumn("label.amount", p -> MoneyUtil.format(p.getAmount())));
         pv.getColumns().add(TableHelper.column("salary.pay.emergency",
                 p -> p.isEmergency() ? I18n.get("button.yes") : "—"));
-        pv.getColumns().add(TableHelper.longTextColumn("label.note", p -> p.getNote() == null ? "" : p.getNote()));
-        List<RowAction<SalaryPayment>> actions = new ArrayList<>();
-        if (SalaryController.can(Action.EDIT)) {
-            actions.add(new RowAction<>(Icons.EDIT, "button.edit", "salary.pay.edit_tip", "icon-edit", this::edit));
-        }
-        if (!actions.isEmpty()) {
-            pv.getColumns().add(actionsColumn(actions));
+        if (SalaryController.isAdmin()) {
+            pv.getColumns().add(TableHelper.actionsColumn("label.actions",
+                    new RowAction<SalaryPayment>(Icons.REMOVE, "salary.pay.delete_tip", "icon-out", this::delete)));
         }
         paymentsHolder.getChildren().setAll(paymentsTable);
     }
 
-    @SuppressWarnings("unchecked")
-    private static TableColumn<SalaryPayment, SalaryPayment> actionsColumn(List<RowAction<SalaryPayment>> actions) {
-        return TableHelper.actionsColumn("label.actions", actions.toArray(new RowAction[0]));
-    }
-
-    /** Loads the employee's history; call before showing. */
-    private void show(Employee employee) {
-        this.employee = employee;
+    /** Loads the user's history; call before showing. */
+    private void show(User user) {
+        this.user = user;
         load();
     }
 
     private void load() {
         try {
-            History h = service.history(employee.getId());
+            History h = service.history(user.getId());
             months = h.months();
             payments = h.payments();
             totalNetLabel.setText(MoneyUtil.format(h.totalNet()));
@@ -142,10 +133,23 @@ public class SalaryHistoryController {
         paymentsTable.reload();
     }
 
-    private void edit(SalaryPayment p) {
-        if (SalaryPaymentFormController.open(employee, YearMonth.of(p.getYear(), p.getMonth()), p)) {
-            load();
+    /** Asks, then deletes a payment (its money goes back to the account). */
+    private void delete(SalaryPayment p) {
+        if (!Dialogs.confirmDelete(I18n.get("salary.pay.confirm_delete", MoneyUtil.format(p.getAmount()),
+                user.getName(), DateUtil.format(p.getDate())))) {
+            return;
         }
+        try {
+            switch (service.deletePayment(p.getId())) {
+                case SAVED -> Notifier.success(I18n.get("msg.deleted"));
+                case NOT_FOUND -> Notifier.error(I18n.get("salary.error.not_found"));
+                default -> Notifier.error(I18n.get("msg.error"));
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not delete the salary payment", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+        load();
     }
 
     private static <T> PageResult<T> slice(List<T> all, int offset, int limit) {

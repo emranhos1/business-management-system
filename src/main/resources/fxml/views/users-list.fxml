@@ -8,8 +8,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Users (17.1, 17.2): three lists side by side, equal width: registrations waiting for approval (N1, only while
-     there are any), active users with edit and deactivate buttons on each row, inactive users. -->
+<!-- Users (17.1, 17.2): lists side by side: registrations waiting for approval (N1, only while there are any),
+     active users (60 %) with their row actions, inactive users (40 %). -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.UsersListController" spacing="12">
 
@@ -22,17 +22,17 @@
         <Button fx:id="addButton" text="%user.add" styleClass="add-button" onAction="#onAdd"/>
     </HBox>
 
-    <!-- prefWidth 0 + grow: the shown lists share the width equally -->
-    <HBox spacing="16" VBox.vgrow="ALWAYS" minHeight="320">
-        <VBox fx:id="pendingBox" spacing="12" HBox.hgrow="ALWAYS" prefWidth="0" visible="false" managed="false">
+    <!-- Widths are set by the controller: active 60 %, inactive 40 % (pending, when shown, takes a third first) -->
+    <HBox fx:id="listsRow" spacing="16" VBox.vgrow="ALWAYS" minHeight="320">
+        <VBox fx:id="pendingBox" spacing="12" minWidth="0" visible="false" managed="false">
             <Label text="%user.section.pending" styleClass="section-title"/>
             <StackPane fx:id="pendingHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
-        <VBox spacing="12" HBox.hgrow="ALWAYS" prefWidth="0">
+        <VBox fx:id="activeBox" spacing="12" minWidth="0">
             <Label text="%user.section.active" styleClass="section-title"/>
             <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
-        <VBox spacing="12" HBox.hgrow="ALWAYS" prefWidth="0">
+        <VBox fx:id="inactiveBox" spacing="12" minWidth="0">
             <Label text="%user.section.inactive" styleClass="section-title"/>
             <StackPane fx:id="inactiveHolder" VBox.vgrow="ALWAYS"/>
         </VBox>

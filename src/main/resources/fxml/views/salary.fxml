@@ -7,8 +7,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Salary tab (14.3 - 14.5): pick a month (this month at first); every employee's salary for it with what is
-     paid and due. Each row: work out salary, pay, history. -->
+<!-- Salary tab of the users page (14.3 - 14.5, N12): pick a month (this month at first); every user's salary for it
+     with what is paid and due. Each row: salary (work out and pay), history. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.SalaryController" spacing="12">
     <!-- FlowPane: wraps to a second line when the page is narrow -->
@@ -19,10 +19,6 @@
         <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearFilter"/>
     </FlowPane>
     <FlowPane hgap="12" vgap="12">
-        <VBox styleClass="stat-tile">
-            <Label text="%salary.working_days" styleClass="stat-label"/>
-            <Label fx:id="workingDaysLabel" styleClass="stat-value"/>
-        </VBox>
         <VBox styleClass="stat-tile, stat-tile-main">
             <Label text="%salary.total_net" styleClass="stat-label"/>
             <Label fx:id="totalNetLabel" styleClass="stat-value"/>

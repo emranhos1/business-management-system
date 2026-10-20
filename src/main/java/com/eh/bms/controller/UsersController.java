@@ -7,17 +7,20 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
 /**
- * Users page (Stage 17, admin only): the users list, the permission editor and the audit log tabs. Opening the
- * users or audit tab loads it again, so a change made elsewhere shows. The permission tab is not reloaded, so
- * what is being ticked is not lost by a click on another tab. The support login sees only the users list.
+ * Users page (Stage 17, N12, admin only): the users list, the month's salary, the permission editor and the audit
+ * log tabs. Opening the users, salary or audit tab loads it again, so a change made elsewhere shows. The permission
+ * tab is not reloaded, so what is being ticked is not lost by a click on another tab. The support login sees only
+ * the users list.
  */
 public class UsersController {
 
     @FXML private TabPane tabs;
     @FXML private Tab listTab;
+    @FXML private Tab salaryTab;
     @FXML private Tab auditTab;
-    /** Controllers of the included tabs (fx:id="list" and "audit"). */
+    /** Controllers of the included tabs (fx:id="list", "salary" and "audit"). */
     @FXML private UsersListController listController;
+    @FXML private SalaryController salaryController;
     @FXML private AuditLogController auditController;
 
     @FXML
@@ -28,6 +31,8 @@ public class UsersController {
         tabs.getSelectionModel().selectedItemProperty().addListener((obs, old, tab) -> {
             if (tab == listTab) {
                 listController.reload();
+            } else if (tab == salaryTab) {
+                salaryController.reload();
             } else if (tab == auditTab) {
                 auditController.reload();
             }

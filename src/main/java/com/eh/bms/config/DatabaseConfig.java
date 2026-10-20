@@ -4,11 +4,9 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
-import com.eh.bms.model.Attendance;
 import com.eh.bms.model.AuditLog;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.BusinessTransaction;
-import com.eh.bms.model.Employee;
 import com.eh.bms.model.Expense;
 import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.Party;
@@ -62,8 +60,6 @@ public final class DatabaseConfig {
             AccountTransaction.class,
             ExpenseCategory.class,
             Expense.class,
-            Employee.class,
-            Attendance.class,
             SalaryProcessing.class,
             SalaryPayment.class,
             User.class,
@@ -99,6 +95,8 @@ public final class DatabaseConfig {
 
         HikariDataSource ds = new HikariDataSource(hikari);
         try {
+            // Old tables that hbm2ddl cannot change by itself (it never drops anything)
+            LegacySchema.run(ds);
             StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                     .applySetting(JdbcSettings.DATASOURCE, ds)
                     // Creates missing tables (FK order) and adds missing columns. Never drops anything.
