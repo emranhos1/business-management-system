@@ -329,9 +329,17 @@ Depends on: Stage 11 (memo number saved with each sale)
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| N6.1 | Decide memo layout and paper size (A4 / A5 / thermal roll) | User confirms layout | [ ] |
-| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [ ] |
-| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [ ] |
+| N6.1 | Decide memo layout and paper size: A4 / A5 / 80 mm roll picked in Settings (default A5); app's language; preview, then print; party's earlier and present balance, accounts paid into, thanks, signatures | User confirms layout | ✅ |
+| N6.2 | Memo view: business name, logo, memo no., date, customer, items, totals, paid, due | Memo shows right data | [T] |
+| N6.3 | Print button after confirming a sale and on each row of the sales list | Printed memo matches the sale | [T] |
+
+### N11 — Warn When a Sale Has No Money
+Money is often forgotten before "বিক্রি করুন"; the sale then goes all on credit without a word.
+Depends on: Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N11.1 | No money typed and total above 0: ask "No money was taken. Sell all ৳X on credit?" before the sale question; No = back to the money field | Sale with no money asks first; No saves nothing; Yes goes on as before | [T] |
 
 ### N7 — Sale Return Stock Rounding (known bug) ✅
 Part returns of one sale line round the stock quantity on each return, so stock drifts (10 pcs sold as 0.833 dozen, returned 5 + 5, puts back 0.834). `SaleService.returnGoods` should use the cumulative rounding `PurchaseService` already uses (`mainShare(item, returned + qty) − mainShare(item, returned)`).

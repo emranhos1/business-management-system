@@ -713,6 +713,15 @@ public class SaleEntryController {
             return false;
         }
 
+        // No money typed (often forgotten): ask before selling it all on credit (N11)
+        if (paid.signum() == 0 && t.grandTotal().signum() > 0
+                && !Dialogs.confirm(I18n.get("sale.no_money.question", MoneyUtil.format(t.grandTotal())))) {
+            if (!payments.isEmpty()) {
+                payments.get(0).amount.requestFocus();
+            }
+            return false;
+        }
+
         // A walk-in customer cannot owe: offer to add them as a party (name and mobile filled in)
         if (due.signum() > 0 && isWalkIn()) {
             // Adding a party needs its own permission; without it the walk-in must pay in full
@@ -752,6 +761,7 @@ public class SaleEntryController {
                     Notifier.success(I18n.get("sale.done", I18n.digits(String.valueOf(result.memoNo()))));
                     reset();
                     onSaved.run();
+                    offerMemo(result.memoNo());
                     return true;
                 }
                 case INSUFFICIENT_STOCK -> {
@@ -779,6 +789,19 @@ public class SaleEntryController {
             Notifier.error(I18n.get("msg.error"));
         }
         return false;
+    }
+
+    /** After a sale: "Print the memo?"; Yes opens its preview (N6). */
+    private void offerMemo(long memoNo) {
+        if (!Dialogs.confirm(I18n.get("memo.ask_print", I18n.digits(String.valueOf(memoNo))))) {
+            return;
+        }
+        try {
+            saleService.idOfMemo(memoNo).ifPresent(MemoViewController::open);
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not open memo " + memoNo, e);
+            Notifier.error(I18n.get("msg.error"));
+        }
     }
 
     /** Opens the new-party form with the walk-in name and mobile; the party, once saved. */

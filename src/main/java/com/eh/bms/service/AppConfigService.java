@@ -2,6 +2,7 @@ package com.eh.bms.service;
 
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.repository.AppConfigRepository;
+import com.eh.bms.util.MemoPaper;
 import com.eh.bms.util.TransactionHelper;
 
 import java.math.BigDecimal;
@@ -49,6 +50,8 @@ public class AppConfigService {
     public static final LocalTime WORK_END_DEFAULT = LocalTime.of(17, 0);
     /** First day auto attendance may fill (ISO date, set when the feature first ran); older days are never filled. */
     public static final String ATTENDANCE_AUTO_FROM = "attendance_auto_from";
+    /** Paper the sale memo is printed on: a {@link MemoPaper} name (N6). */
+    public static final String MEMO_PAPER = "memo_paper";
 
     private final AppConfigRepository repository = new AppConfigRepository();
     private final AuditService auditService = new AuditService();
@@ -95,6 +98,11 @@ public class AppConfigService {
     /** Weekly off days from Settings; a missing key gives the default (Friday), an empty value none. */
     public Set<DayOfWeek> weeklyOffDays() {
         return parseOffDays(getString(WEEKLY_OFF_DAYS, WEEKLY_OFF_DAYS_DEFAULT));
+    }
+
+    /** Memo paper from Settings (default A5). */
+    public MemoPaper memoPaper() {
+        return MemoPaper.of(getString(MEMO_PAPER, null));
     }
 
     /** Paid leave setting (default off). */

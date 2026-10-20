@@ -81,6 +81,8 @@ public class SalesListController {
 
         List<RowAction<BusinessTransaction>> actions = new ArrayList<>();
         actions.add(new RowAction<>(Icons.LEDGER, "button.view", "sale.view.title.short", "icon-view", this::openView));
+        actions.add(new RowAction<>(Icons.PRINT, "memo.print", "memo.print.tip", "icon-print",
+                s -> MemoViewController.open(s.getId())));
         if (can(Action.CREATE)) {
             actions.add(new RowAction<>(Icons.MONEY_IN, "sale.action.collect", "sale.collect.title.short", "icon-in",
                     this::openCollect));

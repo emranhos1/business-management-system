@@ -201,6 +201,13 @@
                 <Label fx:id="storageError" styleClass="field-error" wrapText="true"/>
                 <Label text="%settings.storage.hint" styleClass="field-hint" wrapText="true"/>
             </VBox>
+
+            <!-- Memo paper (N6): A4, A5 or the 80 mm roll -->
+            <Label text="%settings.memo_paper" styleClass="form-label"
+                   GridPane.rowIndex="10" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+            <VBox styleClass="field-box" GridPane.rowIndex="10" GridPane.columnIndex="1">
+                <ComboBox fx:id="memoPaperBox" maxWidth="Infinity"/>
+            </VBox>
         </GridPane>
 
         <HBox alignment="CENTER_LEFT">

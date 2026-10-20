@@ -745,13 +745,14 @@
      no-button     No in confirm dialogs                            grey
      page-button   Previous / Next under tables                     grey
      view-button   Open a read-only view (e.g. account ledger)      teal
+     print-button  Print (memo preview)                             indigo
      icon-button   Action on a table row (edit, view, copy, ...)    icon (+ word), colour per action
    Normal: light background, coloured border and text, soft shadow.
    Hover: filled with the colour, white text, deeper shadow.
    ===================================================================== */
 
 .save-button, .add-button, .login-button, .update-button, .register-button, .back-button, .edit-button,
-.delete-button, .cancel-button, .page-button, .view-button, .no-button {
+.delete-button, .cancel-button, .page-button, .view-button, .print-button, .no-button {
     -fx-background-color: #ffffff;
     -fx-background-radius: 4;
     -fx-border-radius: 4;
@@ -769,14 +770,15 @@
 /* Every button at least 140 wide; a longer label makes it wider instead of cutting the text to "..."
    (Login, Register and Back fill their card instead). -1 = as wide as its label. */
 .save-button, .add-button, .update-button, .edit-button,
-.delete-button, .cancel-button, .page-button, .view-button, .no-button {
+.delete-button, .cancel-button, .page-button, .view-button, .print-button, .no-button {
     -fx-min-width: 140;
     -fx-pref-width: -1;
     -fx-max-width: -1;
 }
 
 .save-button:hover, .add-button:hover, .login-button:hover, .update-button:hover, .register-button:hover,
-.back-button:hover, .edit-button:hover, .delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover, .no-button:hover {
+.back-button:hover, .edit-button:hover, .delete-button:hover, .cancel-button:hover, .page-button:hover, .view-button:hover,
+.print-button:hover, .no-button:hover {
     -fx-text-fill: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
 }
@@ -916,6 +918,13 @@
 .icon-copy.icon-text-button { -fx-text-fill: #2563eb; }
 .icon-copy.icon-text-button:hover { -fx-text-fill: #ffffff; }
 
+/* Indigo: print */
+.icon-print { -fx-border-color: #4f46e5; }
+.icon-print .icon { -fx-background-color: #4f46e5; }
+.icon-print:hover { -fx-background-color: #4f46e5; }
+.icon-print.icon-text-button { -fx-text-fill: #4f46e5; }
+.icon-print.icon-text-button:hover { -fx-text-fill: #ffffff; }
+
 /* Grey: make inactive */
 .icon-off { -fx-border-color: #6b7280; }
 .icon-off .icon { -fx-background-color: #6b7280; }
@@ -935,6 +944,16 @@
     -fx-background-color: #0d9488;
 }
 
+/* Indigo: Print */
+.print-button {
+    -fx-border-color: #4f46e5;
+    -fx-text-fill: #4f46e5;
+}
+
+.print-button:hover {
+    -fx-background-color: #4f46e5;
+}
+
 /* Reports page (Stage 16): the list of reports, and the totals row of a report table */
 .report-list .list-cell {
     -fx-padding: 10 12;
@@ -943,5 +962,108 @@
 
 .report-total-row .table-cell {
     -fx-font-weight: bold;
+}
+
+/* Sale memo (N6, SaleMemo): white paper, black text, so the screen shows what prints. The preview puts it on
+   a grey desk. A4 / A5 (memo-page) and the 80 mm roll (memo-roll: smaller text, small margins). */
+.memo-desk {
+    -fx-background-color: #e5e7eb;
+}
+
+.memo-holder {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 8, 0, 0, 2);
+}
+
+.memo {
+    -fx-background-color: #ffffff;
+    -fx-padding: 28;
+    -fx-spacing: 6;
+    -fx-font-size: 13px;
+}
+
+.memo .label {
+    -fx-text-fill: #000000;
+}
+
+.memo-roll {
+    -fx-padding: 8 6;
+    -fx-spacing: 4;
+    -fx-font-size: 12px;
+}
+
+.memo-shop {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.memo-roll .memo-shop {
+    -fx-font-size: 16px;
+}
+
+.memo-small {
+    -fx-font-size: 11px;
+}
+
+.memo-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-border-color: #000000;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-padding: 2 14;
+}
+
+.memo-roll .memo-title {
+    -fx-font-size: 13px;
+}
+
+.memo-line {
+    -fx-min-height: 1;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+    -fx-background-color: #000000;
+}
+
+.memo-head-row {
+    -fx-border-color: transparent transparent #000000 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 0 4 0;
+}
+
+.memo-head-row .label, .memo-strong, .memo-strong .label {
+    -fx-font-weight: bold;
+}
+
+.memo-item-row {
+    -fx-padding: 2 0;
+}
+
+.memo-grand .label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.memo-thanks {
+    -fx-padding: 10 0 0 0;
+    -fx-font-weight: bold;
+}
+
+.memo-signs {
+    -fx-padding: 40 0 0 0;
+}
+
+.memo-roll .memo-signs {
+    -fx-padding: 28 0 0 0;
+}
+
+.memo-sign {
+    -fx-min-width: 120;
+    -fx-border-color: #000000 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 4 0 0 0;
+}
+
+.memo-roll .memo-sign {
+    -fx-min-width: 100;
 }
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Memo preview (N6): the memo as it prints, on a grey desk; Print and Close stay under it. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.MemoViewController"
+      styleClass="dialog-form, memo-desk" spacing="12">
+
+    <StackPane fx:id="paperHolder" styleClass="memo-holder"/>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.close" styleClass="cancel-button" cancelButton="true" onAction="#onClose"/>
+        <Button text="%memo.print" styleClass="print-button" defaultButton="true" onAction="#onPrint"/>
+    </HBox>
+</VBox>

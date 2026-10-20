@@ -12,6 +12,7 @@ import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.InputFilters;
+import com.eh.bms.util.MemoPaper;
 import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PermissionUtil;
@@ -118,6 +119,7 @@ public class SettingsController {
     @FXML private TimePicker workEndPicker;
     @FXML private Label workTimeError;
     @FXML private CheckBox paidLeaveBox;
+    @FXML private ComboBox<MemoPaper> memoPaperBox;
     @FXML private TextField storageField;
     @FXML private Label storageError;
     @FXML private Button saveAppButton;
@@ -183,6 +185,8 @@ public class SettingsController {
         timeFormatBox.getItems().setAll(DateUtil.TIME_PATTERNS);
         timeFormatBox.setConverter(converter(p -> I18n.get(DateUtil.TIME_24.equals(p) ? "settings.time.24" : "settings.time.12")));
         timeFormatBox.valueProperty().addListener((obs, old, pattern) -> showTimeExample(pattern));
+        memoPaperBox.getItems().setAll(MemoPaper.values());
+        memoPaperBox.setConverter(converter(p -> I18n.get("settings.memo_paper." + p.name())));
         for (DayOfWeek day : WEEK) {
             CheckBox box = new CheckBox(day.getDisplayName(TextStyle.FULL, I18n.getLocale()));
             offDayBoxes.put(day, box);
@@ -402,6 +406,7 @@ public class SettingsController {
             workStartPicker.setValue(configService.workStart());
             workEndPicker.setValue(configService.workEnd());
             paidLeaveBox.setSelected(configService.paidLeave());
+            memoPaperBox.setValue(configService.memoPaper());
             currentStorage = AppPaths.storageDir().toAbsolutePath();
             chosenStorage = currentStorage;
             storageField.setText(currentStorage.toString());
@@ -473,6 +478,8 @@ public class SettingsController {
         values.put(AppConfigService.WORK_START_TIME, AppConfigService.formatTime(workStart));
         values.put(AppConfigService.WORK_END_TIME, AppConfigService.formatTime(workEnd));
         values.put(AppConfigService.PAID_LEAVE, String.valueOf(paidLeaveBox.isSelected()));
+        values.put(AppConfigService.MEMO_PAPER,
+                (memoPaperBox.getValue() == null ? MemoPaper.DEFAULT : memoPaperBox.getValue()).name());
         try {
             if (storageChanged) {
                 // Copy first: if it fails, nothing is saved and the old folder stays in use
@@ -504,7 +511,8 @@ public class SettingsController {
                 text(itemsPerPageField), text(dashboardRowsField),
                 text(lowStockField), String.valueOf(autoBackupBox.isSelected()), String.valueOf(chosenStorage),
                 AppConfigService.formatOffDays(selectedOffDays()), String.valueOf(workStartPicker.getValue()),
-                String.valueOf(workEndPicker.getValue()), String.valueOf(paidLeaveBox.isSelected()));
+                String.valueOf(workEndPicker.getValue()), String.valueOf(paidLeaveBox.isSelected()),
+                String.valueOf(memoPaperBox.getValue()));
     }
 
     /** The ticked weekly off days (none = no weekly off). */
