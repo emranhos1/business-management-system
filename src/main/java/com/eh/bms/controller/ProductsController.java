@@ -97,6 +97,9 @@ public class ProductsController {
             actions.add(new RowAction<>(Icons.COPY, "products.copy", "products.form.copy_title", "icon-copy",
                     product -> openForm(product, true)));
         }
+        // Label print needs no permission beyond seeing the page: it only reads the product
+        actions.add(new RowAction<>(Icons.PRINT, "products.label", "products.label_tip", "icon-print",
+                ProductLabelController::open));
         if (!actions.isEmpty()) {
             view.getColumns().add(actionsColumn(actions));
         }
@@ -221,6 +224,8 @@ public class ProductsController {
         } else if (product != null) {
             form.edit(product);
             titleKey = "products.form.edit_title";
+        } else {
+            form.fillNextCode(); // a new product: the next automatic code, changeable
         }
         WindowManager.dialog(root, I18n.get(titleKey)).showAndWait();
         if (form.isSaved()) {

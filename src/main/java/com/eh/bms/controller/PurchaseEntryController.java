@@ -98,7 +98,8 @@ public class PurchaseEntryController {
     private final class PaymentRow {
         final ComboBox<Account> account = new ComboBox<>();
         final TextField amount = new TextField();
-        final HBox node;
+        final Button remove = new Button();
+        final VBox node;
 
         PaymentRow(Account selected) {
             account.getItems().setAll(accounts);
@@ -109,9 +110,7 @@ public class PurchaseEntryController {
                     if (a == null) {
                         return "";
                     }
-                    BigDecimal balance = balances.get(a.getId());
-                    String name = I18n.pick(a.getName(), a.getNameEn());
-                    return balance == null ? name : I18n.get("purchase.account_balance", name, MoneyUtil.format(balance));
+                    return AccountFormController.nameWithType(a);
                 }
 
                 @Override
@@ -132,12 +131,19 @@ public class PurchaseEntryController {
             amount.setMinWidth(Region.USE_PREF_SIZE);
             account.setMinWidth(80);
             amount.textProperty().addListener((obs, old, now) -> recalc());
-            Button remove = new Button();
+
             remove.setGraphic(Icons.of(Icons.REMOVE));
             remove.getStyleClass().addAll("icon-button", "icon-out");
             remove.setTooltip(new Tooltip(I18n.get("sale.remove_payment")));
             remove.setMinWidth(Region.USE_PREF_SIZE);
-            node = new HBox(6, account, amount, remove);
+            // The picked account's balance, small, under the row: money goes out of it
+            Label balanceHint = new Label();
+            balanceHint.getStyleClass().add("field-hint");
+            balanceHint.setVisible(false);
+            balanceHint.setManaged(false);
+            account.valueProperty().addListener((obs, old, now) -> showBalance(balanceHint, now));
+            showBalance(balanceHint, selected);
+            node = new VBox(2, new HBox(6, account, amount, remove), balanceHint);
             remove.setOnAction(e -> {
                 payments.remove(this);
                 paymentsBox.getChildren().remove(node);
@@ -269,8 +275,10 @@ public class PurchaseEntryController {
         TableHelper.setUp(itemsTable);
         itemsTable.setItems(lines);
         itemsTable.getColumns().add(TableHelper.column("sale.product", l -> UnitUtil.productName(l.product())));
-        itemsTable.getColumns().add(TableHelper.moneyColumn("sale.quantity",
-                l -> UnitUtil.number(l.quantity()) + " " + UnitUtil.name(l.unit())));
+        // − / + around the quantity: one more or one less without opening the line
+        itemsTable.getColumns().add(TableHelper.stepperColumn("sale.quantity",
+                l -> UnitUtil.number(l.quantity()) + " " + UnitUtil.name(l.unit()), l -> stepLine(l, BigDecimal.ONE.negate()),
+                l -> stepLine(l, BigDecimal.ONE), l -> l.quantity().compareTo(BigDecimal.ONE) > 0));
         itemsTable.getColumns().add(TableHelper.moneyColumn("purchase.price", l -> MoneyUtil.format(l.price())));
         itemsTable.getColumns().add(TableHelper.moneyColumn("sale.discount_unit",
                 l -> l.discount().signum() == 0 ? "—" : MoneyUtil.format(l.discount())));
@@ -458,6 +466,15 @@ public class PurchaseEntryController {
         productField.requestFocus();
     }
 
+    /** The − / + button of a line: its quantity changes by {@code step}. */
+    private void stepLine(Line line, BigDecimal step) {
+        BigDecimal qty = line.quantity().add(step);
+        int i = lines.indexOf(line);
+        if (qty.signum() > 0 && i >= 0) {
+            lines.set(i, new Line(line.product(), line.unit(), qty, line.price(), line.discount()));
+        }
+    }
+
     /** Puts the line back into the entry fields to change it. */
     private void editLine(Line line) {
         lines.remove(line);
@@ -496,6 +513,14 @@ public class PurchaseEntryController {
                 .orElse(accounts.isEmpty() ? null : accounts.get(0));
     }
 
+    /** Small line under a payment row: the balance of the picked account (hidden while none is picked). */
+    private void showBalance(Label hint, Account account) {
+        BigDecimal balance = account == null ? null : balances.get(account.getId());
+        hint.setText(balance == null ? "" : I18n.get("purchase.balance_hint", MoneyUtil.format(balance)));
+        hint.setVisible(balance != null);
+        hint.setManaged(balance != null);
+    }
+
     private void addPaymentRow(Account account) {
         PaymentRow row = new PaymentRow(account);
         payments.add(row);
@@ -516,6 +541,11 @@ public class PurchaseEntryController {
 
     private void updateAddPaymentButton() {
         addPaymentButton.setDisable(payments.size() >= accounts.size());
+        // At least one account always stays: the only row has no remove button
+        for (PaymentRow r : payments) {
+            r.remove.setVisible(payments.size() > 1);
+            r.remove.setManaged(payments.size() > 1);
+        }
     }
 
     /** Puts what is still due into the first row (e.g. the whole bill in cash). */
@@ -785,6 +815,22 @@ public class PurchaseEntryController {
         return parsed;
     }
 
+
+    /** The "−" next to the quantity: one less, never to 0 or below. */
+    @FXML
+    private void onQtyMinus() {
+        BigDecimal qty = amountOf(qtyField);
+        if (qty != null && qty.subtract(BigDecimal.ONE).signum() > 0) {
+            qtyField.setText(qty.subtract(BigDecimal.ONE).stripTrailingZeros().toPlainString());
+        }
+    }
+
+    /** The "+" next to the quantity: one more (an empty field becomes 1). */
+    @FXML
+    private void onQtyPlus() {
+        BigDecimal qty = amountOf(qtyField);
+        qtyField.setText((qty == null ? BigDecimal.ONE : qty.add(BigDecimal.ONE)).stripTrailingZeros().toPlainString());
+    }
     /** The number typed (accepted by InputFilters.decimal), or null when empty. */
     private static BigDecimal amountOf(TextField field) {
         String t = field.getText() == null ? "" : field.getText().trim();

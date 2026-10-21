@@ -55,6 +55,14 @@ public class ProductRepository {
         return Optional.ofNullable(session.find(Product.class, id));
     }
 
+    /** The product with exactly this code (the SKU is unique); the case is ignored by the DB collation. */
+    public Optional<Product> findBySku(Session session, String sku) {
+        return session.createSelectionQuery("from Product p join fetch p.category left join fetch p.unit"
+                        + " left join fetch p.secondaryUnit where p.sku = :sku", Product.class)
+                .setParameter("sku", sku)
+                .uniqueResultOptional();
+    }
+
     /**
      * True if another product (not {@code excludeId}) has this Bangla name and the same pack: unit,
      * secondary unit and conversion. The same name with another pack size is allowed. Case is ignored by the DB collation.
@@ -108,6 +116,12 @@ public class ProductRepository {
     /** Same as {@link #existsByName} for the SKU. */
     public boolean existsBySku(Session session, String sku, Long excludeId) {
         return existsBy(session, "sku", sku, excludeId);
+    }
+
+    /** The biggest product id, 0 when there is none (the next automatic code counts from it). */
+    public long maxId(Session session) {
+        Long max = session.createSelectionQuery("select max(p.id) from Product p", Long.class).getSingleResult();
+        return max == null ? 0 : max;
     }
 
     /** True if any stock ledger entry or transaction item uses the product. */

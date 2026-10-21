@@ -58,6 +58,15 @@ public class TransactionRepository {
                 .uniqueResultOptional();
     }
 
+    /** Id of the transaction of this type with this memo number. */
+    public Optional<Long> idOfMemo(Session session, long memoNo) {
+        return session.createSelectionQuery("select t.id from BusinessTransaction t"
+                        + " where t.type = :type and t.memoNo = :memo", Long.class)
+                .setParameter("type", type)
+                .setParameter("memo", memoNo)
+                .uniqueResultOptional();
+    }
+
     /** Lines of a sale with product and units loaded, in entry order. */
     public List<TransactionItem> items(Session session, long saleId) {
         return session.createSelectionQuery("from TransactionItem i join fetch i.product p left join fetch p.unit"

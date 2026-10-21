@@ -3,6 +3,7 @@ package com.eh.bms.service;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.Party;
+import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.model.PartyStatus;
 import com.eh.bms.model.PartyTradeType;
 import com.eh.bms.model.PartyType;
@@ -11,6 +12,7 @@ import com.eh.bms.util.PageResult;
 import com.eh.bms.util.TransactionHelper;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
@@ -65,6 +67,36 @@ public class PartyService {
                 auditService.updated(session, AppModule.PARTY, id, old, describe(p));
             }
             return StatusResult.DONE;
+        });
+    }
+
+    public enum WriteOffResult {
+        DONE, NO_BALANCE, NOT_FOUND
+    }
+
+    /**
+     * Forgives what is left in the party's ledger, whichever way it goes (they owe us, or we owe them): one
+     * {@code WRITE_OFF} entry brings the balance to exactly 0 (user decision, e.g. a customer who died or went away).
+     * The sales and purchases stay as they were; only the ledger balance is cleared.
+     */
+    public WriteOffResult writeOff(long id) {
+        return TransactionHelper.inTransaction(session -> {
+            if (repository.findById(session, id).isEmpty()) {
+                return WriteOffResult.NOT_FOUND;
+            }
+            BigDecimal balance = ledgerService.balance(session, id);
+            if (balance.signum() == 0) {
+                return WriteOffResult.NO_BALANCE;
+            }
+            // + they owe us: we got it (credit); - we owe them: we gave it (debit)
+            if (balance.signum() > 0) {
+                ledgerService.post(session, id, LocalDate.now(), PartyLedgerType.WRITE_OFF, BigDecimal.ZERO, balance, null, null);
+            } else {
+                ledgerService.post(session, id, LocalDate.now(), PartyLedgerType.WRITE_OFF, balance.negate(), BigDecimal.ZERO, null, null);
+            }
+            auditService.updated(session, AppModule.PARTY, id, "balance=" + balance.toPlainString(),
+                    "balance=0 (written off)");
+            return WriteOffResult.DONE;
         });
     }
 

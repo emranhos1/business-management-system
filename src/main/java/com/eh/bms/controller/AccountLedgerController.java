@@ -111,7 +111,7 @@ public class AccountLedgerController {
                     PartyText.name(r.party()));
         } else if (r.source() == AccountTransactionSource.SALARY && r.salaryPayment() != null) {
             SalaryPayment p = r.salaryPayment();
-            what = I18n.get("ledger.salary", p.getEmployee().getName(), monthText(p.getYear(), p.getMonth()));
+            what = I18n.get("ledger.salary", p.getUser().getName(), monthText(p.getYear(), p.getMonth()));
         }
         String note = r.note();
         // A sale or purchase line's note is its memo number ("#3"): "মেমো #3" / "ক্রয় মেমো #3"

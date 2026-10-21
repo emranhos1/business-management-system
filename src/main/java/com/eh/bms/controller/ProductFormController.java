@@ -181,6 +181,18 @@ public class ProductFormController {
                 .add(minStockField, minStockError);
     }
 
+    /**
+     * Puts the next automatic code in the code field (a new product or a copy); the user may change it. If it cannot
+     * be worked out the field stays empty and the form still opens.
+     */
+    public void fillNextCode() {
+        try {
+            skuField.setText(service.nextSku());
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not work out the next product code", e);
+        }
+    }
+
     /** Fills the form for editing; call before showing. Leave it uncalled to add a new product. */
     public void edit(Product product) {
         productId = product.getId();
@@ -202,6 +214,9 @@ public class ProductFormController {
                     .ifPresent(categoryBox::setValue);
         }
         skuField.setText(product.getSku());
+        if (product.getSku() == null || product.getSku().isBlank()) {
+            fillNextCode(); // every product needs a code: an old one without it gets the next automatic code
+        }
         selectUnit(unitBox, product.getUnit());
         selectUnit(secondaryUnitBox, product.getSecondaryUnit());
         conversionField.setText(plain(product.getConversionFactor()));
@@ -219,7 +234,7 @@ public class ProductFormController {
     public void copyFrom(Product product) {
         edit(product);
         productId = null;
-        skuField.clear();
+        fillNextCode();
         // A copy is a new product: nothing to delete, and its pack is free to change
         deleteButton.setVisible(false);
         deleteButton.setManaged(false);
@@ -335,6 +350,9 @@ public class ProductFormController {
         if (nameEn.isEmpty()) {
             form.error(nameEnField, I18n.get("msg.required_field", I18n.get("products.name_en")));
         }
+        if (sku.isEmpty()) {
+            form.error(skuField, I18n.get("msg.required_field", I18n.get("products.sku")));
+        }
         if (category == null) {
             form.error(categoryBox, I18n.get("msg.required_field", I18n.get("products.category")));
         }
@@ -381,6 +399,10 @@ public class ProductFormController {
                 }
                 case DUPLICATE_NAME_EN -> {
                     form.error(nameEnField, I18n.get("products.error.duplicate"));
+                    form.focusFirstError();
+                }
+                case SKU_REQUIRED -> {
+                    form.error(skuField, I18n.get("msg.required_field", I18n.get("products.sku")));
                     form.focusFirstError();
                 }
                 case DUPLICATE_SKU -> {

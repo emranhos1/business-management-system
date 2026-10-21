@@ -12,10 +12,16 @@ import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** A login user. */
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/** A user: login, role (পদ) and, as every user is staff (N12), the staff details and salary. */
 @Entity
 @Table(name = "users",
-        uniqueConstraints = @UniqueConstraint(name = "uk_users_username", columnNames = "username"))
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_users_username", columnNames = "username"),
+                @UniqueConstraint(name = "uk_users_nid", columnNames = "nid")
+        })
 public class User {
 
     @Id
@@ -48,6 +54,30 @@ public class User {
      */
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword;
+
+    // Staff details and salary (N12: every user is staff); empty until the admin fills them in
+
+    @Column(name = "phone", length = 30)
+    private String phone;
+
+    /** Optional; unique when given. */
+    @Column(name = "nid", length = 30)
+    private String nid;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "join_date")
+    private LocalDate joinDate;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "salary_type", length = 20)
+    private SalaryType salaryType;
+
+    /** Per month, day or hour, by salary_type. */
+    @Column(name = "base_salary", precision = 14, scale = 2)
+    private BigDecimal baseSalary;
 
     public Long getId() {
         return id;
@@ -99,5 +129,58 @@ public class User {
 
     public void setMustChangePassword(boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getNid() {
+        return nid;
+    }
+
+    public void setNid(String nid) {
+        this.nid = nid;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public LocalDate getJoinDate() {
+        return joinDate;
+    }
+
+    public void setJoinDate(LocalDate joinDate) {
+        this.joinDate = joinDate;
+    }
+
+    public SalaryType getSalaryType() {
+        return salaryType;
+    }
+
+    public void setSalaryType(SalaryType salaryType) {
+        this.salaryType = salaryType;
+    }
+
+    public BigDecimal getBaseSalary() {
+        return baseSalary;
+    }
+
+    public void setBaseSalary(BigDecimal baseSalary) {
+        this.baseSalary = baseSalary;
+    }
+
+    /** True once the admin has set a salary (a new registration has none yet). */
+    public boolean hasSalary() {
+        return salaryType != null && baseSalary != null;
     }
 }

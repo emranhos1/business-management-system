@@ -41,7 +41,7 @@ import java.util.logging.Logger;
 /**
  * Parties page: active customers and suppliers (10.1) with what is due as পাবো / দেবো (10.4), search by
  * name or mobile. Each row has icon buttons: ledger (10.3), money received / paid (10.5) and inactive.
- * Inactive parties are listed below, each with a button to make it active again.
+ * Inactive parties are in the same list, below the active ones; their row keeps only the switch-on button.
  */
 public class PartiesController {
 
@@ -55,15 +55,12 @@ public class PartiesController {
     @FXML private Button addButton;
     @FXML private TextField searchField;
     @FXML private StackPane tableHolder;
-    @FXML private StackPane inactiveHolder;
 
     private final PartyService service = new PartyService();
     private final PartyLedgerService ledgerService = new PartyLedgerService();
     private PaginatedTable<Party> table;
-    private PaginatedTable<Party> inactiveTable;
     /** Current balance of the parties on the shown page. */
     private Map<Long, BigDecimal> balances = Map.of();
-    private Map<Long, BigDecimal> inactiveBalances = Map.of();
 
     @FXML
     private void initialize() {
@@ -71,53 +68,63 @@ public class PartiesController {
         boolean canCreate = can(Action.CREATE);
         boolean canEdit = can(Action.EDIT);
 
-        table = new PaginatedTable<>((offset, limit) -> loadPage(PartyStatus.ACTIVE, offset, limit));
+        table = new PaginatedTable<>(this::loadPage);
         TableView<Party> view = table.getTableView();
         addInfoColumns(view);
         view.getColumns().add(TableHelper.styledColumn("party.col.balance",
                 p -> PartyText.balance(balances.get(p.getId())),
                 p -> PartyText.balanceStyle(balances.get(p.getId()))));
-        // Money received / paid adds ledger entries (create permission); edit and inactive change the party (edit)
+        view.getColumns().add(TableHelper.column("label.status", p -> I18n.get("label.status." + p.getStatus().name())));
+        // Money received / paid adds ledger entries (create permission); edit and inactive change the party (edit).
+        // An inactive party keeps only its switch-on button; every other button on its row is greyed out
         List<RowAction<Party>> actions = new ArrayList<>();
         if (canEdit) {
-            actions.add(new RowAction<>(Icons.EDIT, "button.edit", "party.form.edit_title", "icon-edit", this::openForm));
+            actions.add(new RowAction<Party>(Icons.EDIT, "button.edit", "party.form.edit_title", "icon-edit", this::openForm)
+                    .enabledWhen(PartiesController::isActive));
         }
-        actions.add(new RowAction<>(Icons.LEDGER, "button.view", "party.ledger", "icon-view", this::openLedger));
+        actions.add(new RowAction<Party>(Icons.LEDGER, "button.view", "party.ledger", "icon-view", this::openLedger)
+                .enabledWhen(PartiesController::isActive));
         if (canCreate) {
-            actions.add(new RowAction<>(Icons.MONEY_IN, "party.action.receive", "party.receive", "icon-in", p -> openPayment(p, Direction.RECEIVED)));
-            actions.add(new RowAction<>(Icons.MONEY_OUT, "party.action.pay", "party.pay", "icon-out", p -> openPayment(p, Direction.PAID)));
+            actions.add(new RowAction<Party>(Icons.MONEY_IN, "party.action.receive", "party.receive", "icon-in",
+                    p -> openPayment(p, Direction.RECEIVED)).enabledWhen(PartiesController::isActive));
+            actions.add(new RowAction<Party>(Icons.MONEY_OUT, "party.action.pay", "party.pay", "icon-out",
+                    p -> openPayment(p, Direction.PAID)).enabledWhen(PartiesController::isActive));
         }
         if (canEdit) {
-            actions.add(new RowAction<>(Icons.DEACTIVATE, "party.deactivate", "icon-off", this::deactivate));
+            // Forgive what is left (a customer who left or died): shown while there is a balance
+            actions.add(new RowAction<Party>(Icons.REMOVE, "party.writeoff", "party.writeoff_tip", "icon-out",
+                    this::writeOff).visibleWhen(p -> isActive(p) && hasBalance(p)));
+        }
+        if (canEdit) {
+            actions.add(new RowAction<>(Icons.DEACTIVATE, "party.deactivate", "icon-off", this::deactivate,
+                    PartiesController::isActive));
+            actions.add(new RowAction<>(Icons.ACTIVATE, "party.activate", "icon-on", this::activate,
+                    p -> !isActive(p)));
         }
         view.getColumns().add(actionsColumn(actions));
-        TableHelper.onDoubleClick(view, true, this::openLedger);
+        TableHelper.onDoubleClick(view, true, p -> {
+            if (isActive(p)) {
+                openLedger(p);
+            }
+        });
 
-        inactiveTable = new PaginatedTable<>((offset, limit) -> loadPage(PartyStatus.INACTIVE, offset, limit));
-        TableView<Party> inactiveView = inactiveTable.getTableView();
-        addInfoColumns(inactiveView);
-        inactiveView.getColumns().add(TableHelper.styledColumn("party.col.balance",
-                p -> PartyText.balance(inactiveBalances.get(p.getId())),
-                p -> PartyText.balanceStyle(inactiveBalances.get(p.getId()))));
-        List<RowAction<Party>> inactiveActions = new ArrayList<>();
-        if (canEdit) {
-            inactiveActions.add(new RowAction<>(Icons.EDIT, "button.edit", "party.form.edit_title", "icon-edit", this::openForm));
-        }
-        inactiveActions.add(new RowAction<>(Icons.LEDGER, "button.view", "party.ledger", "icon-view", this::openLedger));
-        if (canEdit) {
-            inactiveActions.add(new RowAction<>(Icons.ACTIVATE, "party.activate", "icon-on", this::activate));
-        }
-        inactiveView.getColumns().add(actionsColumn(inactiveActions));
-        TableHelper.onDoubleClick(inactiveView, true, this::openLedger);
-
-        // Search (both lists) while typing, after a short pause
+        // Search while typing, after a short pause
         PauseTransition pause = new PauseTransition(Duration.millis(300));
-        pause.setOnFinished(e -> reloadBoth());
+        pause.setOnFinished(e -> table.reload());
         searchField.textProperty().addListener((obs, old, text) -> pause.playFromStart());
 
         tableHolder.getChildren().setAll(table);
-        inactiveHolder.getChildren().setAll(inactiveTable);
-        reloadBoth();
+        table.reload();
+    }
+
+    /** True when the party's ledger is not at 0 (as last loaded). */
+    private boolean hasBalance(Party p) {
+        BigDecimal b = balances.get(p.getId());
+        return b != null && b.signum() != 0;
+    }
+
+    private static boolean isActive(Party p) {
+        return p.getStatus() == PartyStatus.ACTIVE;
     }
 
     private static void addInfoColumns(TableView<Party> view) {
@@ -133,25 +140,17 @@ public class PartiesController {
         return TableHelper.actionsColumn("label.actions", actions.toArray(new RowAction[0]));
     }
 
-    private PageResult<Party> loadPage(PartyStatus status, int offset, int limit) {
+    private PageResult<Party> loadPage(int offset, int limit) {
         try {
-            PageResult<Party> page = service.page(status, searchField.getText(), offset, limit);
-            if (status == PartyStatus.ACTIVE) {
-                balances = ledgerService.balances(page.items());
-            } else {
-                inactiveBalances = ledgerService.balances(page.items());
-            }
+            // Every status: active first, the inactive ones last
+            PageResult<Party> page = service.page(null, searchField.getText(), offset, limit);
+            balances = ledgerService.balances(page.items());
             return page;
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not load parties", e);
             Notifier.error(I18n.get("msg.error"));
             return PageResult.empty();
         }
-    }
-
-    private void reloadBoth() {
-        table.reload();
-        inactiveTable.reload();
     }
 
     @FXML
@@ -171,6 +170,25 @@ public class PartiesController {
         changeStatus(party, PartyStatus.INACTIVE, "party.deactivated");
     }
 
+    private void writeOff(Party party) {
+        BigDecimal balance = balances.get(party.getId());
+        if (balance == null || !Dialogs.confirmDelete(I18n.get("party.confirm_writeoff", PartyText.name(party),
+                PartyText.balance(balance)))) {
+            return;
+        }
+        try {
+            switch (service.writeOff(party.getId())) {
+                case DONE -> Notifier.success(I18n.get("party.written_off"));
+                case NO_BALANCE -> Notifier.error(I18n.get("party.error.no_balance"));
+                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+            table.refresh();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not write off the balance", e);
+            Notifier.error(I18n.get("msg.error"));
+        }
+    }
+
     private void activate(Party party) {
         if (!Dialogs.confirm(I18n.get("party.confirm_activate", PartyText.name(party)))) {
             return;
@@ -186,7 +204,6 @@ public class PartiesController {
                 case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
             }
             table.refresh();
-            inactiveTable.refresh();
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not change party status", e);
             Notifier.error(I18n.get("msg.error"));
@@ -233,7 +250,6 @@ public class PartiesController {
         // Saved or deleted; the party may be in either list
         if (form.isSaved()) {
             table.refresh();
-            inactiveTable.refresh();
         }
     }
 

@@ -1,6 +1,7 @@
 package com.eh.bms.repository;
 
 import com.eh.bms.model.PartyLedger;
+import com.eh.bms.model.PartyLedgerType;
 import org.hibernate.Session;
 
 import java.math.BigDecimal;
@@ -9,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /** Database access for {@code party_ledger}. Net = debit - credit (+ party owes us more, - we owe more). */
 public class PartyLedgerRepository {
@@ -73,6 +75,18 @@ public class PartyLedgerRepository {
                 .setParameter("entryId", entryId)
                 .getSingleResult();
         return net == null ? BigDecimal.ZERO : net;
+    }
+
+    /** The entry of the goods of one sale (type SALE, {@code reference_id} = the sale); empty for a 0-total sale. */
+    public Optional<PartyLedger> saleEntry(Session session, long partyId, long saleId) {
+        return session.createSelectionQuery("from PartyLedger l where l.party.id = :party and l.type = :type"
+                        + " and l.referenceId = :sale order by l.id", PartyLedger.class)
+                .setParameter("party", partyId)
+                .setParameter("type", PartyLedgerType.SALE)
+                .setParameter("sale", saleId)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 
     /** Entries by id, with their party loaded (e.g. to name the party in an account ledger). */

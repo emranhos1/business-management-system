@@ -16,8 +16,13 @@ public class PartyRepository {
      */
     public List<Party> page(Session session, PartyStatus status, String search, int offset, int limit) {
         boolean filter = search != null && !search.isBlank();
-        var query = session.createSelectionQuery("from Party p" + where(filter) + " order by p.name, p.id", Party.class)
-                .setParameter("status", status);
+        // Every status (null): the inactive ones come last
+        var query = session.createSelectionQuery("from Party p" + where(status, filter)
+                        + " order by case when p.status = com.eh.bms.model.PartyStatus.INACTIVE then 1 else 0 end,"
+                        + " p.name, p.id", Party.class);
+        if (status != null) {
+            query.setParameter("status", status);
+        }
         if (filter) {
             query.setParameter("search", like(search));
         }
@@ -26,16 +31,19 @@ public class PartyRepository {
 
     public long count(Session session, PartyStatus status, String search) {
         boolean filter = search != null && !search.isBlank();
-        var query = session.createSelectionQuery("select count(p) from Party p" + where(filter), Long.class)
-                .setParameter("status", status);
+        var query = session.createSelectionQuery("select count(p) from Party p" + where(status, filter), Long.class);
+        if (status != null) {
+            query.setParameter("status", status);
+        }
         if (filter) {
             query.setParameter("search", like(search));
         }
         return query.getSingleResult();
     }
 
-    private static String where(boolean search) {
-        return " where p.status = :status"
+    /** {@code status} null = every status. */
+    private static String where(PartyStatus status, boolean search) {
+        return " where 1 = 1" + (status == null ? "" : " and p.status = :status")
                 + (search ? " and (p.name like :search or p.nameEn like :search or p.phone like :search)" : "");
     }
 

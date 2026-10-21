@@ -42,13 +42,14 @@ public class DashboardService {
     }
 
     /** Net profit of the range and its parts (15.4). */
-    public record Profit(BigDecimal sales, BigDecimal costOfSales, BigDecimal expenses, BigDecimal salary) {
+    public record Profit(BigDecimal sales, BigDecimal costOfSales, BigDecimal expenses, BigDecimal salary,
+                         BigDecimal writtenOff) {
         public BigDecimal grossProfit() {
             return sales.subtract(costOfSales);
         }
 
         public BigDecimal net() {
-            return grossProfit().subtract(expenses).subtract(salary);
+            return grossProfit().subtract(expenses).subtract(salary).subtract(writtenOff);
         }
     }
 
@@ -79,7 +80,8 @@ public class DashboardService {
             Profit profit = new Profit(money(repository.netSales(session, from, to)),
                     money(repository.costOfSales(session, from, to)),
                     period.expenses(),
-                    repository.salaryOfMonths(session, YearMonth.from(from), YearMonth.from(to)));
+                    repository.salaryOfMonths(session, YearMonth.from(from), YearMonth.from(to)),
+                    repository.writeOffLoss(session, from, to));
 
             // Party balances at the end of the last day: + = they owe us (পাবো), - = we owe them (দেবো)
             Map<Long, BigDecimal> partyNet = repository.partyNetUpTo(session, to);
