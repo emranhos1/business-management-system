@@ -71,8 +71,10 @@
                 <Label fx:id="profitExpensesLabel" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
                 <Label text="%dashboard.profit.salary" GridPane.rowIndex="4"/>
                 <Label fx:id="profitSalaryLabel" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
-                <Label fx:id="profitNetTitle" text="%dashboard.profit.net" styleClass="stat-value" GridPane.rowIndex="5"/>
-                <Label fx:id="profitNetLabel" styleClass="stat-value" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                <Label text="%dashboard.profit.writeoff" GridPane.rowIndex="5"/>
+                <Label fx:id="profitWriteOffLabel" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                <Label fx:id="profitNetTitle" text="%dashboard.profit.net" styleClass="stat-value" GridPane.rowIndex="6"/>
+                <Label fx:id="profitNetLabel" styleClass="stat-value" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
             </GridPane>
         </VBox>
 

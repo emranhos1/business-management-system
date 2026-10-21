@@ -60,7 +60,7 @@ public class PermissionsController {
 
     @FXML
     private void initialize() {
-        roleBox.getItems().setAll(UserRole.MANAGER, UserRole.CASHIER);
+        roleBox.getItems().setAll(UserRole.MANAGER, UserRole.CASHIER, UserRole.EMPLOYEE);
         roleBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(UserRole role) {
@@ -149,7 +149,6 @@ public class PermissionsController {
             case PURCHASE -> "menu.purchases";
             case EXPENSE -> "menu.expenses";
             case ACCOUNT -> "menu.accounts";
-            case EMPLOYEE -> "menu.employees";
             case REPORT -> "menu.reports";
             case SETTINGS -> "menu.settings";
             case USER -> "menu.users";

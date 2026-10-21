@@ -108,6 +108,61 @@ public final class TableHelper {
     }
 
     /**
+     * A column that shows a quantity with a small "−" and "+" button around it (e.g. the lines of a sale), so the
+     * quantity can be changed by one without opening the line. {@code canMinus} greys the "−" out (e.g. at 1).
+     */
+    public static <T> TableColumn<T, T> stepperColumn(String titleKey, Function<T, String> text, Consumer<T> minus,
+                                                      Consumer<T> plus, Predicate<T> canMinus) {
+        TableColumn<T, T> c = new TableColumn<>(I18n.get(titleKey));
+        c.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue()));
+        c.setCellFactory(col -> new TableCell<>() {
+            private final Button less = stepButton("−");
+            private final Button more = stepButton("+");
+            private final Label label = new Label();
+            private final HBox box = new HBox(6, less, label, more);
+
+            {
+                box.setAlignment(Pos.CENTER_RIGHT);
+                less.setOnAction(e -> {
+                    T item = getItem();
+                    if (item != null) {
+                        minus.accept(item);
+                    }
+                });
+                more.setOnAction(e -> {
+                    T item = getItem();
+                    if (item != null) {
+                        plus.accept(item);
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    return;
+                }
+                label.setText(text.apply(item));
+                less.setDisable(!canMinus.test(item));
+                setGraphic(box);
+            }
+        });
+        c.setSortable(false);
+        c.getStyleClass().add("money-column");
+        fitBy(c, text, 2 * 28 + 12);
+        return c;
+    }
+
+    private static Button stepButton(String sign) {
+        Button b = new Button(sign);
+        b.getStyleClass().add("step-button");
+        b.setFocusTraversable(false);
+        return b;
+    }
+
+    /**
      * Right-aligned column whose cells each get a style class from their row (e.g. green "পাবো",
      * red "দেবো"); {@code style} may return null for no colour.
      */
@@ -147,10 +202,31 @@ public final class TableHelper {
      * "দেখুন"; {@code tooltipKey} says what it does (shown on hover); {@code colorClass} is one of the
      * icon-button colours in main.css (e.g. "icon-view", "icon-in", "icon-out", "icon-off", "icon-on").
      */
-    public record RowAction<T>(String icon, String labelKey, String tooltipKey, String colorClass, Consumer<T> action) {
+    public record RowAction<T>(String icon, String labelKey, String tooltipKey, String colorClass, Consumer<T> action,
+                               Predicate<T> visibleWhen, Predicate<T> enabledWhen) {
+        public RowAction(String icon, String labelKey, String tooltipKey, String colorClass, Consumer<T> action) {
+            this(icon, labelKey, tooltipKey, colorClass, action, null, null);
+        }
+
         /** Icon only. */
         public RowAction(String icon, String tooltipKey, String colorClass, Consumer<T> action) {
-            this(icon, null, tooltipKey, colorClass, action);
+            this(icon, null, tooltipKey, colorClass, action, null, null);
+        }
+
+        /** Icon only, shown on the rows where {@code visibleWhen} is true. */
+        public RowAction(String icon, String tooltipKey, String colorClass, Consumer<T> action,
+                         Predicate<T> visibleWhen) {
+            this(icon, null, tooltipKey, colorClass, action, visibleWhen, null);
+        }
+
+        /** The same button, shown only on the rows where {@code visible} is true. */
+        public RowAction<T> visibleWhen(Predicate<T> visible) {
+            return new RowAction<>(icon, labelKey, tooltipKey, colorClass, action, visible, enabledWhen);
+        }
+
+        /** The same button, greyed out (disabled) on the rows where {@code enabled} is false. */
+        public RowAction<T> enabledWhen(Predicate<T> enabled) {
+            return new RowAction<>(icon, labelKey, tooltipKey, colorClass, action, visibleWhen, enabled);
         }
     }
 
@@ -170,6 +246,7 @@ public final class TableHelper {
         c.setCellValueFactory(cell -> new SimpleObjectProperty<>(cell.getValue()));
         c.setCellFactory(col -> new TableCell<>() {
             private final HBox box = new HBox(4);
+            private final java.util.List<Button> buttons = new java.util.ArrayList<>();
 
             {
                 // Over the buttons column only each button's own tooltip shows, not the row's full details
@@ -206,12 +283,21 @@ public final class TableHelper {
                         }
                     });
                     box.getChildren().add(b);
+                    buttons.add(b);
                 }
             }
 
             @Override
             protected void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
+                if (!empty && item != null) {
+                    for (int i = 0; i < actions.length; i++) {
+                        boolean show = actions[i].visibleWhen() == null || actions[i].visibleWhen().test(item);
+                        buttons.get(i).setVisible(show);
+                        buttons.get(i).setManaged(show);
+                        buttons.get(i).setDisable(actions[i].enabledWhen() != null && !actions[i].enabledWhen().test(item));
+                    }
+                }
                 setGraphic(empty || item == null ? null : box);
             }
         });

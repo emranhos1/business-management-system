@@ -15,26 +15,26 @@ import java.util.Optional;
 /** Database access for {@code salary_processing} (month sheets) and {@code salary_payments}. */
 public class SalaryRepository {
 
-    public Optional<SalaryProcessing> findSheet(Session session, long employeeId, int year, int month) {
-        return session.createSelectionQuery("from SalaryProcessing s where s.employee.id = :employee"
+    public Optional<SalaryProcessing> findSheet(Session session, long userId, int year, int month) {
+        return session.createSelectionQuery("from SalaryProcessing s where s.user.id = :user"
                         + " and s.year = :year and s.month = :month", SalaryProcessing.class)
-                .setParameter("employee", employeeId)
+                .setParameter("user", userId)
                 .setParameter("year", year)
                 .setParameter("month", month)
                 .uniqueResultOptional();
     }
 
-    /** One employee's sheets, newest month first. */
-    public List<SalaryProcessing> sheetsOf(Session session, long employeeId) {
-        return session.createSelectionQuery("from SalaryProcessing s where s.employee.id = :employee"
+    /** One user's sheets, newest month first. */
+    public List<SalaryProcessing> sheetsOf(Session session, long userId) {
+        return session.createSelectionQuery("from SalaryProcessing s where s.user.id = :user"
                         + " order by s.year desc, s.month desc", SalaryProcessing.class)
-                .setParameter("employee", employeeId)
+                .setParameter("user", userId)
                 .getResultList();
     }
 
-    /** Every employee's sheet of one month, with the employee loaded. */
+    /** Every user's sheet of one month, with the user loaded. */
     public List<SalaryProcessing> sheetsOfMonth(Session session, int year, int month) {
-        return session.createSelectionQuery("from SalaryProcessing s join fetch s.employee"
+        return session.createSelectionQuery("from SalaryProcessing s join fetch s.user"
                         + " where s.year = :year and s.month = :month", SalaryProcessing.class)
                 .setParameter("year", year)
                 .setParameter("month", month)
@@ -53,43 +53,43 @@ public class SalaryRepository {
         return Optional.ofNullable(session.find(SalaryPayment.class, id));
     }
 
-    /** Payments by id with the employee loaded (names the payment in the account ledger). */
+    /** Payments by id with the user loaded (names the payment in the account ledger). */
     public Map<Long, SalaryPayment> findPaymentsByIds(Session session, Collection<Long> ids) {
         Map<Long, SalaryPayment> result = new HashMap<>();
         if (ids.isEmpty()) {
             return result;
         }
-        session.createSelectionQuery("from SalaryPayment p join fetch p.employee where p.id in :ids", SalaryPayment.class)
+        session.createSelectionQuery("from SalaryPayment p join fetch p.user where p.id in :ids", SalaryPayment.class)
                 .setParameter("ids", ids)
                 .getResultList()
                 .forEach(p -> result.put(p.getId(), p));
         return result;
     }
 
-    /** One employee's payments, newest first, with the account loaded. */
-    public List<SalaryPayment> paymentsOf(Session session, long employeeId) {
-        return session.createSelectionQuery("from SalaryPayment p join fetch p.account where p.employee.id = :employee"
+    /** One user's payments, newest first, with the account loaded. */
+    public List<SalaryPayment> paymentsOf(Session session, long userId) {
+        return session.createSelectionQuery("from SalaryPayment p join fetch p.account where p.user.id = :user"
                         + " order by p.date desc, p.id desc", SalaryPayment.class)
-                .setParameter("employee", employeeId)
+                .setParameter("user", userId)
                 .getResultList();
     }
 
-    /** One employee's payments for one month, oldest first, with the account loaded. */
-    public List<SalaryPayment> paymentsOf(Session session, long employeeId, int year, int month) {
-        return session.createSelectionQuery("from SalaryPayment p join fetch p.account where p.employee.id = :employee"
+    /** One user's payments for one month, oldest first, with the account loaded. */
+    public List<SalaryPayment> paymentsOf(Session session, long userId, int year, int month) {
+        return session.createSelectionQuery("from SalaryPayment p join fetch p.account where p.user.id = :user"
                         + " and p.year = :year and p.month = :month order by p.date, p.id", SalaryPayment.class)
-                .setParameter("employee", employeeId)
+                .setParameter("user", userId)
                 .setParameter("year", year)
                 .setParameter("month", month)
                 .getResultList();
     }
 
-    /** One employee's total paid per salary month, leaving out payment {@code excludeId} (may be null). */
-    public Map<YearMonth, BigDecimal> paidByMonth(Session session, long employeeId, Long excludeId) {
+    /** One user's total paid per salary month, leaving out payment {@code excludeId} (may be null). */
+    public Map<YearMonth, BigDecimal> paidByMonth(Session session, long userId, Long excludeId) {
         var query = session.createSelectionQuery("select p.year, p.month, sum(p.amount) from SalaryPayment p"
-                        + " where p.employee.id = :employee" + (excludeId == null ? "" : " and p.id <> :id")
+                        + " where p.user.id = :user" + (excludeId == null ? "" : " and p.id <> :id")
                         + " group by p.year, p.month", Object[].class)
-                .setParameter("employee", employeeId);
+                .setParameter("user", userId);
         if (excludeId != null) {
             query.setParameter("id", excludeId);
         }
@@ -98,9 +98,9 @@ public class SalaryRepository {
         return result;
     }
 
-    /** Every employee's net salary per processed month up to and including {@code year}-{@code month}: employee id, month, net. */
+    /** Every user's net salary per processed month up to and including {@code year}-{@code month}: user id, month, net. */
     public Map<Long, Map<YearMonth, BigDecimal>> netsUpTo(Session session, int year, int month) {
-        return byEmployeeMonth(session.createSelectionQuery("select s.employee.id, s.year, s.month, s.netSalary"
+        return byUserMonth(session.createSelectionQuery("select s.user.id, s.year, s.month, s.netSalary"
                         + " from SalaryProcessing s where s.year < :year or (s.year = :year and s.month <= :month)",
                         Object[].class)
                 .setParameter("year", year)
@@ -108,17 +108,17 @@ public class SalaryRepository {
                 .getResultList());
     }
 
-    /** Every employee's total paid per salary month up to and including {@code year}-{@code month}. */
+    /** Every user's total paid per salary month up to and including {@code year}-{@code month}. */
     public Map<Long, Map<YearMonth, BigDecimal>> paidUpTo(Session session, int year, int month) {
-        return byEmployeeMonth(session.createSelectionQuery("select p.employee.id, p.year, p.month, sum(p.amount)"
+        return byUserMonth(session.createSelectionQuery("select p.user.id, p.year, p.month, sum(p.amount)"
                         + " from SalaryPayment p where p.year < :year or (p.year = :year and p.month <= :month)"
-                        + " group by p.employee.id, p.year, p.month", Object[].class)
+                        + " group by p.user.id, p.year, p.month", Object[].class)
                 .setParameter("year", year)
                 .setParameter("month", month)
                 .getResultList());
     }
 
-    private static Map<Long, Map<YearMonth, BigDecimal>> byEmployeeMonth(List<Object[]> rows) {
+    private static Map<Long, Map<YearMonth, BigDecimal>> byUserMonth(List<Object[]> rows) {
         Map<Long, Map<YearMonth, BigDecimal>> result = new HashMap<>();
         for (Object[] r : rows) {
             result.computeIfAbsent((Long) r[0], k -> new HashMap<>())
@@ -127,11 +127,11 @@ public class SalaryRepository {
         return result;
     }
 
-    /** Total paid per employee id for one month. */
-    public Map<Long, BigDecimal> paidByEmployee(Session session, int year, int month) {
+    /** Total paid per user id for one month. */
+    public Map<Long, BigDecimal> paidByUser(Session session, int year, int month) {
         Map<Long, BigDecimal> result = new HashMap<>();
-        session.createSelectionQuery("select p.employee.id, sum(p.amount) from SalaryPayment p"
-                        + " where p.year = :year and p.month = :month group by p.employee.id", Object[].class)
+        session.createSelectionQuery("select p.user.id, sum(p.amount) from SalaryPayment p"
+                        + " where p.year = :year and p.month = :month group by p.user.id", Object[].class)
                 .setParameter("year", year)
                 .setParameter("month", month)
                 .getResultList()

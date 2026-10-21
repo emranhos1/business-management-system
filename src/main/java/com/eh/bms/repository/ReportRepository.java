@@ -1,5 +1,6 @@
 package com.eh.bms.repository;
 
+import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.PartyLedger;
@@ -33,12 +34,43 @@ public class ReportRepository {
                 .getResultList();
     }
 
+    /**
+     * Confirmed sales dated {@code from}..{@code to}, one row per sale: {@code [date, tax, grand total, returned]}.
+     * The VAT of a return is not stored, so the service shares it by the returned part of the bill.
+     */
+    public List<Object[]> saleVatRows(Session session, LocalDate from, LocalDate to) {
+        return session.createSelectionQuery("select t.date, coalesce(t.taxAmount, 0), t.grandTotal,"
+                        + " coalesce(t.returnedAmount, 0) from BusinessTransaction t"
+                        + " where t.type = :type and t.status = :confirmed and t.date >= :from and t.date <= :to"
+                        + " order by t.date, t.id", Object[].class)
+                .setParameter("type", TransactionType.SALE)
+                .setParameter("confirmed", TransactionStatus.CONFIRMED)
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getResultList();
+    }
+
     /** Expenses dated {@code from}..{@code to}, one row per day: {@code [date, count, total]}. */
     public List<Object[]> expensesByDate(Session session, LocalDate from, LocalDate to) {
         return session.createSelectionQuery("select e.date, count(e), sum(e.amount) from Expense e"
                         + " where e.date >= :from and e.date <= :to group by e.date order by e.date", Object[].class)
                 .setParameter("from", from)
                 .setParameter("to", to)
+                .getResultList();
+    }
+
+    /**
+     * Money into and out of the accounts of the mobile rule (bKash, Nagad, ...) dated {@code from}..{@code to},
+     * transfers left out: {@code [account id, CREDIT or DEBIT, sum]}.
+     */
+    public List<Object[]> mobileMoney(Session session, LocalDate from, LocalDate to) {
+        return session.createSelectionQuery("select t.account.id, t.type, sum(t.amount) from AccountTransaction t"
+                        + " where t.account.type.numberRule = :mobile and t.date >= :from and t.date <= :to"
+                        + " and (t.source is null or t.source <> :transfer) group by t.account.id, t.type", Object[].class)
+                .setParameter("mobile", AccountNumberRule.MOBILE)
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .setParameter("transfer", AccountTransactionSource.TRANSFER)
                 .getResultList();
     }
 
@@ -56,6 +88,16 @@ public class ReportRepository {
                 .getResultList()
                 .forEach(r -> result.put((LocalDate) r[0], (BigDecimal) r[1]));
         return result;
+    }
+
+    /** Balances forgiven dated {@code from}..{@code to}, oldest first, each with its party. */
+    public List<PartyLedger> writeOffs(Session session, LocalDate from, LocalDate to) {
+        return session.createSelectionQuery("from PartyLedger l join fetch l.party where l.type = :type"
+                        + " and l.date >= :from and l.date <= :to order by l.date, l.id", PartyLedger.class)
+                .setParameter("type", com.eh.bms.model.PartyLedgerType.WRITE_OFF)
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getResultList();
     }
 
     /** Every ledger entry of a party in date order (then entry order), so a running balance can be worked out. */

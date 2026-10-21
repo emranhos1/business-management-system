@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Product labels (20.4): kind of code and number of labels on top, the sheet as it prints under them, then Print. -->
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.ProductLabelController"
+      styleClass="dialog-form" spacing="12">
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="%label.kind" styleClass="form-label"/>
+        <ComboBox fx:id="kindBox" prefWidth="180"/>
+        <Label text="%label.copies" styleClass="form-label"/>
+        <TextField fx:id="copiesField" prefWidth="90"/>
+    </HBox>
+    <Label fx:id="errorLabel" styleClass="field-error" wrapText="true"/>
+
+    <ScrollPane fx:id="previewPane" VBox.vgrow="ALWAYS" styleClass="label-desk"/>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" styleClass="dialog-buttons">
+        <Button text="%button.close" styleClass="cancel-button" cancelButton="true" onAction="#onClose"/>
+        <Button text="%memo.print" styleClass="print-button" defaultButton="true" onAction="#onPrint"/>
+    </HBox>
+</VBox>

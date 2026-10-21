@@ -35,7 +35,7 @@ public class ApproveUserFormController {
     @FXML
     private void initialize() {
         // The support login's role is not for the shop to give
-        roleBox.getItems().setAll(UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER);
+        roleBox.getItems().setAll(UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.EMPLOYEE);
         roleBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(UserRole role) {

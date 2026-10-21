@@ -13,9 +13,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Account type the user manages (e.g. Cash, Bank, Mobile banking, bKash).
+ * Account type the user manages (e.g. Cash, Bank, bKash).
  * A user-managed lookup table by the user's decision (exception to "types are enums").
- * Cash, Bank and Mobile banking are seeded on first start.
+ * Cash, Bank, bKash, Nagad and Rocket are seeded on first start.
  */
 @Entity
 @Table(name = "account_types",

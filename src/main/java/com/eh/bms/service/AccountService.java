@@ -2,6 +2,7 @@ package com.eh.bms.service;
 
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountNumberRule;
+import com.eh.bms.model.AccountStatus;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.repository.AccountRepository;
@@ -21,6 +22,10 @@ public class AccountService {
         SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN
     }
 
+    public enum StatusResult {
+        DONE, HAS_BALANCE, NOT_FOUND
+    }
+
     public enum DeleteResult {
         DELETED, IN_USE, NOT_FOUND
     }
@@ -33,6 +38,7 @@ public class AccountService {
     private final AccountRepository repository = new AccountRepository();
     private final AccountTypeRepository typeRepository = new AccountTypeRepository();
     private final AuditService auditService = new AuditService();
+    private final AccountLedgerService ledgerService = new AccountLedgerService();
 
     public PageResult<Account> page(int offset, int limit) {
         return TransactionHelper.inTransaction(session ->
@@ -42,6 +48,25 @@ public class AccountService {
     /** Every account, sorted by name (e.g. for the transfer form). */
     public List<Account> all() {
         return TransactionHelper.inTransaction(repository::all);
+    }
+
+    /** Switches an account off or on. Off only while its balance is exactly 0 (user decision). */
+    public StatusResult setStatus(long id, AccountStatus status) {
+        return TransactionHelper.inTransaction(session -> {
+            Account a = repository.findById(session, id).orElse(null);
+            if (a == null) {
+                return StatusResult.NOT_FOUND;
+            }
+            if (status == AccountStatus.INACTIVE && ledgerService.balance(session, id).signum() != 0) {
+                return StatusResult.HAS_BALANCE;
+            }
+            if (a.getStatus() != status) {
+                String old = describe(a);
+                a.setStatus(status);
+                auditService.updated(session, AppModule.ACCOUNT, id, old, describe(a));
+            }
+            return StatusResult.DONE;
+        });
     }
 
     /** True once the account has ledger entries; the opening balance can no longer change. */
@@ -126,6 +151,7 @@ public class AccountService {
                 .add("nameEn=" + a.getNameEn())
                 .add("type=" + (a.getType() == null ? null : a.getType().getNameEn()))
                 .add("number=" + a.getAccountNumber())
+                .add("status=" + a.getStatus())
                 .add("opening=" + (a.getOpeningBalance() == null ? null : a.getOpeningBalance().toPlainString()))
                 .toString();
     }

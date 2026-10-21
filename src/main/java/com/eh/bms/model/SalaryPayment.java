@@ -19,14 +19,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Money paid to an employee for one salary month (14.4): an advance (paid before the month's salary is worked
+ * Money paid to a user for one salary month (14.4): an advance (paid before the month's salary is worked
  * out) or part of it. Its account ledger entry has source SALARY and points back here. An emergency advance may
  * go above the month's due; the extra counts as paid for the following months.
  */
 @Entity
 @Table(name = "salary_payments",
         indexes = {
-                @Index(name = "idx_salary_payments_employee_month", columnList = "employee_id, year, month"),
+                @Index(name = "idx_salary_payments_user_month", columnList = "user_id, year, month"),
                 @Index(name = "idx_salary_payments_year_month", columnList = "year, month")
         })
 public class SalaryPayment {
@@ -36,9 +36,9 @@ public class SalaryPayment {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "employee_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_salary_payments_employee"))
-    private Employee employee;
+    @JoinColumn(name = "user_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_salary_payments_user"))
+    private User user;
 
     /** Salary year the payment is for. */
     @Column(name = "year", nullable = false)
@@ -81,12 +81,12 @@ public class SalaryPayment {
         return id;
     }
 
-    public Employee getEmployee() {
-        return employee;
+    public User getUser() {
+        return user;
     }
 
-    public void setEmployee(Employee employee) {
-        this.employee = employee;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public Integer getYear() {

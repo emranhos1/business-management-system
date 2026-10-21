@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Settings page, left part under the business card (Stage 20, admin only; the controller hides it for
+     anyone else): backup and restore on this computer. Results show in the top bar. -->
+<VBox fx:id="root" styleClass="form-card" spacing="16"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.eh.bms.controller.LocalBackupController">
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="%backup.local" styleClass="section-title"/>
+    </HBox>
+
+    <FlowPane hgap="12" vgap="12">
+        <Button fx:id="backupButton" text="%backup.local.save" styleClass="save-button" onAction="#onBackup"/>
+        <Button fx:id="restoreButton" text="%backup.local.restore" styleClass="edit-button" onAction="#onRestore"/>
+    </FlowPane>
+</VBox>

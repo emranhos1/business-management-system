@@ -4,11 +4,9 @@ import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
-import com.eh.bms.model.Attendance;
 import com.eh.bms.model.AuditLog;
 import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.BusinessTransaction;
-import com.eh.bms.model.Employee;
 import com.eh.bms.model.Expense;
 import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.Party;
@@ -32,6 +30,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.JdbcSettings;
 import org.hibernate.cfg.SchemaToolingSettings;
 
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -62,8 +61,6 @@ public final class DatabaseConfig {
             AccountTransaction.class,
             ExpenseCategory.class,
             Expense.class,
-            Employee.class,
-            Attendance.class,
             SalaryProcessing.class,
             SalaryPayment.class,
             User.class,
@@ -99,6 +96,8 @@ public final class DatabaseConfig {
 
         HikariDataSource ds = new HikariDataSource(hikari);
         try {
+            // Old tables that hbm2ddl cannot change by itself (it never drops anything)
+            LegacySchema.run(ds);
             StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                     .applySetting(JdbcSettings.DATASOURCE, ds)
                     // Creates missing tables (FK order) and adds missing columns. Never drops anything.
@@ -120,6 +119,14 @@ public final class DatabaseConfig {
             throw new IllegalStateException("DatabaseConfig.init() has not been called");
         }
         return sessionFactory;
+    }
+
+    /** The open pool; used to ask the server where MySQL is installed (backup). */
+    public static synchronized DataSource dataSource() {
+        if (dataSource == null) {
+            throw new IllegalStateException("DatabaseConfig.init() has not been called");
+        }
+        return dataSource;
     }
 
     public static synchronized void shutdown() {
