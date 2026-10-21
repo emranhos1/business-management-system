@@ -10,6 +10,8 @@ import com.eh.bms.util.InputFilters;
 import com.eh.bms.util.WindowManager;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
@@ -21,6 +23,7 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Screen;
@@ -55,8 +58,6 @@ public class LoginController {
     @FXML private Button loginButton;
     @FXML private Label forgotLabel;
     @FXML private Button registerButton;
-    @FXML private Button bnButton;
-    @FXML private Button enButton;
     @FXML private VBox updateBanner;
     @FXML private Label updateLabel;
     @FXML private Button updateButton;
@@ -70,7 +71,6 @@ public class LoginController {
 
     @FXML
     private void initialize() {
-        markLanguage();
         notesButton.textProperty().bind(I18n.bind("update.notes"));
         updateButton.textProperty().bind(I18n.bind("update.button"));
         FormValidator.hideWhenEmpty(updateError);
@@ -94,39 +94,6 @@ public class LoginController {
         InputFilters.maxLength(passwordField, 72);
 
         Platform.runLater(usernameField::requestFocus);
-    }
-
-    @FXML
-    private void onBangla() {
-        switchLanguage("bn");
-    }
-
-    @FXML
-    private void onEnglish() {
-        switchLanguage("en");
-    }
-
-    /** Saves the language like the sidebar switch does; every text here is bound, so the page follows at once. */
-    private void switchLanguage(String code) {
-        if (code.equals(I18n.getLocale().getLanguage())) {
-            return;
-        }
-        try {
-            configService.set(AppConfigService.DEFAULT_LANGUAGE, code);
-        } catch (RuntimeException e) {
-            LOG.log(Level.SEVERE, "Could not save language", e);
-            showError(I18n.get("msg.error"));
-            return;
-        }
-        I18n.setLanguage(code);
-        markLanguage();
-    }
-
-    private void markLanguage() {
-        boolean english = "en".equals(I18n.getLocale().getLanguage());
-        enButton.getStyleClass().remove("active");
-        bnButton.getStyleClass().remove("active");
-        (english ? enButton : bnButton).getStyleClass().add("active");
     }
 
     @FXML
@@ -246,12 +213,52 @@ public class LoginController {
         HBox buttons = new HBox(close);
         buttons.getStyleClass().add("dialog-buttons");
         buttons.setAlignment(Pos.CENTER_RIGHT);
-        VBox root = new VBox(notes, buttons);
-        root.getStyleClass().add("confirm-dialog");
+
+        // BN / EN at the top right, like the sidebar's: the notes are shown again in the chosen language
+        Button bn = languageButton("BN", "bn");
+        Button en = languageButton("EN", "en");
+        HBox languages = new HBox(bn, en);
+        languages.setAlignment(Pos.CENTER_RIGHT);
+
+        // dialog-form: the Close button stays fixed under the scrolling notes (they are taller than a small screen)
+        VBox root = new VBox(10, languages, notes, buttons);
+        root.getStyleClass().add("dialog-form");
 
         Stage stage = WindowManager.dialog(root, I18n.get("update.notes.title", I18n.digits(release.version())));
         close.setOnAction(e -> stage.close());
+        EventHandler<ActionEvent> change = e -> {
+            String code = ((Button) e.getSource()).getUserData().toString();
+            if (!code.equals(I18n.getLocale().getLanguage()) && saveLanguage(code)) {
+                stage.close();
+                Platform.runLater(this::onShowNotes);
+            }
+        };
+        bn.setOnAction(change);
+        en.setOnAction(change);
         stage.showAndWait();
+    }
+
+    private Button languageButton(String text, String code) {
+        Button button = new Button(text);
+        button.getStyleClass().add("lang-button");
+        button.setUserData(code);
+        button.setMinWidth(Region.USE_PREF_SIZE);
+        if (code.equals(I18n.getLocale().getLanguage())) {
+            button.getStyleClass().add("active");
+        }
+        return button;
+    }
+
+    /** Saves the language like the sidebar switch does and applies it; the login page's texts are bound. */
+    private boolean saveLanguage(String code) {
+        try {
+            configService.set(AppConfigService.DEFAULT_LANGUAGE, code);
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not save language", e);
+            return false;
+        }
+        I18n.setLanguage(code);
+        return true;
     }
 
     /**
