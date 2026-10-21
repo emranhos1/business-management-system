@@ -201,11 +201,11 @@ final class SaleMemo {
 
     private static void totals(VBox page, BusinessTransaction sale, MemoPaper paper) {
         sum(page, paper, I18n.get("memo.subtotal"), sale.getSubtotal(), null);
-        if (sale.getDiscount().signum() > 0) {
-            sum(page, paper, I18n.get("memo.bill_discount"), sale.getDiscount(), null);
-        }
         if (sale.getTaxAmount().signum() > 0) {
             sum(page, paper, I18n.get("memo.vat"), sale.getTaxAmount(), null);
+        }
+        if (sale.getDiscount().signum() > 0) {
+            sum(page, paper, I18n.get("memo.bill_discount"), sale.getDiscount(), null);
         }
         sum(page, paper, I18n.get("sale.grand_total"), sale.getGrandTotal(), "memo-grand");
         if (sale.getReturnedAmount().signum() > 0) {

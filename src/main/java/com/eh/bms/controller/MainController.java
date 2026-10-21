@@ -191,6 +191,10 @@ public class MainController {
 
     @FXML
     private void onLogout() {
+        // Only the admin backs up (Stage 20): Backup now / Skip & logout / Cancel
+        if (UserSession.get().getRole() == UserRole.ADMIN && !LogoutBackupDialog.ask()) {
+            return;
+        }
         I18n.localeProperty().removeListener(localeListener);
         clock.stop();
         Notifier.setHost(null);

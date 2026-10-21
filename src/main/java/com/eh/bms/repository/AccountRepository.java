@@ -1,6 +1,7 @@
 package com.eh.bms.repository;
 
 import com.eh.bms.model.Account;
+import com.eh.bms.model.AccountStatus;
 import org.hibernate.Session;
 
 import java.util.List;
@@ -9,17 +10,22 @@ import java.util.Optional;
 /** Database access for {@code accounts}. */
 public class AccountRepository {
 
-    /** One page, sorted by name; the type is loaded too (the table shows it after the session closes). */
+    /** One page, sorted by name (off accounts last); the type is loaded too (the table shows it after the session closes). */
     public List<Account> page(Session session, int offset, int limit) {
-        return session.createSelectionQuery("from Account a left join fetch a.type order by a.name", Account.class)
+        // Off accounts go below the active ones
+        return session.createSelectionQuery("from Account a left join fetch a.type order by"
+                        + " case when a.status = com.eh.bms.model.AccountStatus.INACTIVE then 1 else 0 end, a.name",
+                        Account.class)
                 .setFirstResult(offset)
                 .setMaxResults(limit)
                 .getResultList();
     }
 
-    /** Every account, sorted by name (for pick lists). */
+    /** Every active account, sorted by name (for pick lists); an inactive account is not offered. */
     public List<Account> all(Session session) {
-        return session.createSelectionQuery("from Account a left join fetch a.type order by a.name", Account.class)
+        return session.createSelectionQuery("from Account a left join fetch a.type"
+                        + " where a.status is null or a.status = :active order by a.name", Account.class)
+                .setParameter("active", AccountStatus.ACTIVE)
                 .getResultList();
     }
 

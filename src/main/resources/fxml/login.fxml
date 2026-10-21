@@ -31,6 +31,12 @@
             <Label fx:id="updateError" styleClass="error-label" wrapText="true"/>
         </VBox>
 
+        <!-- Language switch, same as the sidebar's; the whole login page and the release notes follow it -->
+        <HBox alignment="CENTER_RIGHT" minWidth="360" prefWidth="360" maxWidth="360">
+            <Button fx:id="bnButton" text="BN" styleClass="lang-button" minWidth="-Infinity" onAction="#onBangla"/>
+            <Button fx:id="enButton" text="EN" styleClass="lang-button" minWidth="-Infinity" onAction="#onEnglish"/>
+        </HBox>
+
         <!-- The card is as tall as its content (no blank part), centred in the window -->
         <VBox styleClass="login-card" spacing="10" alignment="CENTER_LEFT"
               minWidth="360" prefWidth="360" maxWidth="360"

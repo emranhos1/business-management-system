@@ -23,7 +23,6 @@ public class AppConfigService {
     /** Rows per page of the dashboard tables (small, so the whole dashboard fits on one screen). */
     public static final String DASHBOARD_ROWS = "dashboard_rows";
     public static final int DASHBOARD_ROWS_DEFAULT = 5;
-    public static final String AUTO_BACKUP = "auto_backup";
     /** Folder for files the user adds (logo, images, documents). Missing = {@code AppPaths.dataDir()}. */
     public static final String STORAGE_PATH = "storage_path";
     /** Paper the sale memo is printed on: a {@link MemoPaper} name (N6). */

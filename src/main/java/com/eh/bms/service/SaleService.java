@@ -116,10 +116,10 @@ public class SaleService {
             subtotal = subtotal.add(l.total());
         }
         BigDecimal discount = billDiscount == null ? BigDecimal.ZERO : billDiscount.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
-        BigDecimal taxable = subtotal.subtract(discount).max(BigDecimal.ZERO);
+        // The bill discount comes off the whole bill, VAT included (user decision), so it can be as big as the bill
         BigDecimal vat = vatPercent == null || vatPercent.signum() <= 0 ? BigDecimal.ZERO.setScale(MONEY_SCALE)
-                : taxable.multiply(vatPercent).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
-        return new Totals(subtotal, discount, vat, taxable.add(vat));
+                : subtotal.multiply(vatPercent).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
+        return new Totals(subtotal, discount, vat, subtotal.add(vat).subtract(discount).max(BigDecimal.ZERO));
     }
 
     /** VAT % from the business profile (Settings); 0 when none. */

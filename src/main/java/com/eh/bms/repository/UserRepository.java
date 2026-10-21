@@ -48,9 +48,16 @@ public class UserRepository {
      */
     public List<User> page(Session session, UserStatus status, String search, int offset, int limit) {
         boolean filter = search != null && !search.isBlank();
-        var query = session.createSelectionQuery("from User u" + where(filter) + " order by u.name, u.id", User.class)
-                .setParameter("status", status)
+        // No status = active and inactive users together (not the waiting ones); the inactive ones come last
+        var query = session.createSelectionQuery("from User u" + where(status, filter)
+                        + " order by case when u.status = com.eh.bms.model.UserStatus.INACTIVE then 1 else 0 end,"
+                        + " u.name, u.id", User.class)
                 .setParameter("hidden", UserRole.SUPER_ADMIN);
+        if (status != null) {
+            query.setParameter("status", status);
+        } else {
+            query.setParameter("pending", UserStatus.PENDING);
+        }
         if (filter) {
             query.setParameter("search", like(search));
         }
@@ -59,9 +66,13 @@ public class UserRepository {
 
     public long count(Session session, UserStatus status, String search) {
         boolean filter = search != null && !search.isBlank();
-        var query = session.createSelectionQuery("select count(u) from User u" + where(filter), Long.class)
-                .setParameter("status", status)
+        var query = session.createSelectionQuery("select count(u) from User u" + where(status, filter), Long.class)
                 .setParameter("hidden", UserRole.SUPER_ADMIN);
+        if (status != null) {
+            query.setParameter("status", status);
+        } else {
+            query.setParameter("pending", UserStatus.PENDING);
+        }
         if (filter) {
             query.setParameter("search", like(search));
         }
@@ -141,8 +152,9 @@ public class UserRepository {
         session.remove(user);
     }
 
-    private static String where(boolean search) {
-        return " where u.status = :status and u.role <> :hidden"
+    /** {@code status} null = active and inactive (everyone but the registrations waiting). */
+    private static String where(UserStatus status, boolean search) {
+        return " where " + (status == null ? "u.status <> :pending" : "u.status = :status") + " and u.role <> :hidden"
                 + (search ? " and (u.name like :search or u.username like :search or u.phone like :search"
                 + " or u.nid like :search)" : "");
     }

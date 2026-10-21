@@ -1,6 +1,7 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.User;
+import com.eh.bms.service.AppConfigService;
 import com.eh.bms.service.AuthService;
 import com.eh.bms.updater.UpdateService;
 import com.eh.bms.util.FormValidator;
@@ -54,6 +55,8 @@ public class LoginController {
     @FXML private Button loginButton;
     @FXML private Label forgotLabel;
     @FXML private Button registerButton;
+    @FXML private Button bnButton;
+    @FXML private Button enButton;
     @FXML private VBox updateBanner;
     @FXML private Label updateLabel;
     @FXML private Button updateButton;
@@ -62,10 +65,12 @@ public class LoginController {
     @FXML private Label updateError;
 
     private final UpdateService updateService = new UpdateService();
+    private final AppConfigService configService = new AppConfigService();
     private UpdateService.Release release;
 
     @FXML
     private void initialize() {
+        markLanguage();
         notesButton.textProperty().bind(I18n.bind("update.notes"));
         updateButton.textProperty().bind(I18n.bind("update.button"));
         FormValidator.hideWhenEmpty(updateError);
@@ -89,6 +94,39 @@ public class LoginController {
         InputFilters.maxLength(passwordField, 72);
 
         Platform.runLater(usernameField::requestFocus);
+    }
+
+    @FXML
+    private void onBangla() {
+        switchLanguage("bn");
+    }
+
+    @FXML
+    private void onEnglish() {
+        switchLanguage("en");
+    }
+
+    /** Saves the language like the sidebar switch does; every text here is bound, so the page follows at once. */
+    private void switchLanguage(String code) {
+        if (code.equals(I18n.getLocale().getLanguage())) {
+            return;
+        }
+        try {
+            configService.set(AppConfigService.DEFAULT_LANGUAGE, code);
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not save language", e);
+            showError(I18n.get("msg.error"));
+            return;
+        }
+        I18n.setLanguage(code);
+        markLanguage();
+    }
+
+    private void markLanguage() {
+        boolean english = "en".equals(I18n.getLocale().getLanguage());
+        enButton.getStyleClass().remove("active");
+        bnButton.getStyleClass().remove("active");
+        (english ? enButton : bnButton).getStyleClass().add("active");
     }
 
     @FXML

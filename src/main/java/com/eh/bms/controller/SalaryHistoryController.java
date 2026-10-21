@@ -72,7 +72,7 @@ public class SalaryHistoryController {
     private void initialize() {
         monthsTable = new PaginatedTable<>((offset, limit) -> slice(months, offset, limit));
         TableView<MonthRow> mv = monthsTable.getTableView();
-        mv.getColumns().add(TableHelper.column("salary.month", r -> SalaryController.monthText(r.month())));
+        mv.getColumns().add(TableHelper.column("salary.month", r -> SalaryText.monthText(r.month())));
         mv.getColumns().add(TableHelper.moneyColumn("salary.gross", r -> MoneyUtil.format(r.gross())));
         mv.getColumns().add(TableHelper.moneyColumn("salary.deductions", r -> MoneyUtil.format(r.deductions())));
         mv.getColumns().add(TableHelper.longTextColumn("salary.reason",
@@ -80,24 +80,24 @@ public class SalaryHistoryController {
         mv.getColumns().add(TableHelper.moneyColumn("salary.bonus", r -> MoneyUtil.format(r.bonus())));
         mv.getColumns().add(TableHelper.styledColumn("salary.col.net",
                 r -> r.processed() ? MoneyUtil.format(r.net()) : I18n.get("salary.not_processed"), r -> null));
-        mv.getColumns().add(TableHelper.moneyColumn("salary.col.carry", r -> SalaryController.carryText(r.carryIn())));
+        mv.getColumns().add(TableHelper.moneyColumn("salary.col.carry", r -> SalaryText.carryText(r.carryIn())));
         mv.getColumns().add(TableHelper.moneyColumn("salary.col.paid", r -> MoneyUtil.format(r.paid())));
         mv.getColumns().add(TableHelper.styledColumn("salary.col.due",
-                r -> r.processed() ? SalaryController.dueCell(r.due(), r.advanceLeft()) : "—",
-                r -> SalaryController.dueStyle(r.due())));
+                r -> r.processed() ? SalaryText.dueCell(r.due(), r.advanceLeft()) : "—",
+                r -> SalaryText.dueStyle(r.due())));
         monthsHolder.getChildren().setAll(monthsTable);
 
         paymentsTable = new PaginatedTable<>((offset, limit) -> slice(payments, offset, limit));
         TableView<SalaryPayment> pv = paymentsTable.getTableView();
         pv.getColumns().add(TableHelper.column("label.date", p -> DateUtil.format(p.getDate())));
         pv.getColumns().add(TableHelper.column("salary.month",
-                p -> SalaryController.monthText(YearMonth.of(p.getYear(), p.getMonth()))));
+                p -> SalaryText.monthText(YearMonth.of(p.getYear(), p.getMonth()))));
         pv.getColumns().add(TableHelper.column("salary.pay.account",
                 p -> I18n.pick(p.getAccount().getName(), p.getAccount().getNameEn())));
         pv.getColumns().add(TableHelper.moneyColumn("label.amount", p -> MoneyUtil.format(p.getAmount())));
         pv.getColumns().add(TableHelper.column("salary.pay.emergency",
                 p -> p.isEmergency() ? I18n.get("button.yes") : "—"));
-        if (SalaryController.isAdmin()) {
+        if (SalaryText.isAdmin()) {
             pv.getColumns().add(TableHelper.actionsColumn("label.actions",
                     new RowAction<SalaryPayment>(Icons.REMOVE, "salary.pay.delete_tip", "icon-out", this::delete)));
         }
@@ -118,7 +118,7 @@ public class SalaryHistoryController {
             totalNetLabel.setText(MoneyUtil.format(h.totalNet()));
             totalPaidLabel.setText(MoneyUtil.format(h.totalPaid()));
             totalDueLabel.setText(MoneyUtil.format(h.totalDue()));
-            SalaryController.setStyle(totalDueLabel, SalaryController.dueStyle(h.totalDue()));
+            SalaryText.setStyle(totalDueLabel, SalaryText.dueStyle(h.totalDue()));
             totalAdvanceLabel.setText(MoneyUtil.format(h.totalAdvance()));
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Could not load the salary history", e);

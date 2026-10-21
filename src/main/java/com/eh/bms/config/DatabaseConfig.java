@@ -30,6 +30,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.JdbcSettings;
 import org.hibernate.cfg.SchemaToolingSettings;
 
+import javax.sql.DataSource;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -118,6 +119,14 @@ public final class DatabaseConfig {
             throw new IllegalStateException("DatabaseConfig.init() has not been called");
         }
         return sessionFactory;
+    }
+
+    /** The open pool; used to ask the server where MySQL is installed (backup). */
+    public static synchronized DataSource dataSource() {
+        if (dataSource == null) {
+            throw new IllegalStateException("DatabaseConfig.init() has not been called");
+        }
+        return dataSource;
     }
 
     public static synchronized void shutdown() {

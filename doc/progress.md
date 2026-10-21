@@ -257,23 +257,23 @@ Done the finance-app way (user decision): the installer's own wizard replaces `u
 | 19.4 | Size (Content-Length) and SHA-256 check; a bad file is deleted and an error shows under the banner | Wrong file is rejected | ✅ |
 | 19.5 | Open the installer's wizard and close the app; it replaces the app (data untouched) and can start BMS at the end | Update installs and BMS opens on the new version | ✅ |
 
-## Stage 20 — Phase 2 (Nice to Have)
+## Stage 20 — Phase 2 (Nice to Have) ✅
 Depends on: Phase 1 done
 
 | ID | Task | Test | Status |
 |----|------|------|--------|
-| 20.1 | VAT report (monthly) | Totals match | [ ] |
-| 20.2 | bKash/Nagad/Rocket account types | Types selectable and saved | [ ] |
-| 20.3 | Mobile payment summary report | Totals match | [ ] |
-| 20.4 | Barcode/QR generate and print per product (SKU) | Printed code scans correctly | [ ] |
-| 20.5 | Barcode scanner input on sale screen | Scan adds product row | [ ] |
+| 20.1 | VAT report (monthly) | Totals match | ✅ |
+| 20.2 | bKash/Nagad/Rocket account types | Types selectable and saved | ✅ |
+| 20.3 | Mobile payment summary report | Totals match | ✅ |
+| 20.4 | Barcode/QR generate and print per product (SKU) | Printed code scans correctly | ✅ |
+| 20.5 | Barcode scanner input on sale screen | Scan adds product row | ✅ |
 |  | **Backup (finance-app way)** |  |  |
-| 20.6 | Local backup: `mysqldump` → `backup_data_<yyyyMMdd.HHmm>.sql` in a picked folder; finds `mysqldump`/`mysql` on the PC itself (PATH, registry, XAMPP/WAMP/Laragon folders) | File made; opens as valid SQL | [ ] |
-| 20.7 | Local restore: pick a `.sql`, confirm, `mysql` imports it | Data restored correctly | [ ] |
-| 20.8 | Google Drive connect / disconnect (OAuth2; `credentials.json` next to `BMS.exe`, never in git; token kept so later backups open no browser) | Connect once; next start needs no sign-in | [ ] |
-| 20.9 | Backup to Drive: dump uploaded into a `BMS` folder on Drive (made the first time); last backup time read from Drive | File appears in Drive → BMS; time shows | [ ] |
-| 20.10 | Restore from Drive: the newest backup in the `BMS` folder, confirm first | Data restored correctly | [ ] |
-| 20.11 | Logout asks: Backup now / Skip & logout / Cancel; Cancel stops a running backup or sign-in and stays logged in. The old hidden `auto_backup` setting ("backup on app close") is removed | All three choices behave right; no auto backup option left | [ ] |
+| 20.6 | Local backup: `mysqldump` → `backup_data_<yyyyMMdd.HHmm>.sql` in a picked folder; finds `mysqldump`/`mysql` on the PC itself (PATH, registry, XAMPP/WAMP/Laragon folders) | File made; opens as valid SQL | ✅ |
+| 20.7 | Local restore: pick a `.sql`, confirm, `mysql` imports it | Data restored correctly | ✅ |
+| 20.8 | Google Drive connect / disconnect (OAuth2; `credentials.json` next to `BMS.exe`, never in git; token kept so later backups open no browser) | Connect once; next start needs no sign-in | ✅ |
+| 20.9 | Backup to Drive: dump uploaded into a `BMS` folder on Drive (made the first time); last backup time read from Drive | File appears in Drive → BMS; time shows | ✅ |
+| 20.10 | Restore from Drive: the newest backup in the `BMS` folder, confirm first | Data restored correctly | ✅ |
+| 20.11 | Logout asks: Backup now / Skip & logout / Cancel; Cancel stops a running backup or sign-in and stays logged in. The old hidden `auto_backup` setting ("backup on app close") is removed | All three choices behave right; no auto backup option left | ✅ |
 
 Backup is done exactly the finance-app way (user decision): no backup on app close, only the logout question. Backup and restore buttons are admin only, as in finance-app.
 
@@ -384,3 +384,23 @@ Depends on: Stages 5, 17 (N3 is dropped by user decision; this is its smaller re
 | N10.2 | Support login (`SUPER_ADMIN` role, username `emranhos1`): password only as a BCrypt hash in `SupportAccount.PASSWORD_HASH` (made with `SupportHashTool`), created at startup, hidden from the users list and the audit log's user filter, cannot be edited, switched off or deleted; it can do everything an admin can, so it resets any admin's or user's password from the Users page | Support login works; not in the Users page; sets an admin's new password; that admin must pick their own at the next login | ✅ |
 | N10.3 | Login screen says who to ask when a password is forgotten (no self-service reset) | Hint shows under the login button | ✅ |
 | N10.4 | Dev auto-login (`dev.auto-login`, dev profile only) is kept blank (user decision): dev opens the login screen too; set a username there only to skip it | Dev run shows the login screen and the first-login popup | ✅ |
+
+### N13 — Switch Off an Account With Zero Balance ✅
+A money account that is empty and no longer used should leave the pick lists.
+Depends on: Stage 7
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N13.1 | `accounts.status` (active / inactive); the Accounts list gets a status column and a switch-off / switch-on button on each row; off only while the balance is exactly 0 ("It has a balance. Make it zero first."); an off account is hidden from every account pick list but keeps its ledger; audit row on each change | Account with ৳0: off works and it leaves the pick lists; with a balance: refused; switch on brings it back | ✅ |
+| N13.2 | Parties and users: the separate inactive table is gone; one table each, inactive last with a status column, and only the switch-on button works on an inactive row (same as accounts) | Inactive party or user stays at the bottom of the one table; edit, view, money and double-click are off; switch on brings it back | ✅ |
+| N13.3 | Salary tab removed: the users tab has the month and year pickers, the four totals and the month's net, paid and due columns; the details tooltip also shows the month's figures; clear-filter returns to this month | Month change updates totals and columns; pay from a row updates them; no salary tab | ✅ |
+
+### N14 — Forgive a Party's Balance ✅
+A customer who died or went away, or a supplier who forgave: the rest of the balance must be clearable.
+Depends on: Stage 10
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N14.1 | "মাফ" button on an active party row that has a balance (either way); confirm; one `WRITE_OFF` ledger entry brings the balance to exactly 0; audit row; ledger shows "বাকি মাফ" | Party with ৳0.56 পাবো: forgive makes it 0; ledger shows the entry; a party with no balance has no button | ✅ |
+| N14.2 | Forgiven amounts count as a loss: dashboard profit card line "মাফ করা বাকি", a column in the profit and loss report, both reducing the net profit; a report "মাফ করা বাকির তালিকা" (date, party, which way, amount, total) | Forgive ৳0.56 owed to us: net profit falls by ৳0.56 in both; the list shows it | ✅ |
+| N14.3 | Sale and purchase line entry on one row (product wide, unit, quantity with − / +, price, discount, add) | Fits one row; the product box is the widest | ✅ |

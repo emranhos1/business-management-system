@@ -1067,3 +1067,46 @@
     -fx-min-width: 100;
 }
 
+
+/* ---------------------------------------------------------------- Product labels (20.4) */
+.label-desk { -fx-background: #e5e7eb; -fx-background-color: #e5e7eb; }
+.label-sheet { -fx-background-color: #ffffff; -fx-padding: 24; }
+.label-cell { -fx-background-color: #ffffff; -fx-border-color: #9ca3af; -fx-border-style: dashed; -fx-border-width: 1; -fx-padding: 4; }
+.label-name { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #000000; -fx-text-alignment: center; }
+.label-sku { -fx-font-size: 10px; -fx-text-fill: #000000; }
+.label-price { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #000000; }
+
+/* Small − / + buttons around a quantity in a lines table */
+.step-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #2563eb;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #2563eb;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-min-width: 24;
+    -fx-pref-width: 24;
+    -fx-min-height: 22;
+    -fx-pref-height: 22;
+    -fx-cursor: hand;
+}
+.step-button:hover { -fx-background-color: #2563eb; -fx-text-fill: #ffffff; }
+.step-button:disabled { -fx-border-color: #cbd5e1; -fx-text-fill: #cbd5e1; -fx-background-color: #ffffff; }
+
+/* Number field: the quantity box with its own small ▲ ▼ arrows inside, on the right edge */
+.spin-field { -fx-padding: 4 22 4 8; }
+.spin-arrows { -fx-spacing: 0; -fx-padding: 0 3 0 0; }
+.spin-arrow {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2563eb;
+    -fx-font-size: 8px;
+    -fx-padding: 0;
+    -fx-min-width: 16;
+    -fx-pref-width: 16;
+    -fx-min-height: 12;
+    -fx-pref-height: 12;
+    -fx-max-height: 12;
+    -fx-cursor: hand;
+}
+.spin-arrow:hover { -fx-background-color: #dbeafe; -fx-background-radius: 3; }

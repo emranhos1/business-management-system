@@ -77,6 +77,16 @@ public class DashboardRepository {
         return out.subtract(back);
     }
 
+    /** Balances forgiven dated {@code from}..{@code to}: what we will never get minus what we no longer owe. */
+    public BigDecimal writeOffLoss(Session session, LocalDate from, LocalDate to) {
+        return session.createSelectionQuery("select coalesce(sum(l.credit - l.debit), 0) from PartyLedger l"
+                        + " where l.type = :type and l.date >= :from and l.date <= :to", BigDecimal.class)
+                .setParameter("type", com.eh.bms.model.PartyLedgerType.WRITE_OFF)
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
+    }
+
     /** Net salary of the salary sheets of the months {@code from}..{@code to} (worked out, paid or not). */
     public BigDecimal salaryOfMonths(Session session, YearMonth from, YearMonth to) {
         return session.createSelectionQuery("select coalesce(sum(p.netSalary), 0) from SalaryProcessing p"

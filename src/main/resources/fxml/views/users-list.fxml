@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
@@ -8,33 +9,50 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Users (17.1, 17.2): lists side by side: registrations waiting for approval (N1, only while there are any),
-     active users (60 %) with their row actions, inactive users (40 %). -->
+<!-- Users (17.1, 17.2, N12): registrations waiting for approval (N1, only while there are any) beside one users table
+     (active first, inactive last) with the chosen month's salary; the month's four totals above it. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.UsersListController" spacing="12">
 
-    <!-- One line: title on the left; search, then New user on the right -->
+    <!-- One line: title on the left; the month of the salary columns, search, New user on the right -->
     <HBox styleClass="toolbar" spacing="8" alignment="CENTER_LEFT">
         <Label text="%user.section" styleClass="section-title" minWidth="-Infinity"/>
         <Region HBox.hgrow="ALWAYS" minWidth="8"/>
-        <TextField fx:id="searchField" promptText="%user.search" prefWidth="360" minWidth="160"/>
+        <ComboBox fx:id="monthBox" prefWidth="150"/>
+        <ComboBox fx:id="yearBox" prefWidth="100"/>
+        <TextField fx:id="searchField" promptText="%user.search" prefWidth="300" minWidth="160"/>
         <Button text="%button.clear_filter" styleClass="cancel-button" onAction="#onClearSearch"/>
         <Button fx:id="addButton" text="%user.add" styleClass="add-button" onAction="#onAdd"/>
     </HBox>
 
-    <!-- Widths are set by the controller: active 60 %, inactive 40 % (pending, when shown, takes a third first) -->
+    <!-- The month's four totals share the whole width equally -->
+    <HBox spacing="12">
+        <VBox styleClass="stat-tile, stat-tile-main" HBox.hgrow="ALWAYS" prefWidth="0" maxWidth="Infinity">
+            <Label text="%salary.total_net" styleClass="stat-label"/>
+            <Label fx:id="totalNetLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile" HBox.hgrow="ALWAYS" prefWidth="0" maxWidth="Infinity">
+            <Label text="%salary.total_carry" styleClass="stat-label"/>
+            <Label fx:id="totalCarryLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile" HBox.hgrow="ALWAYS" prefWidth="0" maxWidth="Infinity">
+            <Label text="%salary.total_paid" styleClass="stat-label"/>
+            <Label fx:id="totalPaidLabel" styleClass="stat-value"/>
+        </VBox>
+        <VBox styleClass="stat-tile" HBox.hgrow="ALWAYS" prefWidth="0" maxWidth="Infinity">
+            <Label text="%salary.total_due" styleClass="stat-label"/>
+            <Label fx:id="totalDueLabel" styleClass="stat-value"/>
+        </VBox>
+    </HBox>
+
+    <!-- Widths are set by the controller: waiting registrations take a third while there are any, users the rest -->
     <HBox fx:id="listsRow" spacing="16" VBox.vgrow="ALWAYS" minHeight="320">
         <VBox fx:id="pendingBox" spacing="12" minWidth="0" visible="false" managed="false">
             <Label text="%user.section.pending" styleClass="section-title"/>
             <StackPane fx:id="pendingHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
         <VBox fx:id="activeBox" spacing="12" minWidth="0">
-            <Label text="%user.section.active" styleClass="section-title"/>
             <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS"/>
-        </VBox>
-        <VBox fx:id="inactiveBox" spacing="12" minWidth="0">
-            <Label text="%user.section.inactive" styleClass="section-title"/>
-            <StackPane fx:id="inactiveHolder" VBox.vgrow="ALWAYS"/>
         </VBox>
     </HBox>
 </VBox>

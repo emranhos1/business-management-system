@@ -133,8 +133,8 @@ public class SalaryFormController {
                 setDisable(empty || date.isAfter(LocalDate.now()));
             }
         });
-        SalaryController.monthConverter(monthBox);
-        SalaryController.yearConverter(yearBox);
+        SalaryText.monthConverter(monthBox);
+        SalaryText.yearConverter(yearBox);
         monthBox.getItems().setAll(Month.values());
         monthBox.valueProperty().addListener((obs, old, now) -> {
             if (!setting) {
@@ -177,9 +177,9 @@ public class SalaryFormController {
     private boolean setUp(User user, YearMonth month) {
         this.user = user;
         SalaryType type = user.getSalaryType();
-        userLabel.setText(user.getName() + " (" + SalaryController.roleText(user) + ")");
-        salaryLabel.setText(I18n.get("salary.type_base", SalaryController.typeText(type),
-                SalaryController.baseText(user)));
+        userLabel.setText(user.getName() + " (" + SalaryText.roleText(user) + ")");
+        salaryLabel.setText(I18n.get("salary.type_base", SalaryText.typeText(type),
+                SalaryText.baseText(user)));
         boolean units = type != SalaryType.MONTHLY;
         unitsRow.setVisible(units);
         unitsRow.setManaged(units);
@@ -203,7 +203,7 @@ public class SalaryFormController {
         }
         setting = true;
         try {
-            yearBox.getItems().setAll(SalaryController.years(month));
+            yearBox.getItems().setAll(SalaryText.years(month));
             yearBox.setValue(month.getYear());
             monthBox.setValue(month.getMonth());
         } finally {
@@ -267,7 +267,7 @@ public class SalaryFormController {
             grossHint.setText("");
             netLabel.setText("—");
             dueLabel.setText("");
-            SalaryController.setStyle(netLabel, null);
+            SalaryText.setStyle(netLabel, null);
             WindowManager.fitPopup(netLabel);
             return;
         }
@@ -275,14 +275,14 @@ public class SalaryFormController {
         BigDecimal net = SalaryService.net(gross, deductions, decimal(bonusField));
         grossLabel.setText(MoneyUtil.format(gross));
         grossHint.setText(type == SalaryType.MONTHLY ? I18n.get("salary.gross_hint.MONTHLY")
-                : I18n.get("salary.gross_hint." + type.name(), SalaryController.number(units),
+                : I18n.get("salary.gross_hint." + type.name(), SalaryText.number(units),
                 MoneyUtil.format(user.getBaseSalary())));
         netLabel.setText(MoneyUtil.format(net));
-        SalaryController.setStyle(netLabel, net.signum() < 0 ? PartyText.PAY_STYLE : null);
+        SalaryText.setStyle(netLabel, net.signum() < 0 ? PartyText.PAY_STYLE : null);
         BigDecimal left = net.subtract(paidAndCarry());
-        dueLabel.setText(net.signum() < 0 ? "" : SalaryController.dueText(left.max(BigDecimal.ZERO),
+        dueLabel.setText(net.signum() < 0 ? "" : SalaryText.dueText(left.max(BigDecimal.ZERO),
                 left.negate().max(BigDecimal.ZERO)));
-        SalaryController.setStyle(dueLabel, SalaryController.dueStyle(left));
+        SalaryText.setStyle(dueLabel, SalaryText.dueStyle(left));
         WindowManager.fitPopup(netLabel);
     }
 
@@ -365,9 +365,9 @@ public class SalaryFormController {
         }
         String question = paying
                 ? I18n.get(emergencyBox.isSelected() ? "salary.form.confirm_emergency" : "salary.form.confirm_pay",
-                user.getName(), SalaryController.monthText(month), MoneyUtil.format(net), MoneyUtil.format(amount),
+                user.getName(), SalaryText.monthText(month), MoneyUtil.format(net), MoneyUtil.format(amount),
                 name(account))
-                : I18n.get("salary.form.confirm", user.getName(), SalaryController.monthText(month),
+                : I18n.get("salary.form.confirm", user.getName(), SalaryText.monthText(month),
                 MoneyUtil.format(net));
         if (!Dialogs.confirm(question)) {
             return;

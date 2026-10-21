@@ -19,7 +19,6 @@ import com.eh.bms.util.PermissionUtil;
 import com.eh.bms.util.UnsavedWork;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
@@ -73,6 +72,8 @@ public class SettingsController {
     private static final String LOGO_PREFIX = "logo-";
 
     @FXML private Region root;
+    /** Second row of cards: backup on this computer and on Google Drive (admin only). */
+    @FXML private Region backupRow;
 
     @FXML private TextField nameField;
     @FXML private Label nameError;
@@ -103,7 +104,6 @@ public class SettingsController {
     @FXML private Label dashboardRowsError;
     @FXML private TextField lowStockField;
     @FXML private Label lowStockError;
-    @FXML private CheckBox autoBackupBox;
     @FXML private ComboBox<MemoPaper> memoPaperBox;
     @FXML private TextField storageField;
     @FXML private Label storageError;
@@ -130,6 +130,7 @@ public class SettingsController {
     private void initialize() {
         PermissionUtil.require(saveProfileButton, AppModule.SETTINGS, Action.EDIT);
         PermissionUtil.require(saveAppButton, AppModule.SETTINGS, Action.EDIT);
+        BackupJobs.showOnlyForAdmin(backupRow);
 
         InputFilters.maxLength(nameField, 150);
         InputFilters.maxLength(addressField, 255);
@@ -373,7 +374,6 @@ public class SettingsController {
             itemsPerPageField.setText(String.valueOf(configService.getInt(AppConfigService.ITEMS_PER_PAGE, 20)));
             dashboardRowsField.setText(String.valueOf(configService.dashboardRows()));
             lowStockField.setText(String.valueOf(configService.getInt(AppConfigService.LOW_STOCK_DEFAULT, 10)));
-            autoBackupBox.setSelected(configService.getBoolean(AppConfigService.AUTO_BACKUP, false));
             memoPaperBox.setValue(configService.memoPaper());
             currentStorage = AppPaths.storageDir().toAbsolutePath();
             chosenStorage = currentStorage;
@@ -433,7 +433,6 @@ public class SettingsController {
         values.put(AppConfigService.ITEMS_PER_PAGE, String.valueOf(items));
         values.put(AppConfigService.DASHBOARD_ROWS, String.valueOf(dashboardRows));
         values.put(AppConfigService.LOW_STOCK_DEFAULT, String.valueOf(lowStock));
-        values.put(AppConfigService.AUTO_BACKUP, String.valueOf(autoBackupBox.isSelected()));
         values.put(AppConfigService.MEMO_PAPER,
                 (memoPaperBox.getValue() == null ? MemoPaper.DEFAULT : memoPaperBox.getValue()).name());
         try {
@@ -465,7 +464,7 @@ public class SettingsController {
     private String appState() {
         return String.join("\u0001", String.valueOf(dateFormatBox.getValue()), String.valueOf(timeFormatBox.getValue()),
                 text(itemsPerPageField), text(dashboardRowsField),
-                text(lowStockField), String.valueOf(autoBackupBox.isSelected()), String.valueOf(chosenStorage),
+                text(lowStockField), String.valueOf(chosenStorage),
                 String.valueOf(memoPaperBox.getValue()));
     }
 

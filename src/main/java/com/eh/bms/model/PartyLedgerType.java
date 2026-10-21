@@ -6,5 +6,7 @@ public enum PartyLedgerType {
     PURCHASE,
     PAYMENT,
     RECEIPT,
-    RETURN
+    RETURN,
+    /** The rest of a balance forgiven (a customer who left, a supplier who forgave): brings it to 0. */
+    WRITE_OFF
 }

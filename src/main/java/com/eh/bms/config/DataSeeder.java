@@ -1,6 +1,7 @@
 package com.eh.bms.config;
 
 import com.eh.bms.model.AccountNumberRule;
+import com.eh.bms.model.AccountStatus;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AccountType;
@@ -61,8 +62,7 @@ public final class DataSeeder {
             {"date_format", "dd/MM/yyyy", "Date display format"},
             {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
-            {"dashboard_rows", "5", "Dashboard table rows per page"},
-            {"auto_backup", "false", "Auto backup on app close"}
+            {"dashboard_rows", "5", "Dashboard table rows per page"}
     };
 
     private static final String DEFAULT_BUSINESS_NAME = "আমার ব্যবসা";
@@ -111,7 +111,9 @@ public final class DataSeeder {
     private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
             {"ক্যাশ", "Cash", AccountNumberRule.NONE},
             {"ব্যাংক", "Bank", AccountNumberRule.BANK},
-            {"মোবাইল ব্যাংকিং", "Mobile banking", AccountNumberRule.MOBILE}
+            {"বিকাশ", "bKash", AccountNumberRule.MOBILE},
+            {"নগদ", "Nagad", AccountNumberRule.MOBILE},
+            {"রকেট", "Rocket", AccountNumberRule.MOBILE}
     };
 
     /** Common units: Bangla name, English name. */
@@ -207,6 +209,7 @@ public final class DataSeeder {
             {"parties", "party_type", PartyTradeType.class},
             {"parties", "balance_type", BalanceType.class},
             {"parties", "status", PartyStatus.class},
+            {"accounts", "status", AccountStatus.class},
             {"party_ledger", "type", PartyLedgerType.class},
             {"permissions", "role", UserRole.class},
             {"permissions", "module", AppModule.class},
@@ -353,6 +356,71 @@ public final class DataSeeder {
                 done = 4;
             }
 
+            if (done < 5) {
+                // v5 (20.2): bKash, Nagad and Rocket as account types (mobile rule); one the user already has is kept
+                int added = 0;
+                for (Object[] row : DEFAULT_ACCOUNT_TYPES) {
+                    if (row[2] != AccountNumberRule.MOBILE
+                            || ACCOUNT_TYPE_REPO.existsByNameBn(session, (String) row[0], null)
+                            || ACCOUNT_TYPE_REPO.existsByNameEn(session, (String) row[1], null)) {
+                        continue;
+                    }
+                    AccountType t = new AccountType();
+                    t.setNameBn((String) row[0]);
+                    t.setNameEn((String) row[1]);
+                    t.setNumberRule(AccountNumberRule.MOBILE);
+                    ACCOUNT_TYPE_REPO.save(session, t);
+                    added++;
+                }
+                LOG.info("Data fix v5: " + added + " mobile wallet account type(s) added");
+                done = 5;
+            }
+
+            if (done < 6) {
+                // v6 (20.2): the generic "Mobile banking" type is replaced by bKash / Nagad / Rocket; removed unless
+                // an account still uses it
+                int removed = 0;
+                for (AccountType t : ACCOUNT_TYPE_REPO.findAll(session)) {
+                    if ("Mobile banking".equals(t.getNameEn()) && !ACCOUNT_TYPE_REPO.isUsed(session, t.getId())) {
+                        ACCOUNT_TYPE_REPO.delete(session, t);
+                        removed++;
+                    }
+                }
+                LOG.info("Data fix v6: " + removed + " generic mobile banking type(s) removed");
+                done = 6;
+            }
+
+            if (done < 7) {
+                // v7 (20.4): every product has a code; an old product without one gets "P" and five digits
+                java.util.Set<String> taken = new java.util.HashSet<>(session.createSelectionQuery(
+                        "select p.sku from Product p where p.sku is not null and p.sku <> ''", String.class).getResultList());
+                int filled = 0;
+                for (com.eh.bms.model.Product p : session.createSelectionQuery(
+                        "from Product p where p.sku is null or p.sku = '' order by p.id", com.eh.bms.model.Product.class)
+                        .getResultList()) {
+                    long n = p.getId();
+                    String sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+                    while (taken.contains(sku)) {
+                        n++;
+                        sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+                    }
+                    p.setSku(sku);
+                    taken.add(sku);
+                    filled++;
+                }
+                LOG.info("Data fix v7: " + filled + " product(s) given a code");
+                done = 7;
+            }
+
+            if (done < 8) {
+                // v8 (20.11): there is no "backup on app close" any more (the logout question replaced it)
+                int removed = session.createMutationQuery("delete from AppConfigEntry e where e.configKey = :key")
+                        .setParameter("key", "auto_backup")
+                        .executeUpdate();
+                LOG.info("Data fix v8: " + removed + " auto_backup setting removed");
+                done = 8;
+            }
+
             if (version == null) {
                 version = new AppConfigEntry();
                 version.setConfigKey(DATA_VERSION);
@@ -365,7 +433,7 @@ public final class DataSeeder {
         });
     }
 
-    /** Cash, Bank and Mobile banking, only when the table is empty (the user may delete or rename them later). */
+    /** Cash, Bank, bKash, Nagad and Rocket, only when the table is empty (the user may delete or rename them later). */
     static void seedAccountTypes() {
         TransactionHelper.runInTransaction(session -> {
             if (ACCOUNT_TYPE_REPO.count(session) == 0) {

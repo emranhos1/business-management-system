@@ -17,7 +17,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <!-- New purchase (12.1-12.2): supplier, item lines on the left; totals and money paid on the right. -->
-<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<TwoColumnLayout xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" mainPercent="70"
                  fx:controller="com.eh.bms.controller.PurchaseEntryController">
 
     <VBox spacing="12">
@@ -49,34 +49,45 @@
 
         <!-- One item line: picked product, unit, quantity, cost, discount -->
         <VBox styleClass="sale-card" spacing="6">
+            <!-- The whole line on one row: the product takes the free width, the rest are small -->
             <GridPane hgap="8" vgap="4">
                 <columnConstraints>
-                    <ColumnConstraints hgrow="ALWAYS" minWidth="90"/>
-                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
-                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
-                    <ColumnConstraints hgrow="ALWAYS" minWidth="80"/>
+                    <ColumnConstraints hgrow="ALWAYS" minWidth="140"/>
+                    <ColumnConstraints minWidth="70" prefWidth="78" maxWidth="78"/>
+                    <ColumnConstraints minWidth="84" prefWidth="96" maxWidth="96"/>
+                    <ColumnConstraints minWidth="64" prefWidth="80" maxWidth="80"/>
+                    <ColumnConstraints minWidth="80" prefWidth="112" maxWidth="112"/>
                     <ColumnConstraints minWidth="-Infinity"/>
                 </columnConstraints>
-                <Label text="%sale.product" styleClass="form-label, required" GridPane.columnSpan="5"/>
-                <StackPane styleClass="picker-box" GridPane.rowIndex="1" GridPane.columnSpan="5">
+                <Label text="%sale.product" styleClass="form-label, required" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <Label text="%sale.unit" styleClass="form-label, required" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                <Label text="%sale.quantity" styleClass="form-label, required" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                <Label text="%purchase.price" styleClass="form-label, required" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+                <Label text="%sale.discount_unit" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="4"/>
+
+                <StackPane styleClass="picker-box" GridPane.rowIndex="1" GridPane.columnIndex="0">
                     <TextField fx:id="productField" promptText="%sale.product.prompt"/>
                     <Region styleClass="picker-arrow" StackPane.alignment="CENTER_RIGHT" mouseTransparent="true"/>
                 </StackPane>
-
-                <Label text="%sale.unit" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                <Label text="%sale.quantity" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-                <Label text="%purchase.price" styleClass="form-label, required" GridPane.rowIndex="2" GridPane.columnIndex="2"/>
-                <Label text="%sale.discount_unit" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="3"/>
-
-                <ComboBox fx:id="unitBox" maxWidth="Infinity" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                <TextField fx:id="qtyField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-                <TextField fx:id="priceField" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
-                <TextField fx:id="discountField" promptText="0" GridPane.rowIndex="3" GridPane.columnIndex="3"/>
+                <ComboBox fx:id="unitBox" maxWidth="Infinity" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                <!-- A number field: its ▲ ▼ arrows (inside the box) change the quantity by one -->
+                <StackPane GridPane.rowIndex="1" GridPane.columnIndex="2">
+                    <TextField fx:id="qtyField" styleClass="spin-field"/>
+                    <VBox styleClass="spin-arrows" StackPane.alignment="CENTER_RIGHT" maxWidth="-Infinity" maxHeight="-Infinity">
+                        <Button text="▲" styleClass="spin-arrow" focusTraversable="false" onAction="#onQtyPlus"/>
+                        <Button text="▼" styleClass="spin-arrow" focusTraversable="false" onAction="#onQtyMinus"/>
+                    </VBox>
+                </StackPane>
+                <TextField fx:id="priceField" GridPane.rowIndex="1" GridPane.columnIndex="3"/>
+                <TextField fx:id="discountField" promptText="0" GridPane.rowIndex="1" GridPane.columnIndex="4"/>
                 <Button text="%sale.add_line" styleClass="add-button" onAction="#onAddLine"
-                        GridPane.rowIndex="3" GridPane.columnIndex="4"/>
+                        GridPane.rowIndex="1" GridPane.columnIndex="5"/>
             </GridPane>
-            <Label fx:id="stockHint" styleClass="field-hint" wrapText="true"/>
-            <Label fx:id="linePreview" styleClass="field-hint" wrapText="true"/>
+            <!-- Stock and this line's total on one line -->
+            <HBox spacing="16" alignment="CENTER_LEFT">
+                <Label fx:id="stockHint" styleClass="field-hint" wrapText="true"/>
+                <Label fx:id="linePreview" styleClass="field-hint" wrapText="true"/>
+            </HBox>
             <Label fx:id="lineError" styleClass="field-error" wrapText="true"/>
         </VBox>
 

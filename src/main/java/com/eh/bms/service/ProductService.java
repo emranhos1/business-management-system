@@ -19,7 +19,7 @@ import java.util.StringJoiner;
 public class ProductService {
 
     public enum SaveResult {
-        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU,
+        SAVED, DUPLICATE_NAME_BN, DUPLICATE_NAME_EN, DUPLICATE_SKU, SKU_REQUIRED,
         /** Unit, secondary unit or conversion changed on a product that has stock or history. */
         PACK_LOCKED
     }
@@ -29,7 +29,7 @@ public class ProductService {
     }
 
     /**
-     * Values from the form. {@code id} is null for a new product. Blank SKU is saved as null; null
+     * Values from the form. {@code id} is null for a new product. A blank SKU is refused (SKU_REQUIRED: every product has a code); null
      * {@code secondaryUnitId} = no secondary unit, and then the conversion factor is dropped.
      * Min stock 0 = no low-stock alert for the product. Prices may be null (not set); the secondary-unit
      * prices are dropped when there is no secondary unit.
@@ -44,6 +44,27 @@ public class ProductService {
     private final ProductCategoryRepository categoryRepository = new ProductCategoryRepository();
     private final UnitRepository unitRepository = new UnitRepository();
     private final AuditService auditService = new AuditService();
+
+    /**
+     * The next automatic product code, "P" and five digits (P00001 ...): counted from the biggest product id and
+     * moved on past any code already taken. It is only offered in the new-product form; the user may change it.
+     */
+    public String nextSku() {
+        return TransactionHelper.inTransaction(session -> {
+            long n = repository.maxId(session) + 1;
+            String sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+            while (repository.existsBySku(session, sku, null)) {
+                n++;
+                sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+            }
+            return sku;
+        });
+    }
+
+    /** The product with exactly this code, e.g. one read by a barcode scanner (20.5). */
+    public java.util.Optional<Product> findBySku(String sku) {
+        return TransactionHelper.inTransaction(session -> repository.findBySku(session, sku.trim()));
+    }
 
     public PageResult<Product> page(int offset, int limit) {
         return TransactionHelper.inTransaction(session ->
@@ -61,6 +82,9 @@ public class ProductService {
             String nameBn = data.nameBn().trim();
             String nameEn = data.nameEn().trim();
             String sku = blankToNull(data.sku());
+            if (sku == null) {
+                return SaveResult.SKU_REQUIRED;
+            }
             // The same name is fine with another pack size; only the same name + same pack is a duplicate
             BigDecimal factor = data.secondaryUnitId() == null ? null : data.conversionFactor();
             if (repository.existsSamePack(session, nameBn, data.unitId(), data.secondaryUnitId(), factor, data.id())) {
@@ -69,7 +93,7 @@ public class ProductService {
             if (repository.existsSamePackEn(session, nameEn, data.unitId(), data.secondaryUnitId(), factor, data.id())) {
                 return SaveResult.DUPLICATE_NAME_EN;
             }
-            if (sku != null && repository.existsBySku(session, sku, data.id())) {
+            if (repository.existsBySku(session, sku, data.id())) {
                 return SaveResult.DUPLICATE_SKU;
             }
             ProductCategory category = categoryRepository.findById(session, data.categoryId())

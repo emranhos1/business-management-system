@@ -83,7 +83,10 @@ public class ReportsController {
         PAYABLE("report.payable"),
         SALARY("report.salary", Filter.MONTH),
         STOCK_VALUATION("report.stock_valuation", Filter.CATEGORY),
-        PROFIT_LOSS("report.profit_loss", Filter.PERIOD, Filter.RANGE);
+        PROFIT_LOSS("report.profit_loss", Filter.PERIOD, Filter.RANGE),
+        VAT("report.vat", Filter.MONTH),
+        MOBILE_PAYMENTS("report.mobile_payments", Filter.RANGE),
+        WRITE_OFFS("report.writeoffs", Filter.RANGE);
 
         private final String titleKey;
         private final Set<Filter> filters;
@@ -295,6 +298,10 @@ public class ReportsController {
                     : service.salary(YearMonth.of(yearBox.getValue(), monthBox.getValue()));
             case STOCK_VALUATION -> service.stockValuation(categoryId);
             case PROFIT_LOSS -> service.profitLoss(periodBox.getValue(), from, to);
+            case MOBILE_PAYMENTS -> service.mobilePayments(from, to);
+            case WRITE_OFFS -> service.writeOffs(from, to);
+            case VAT -> monthBox.getValue() == null || yearBox.getValue() == null ? null
+                    : service.vat(YearMonth.of(yearBox.getValue(), monthBox.getValue()));
         };
     }
 

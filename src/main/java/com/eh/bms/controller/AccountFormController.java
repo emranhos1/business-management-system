@@ -137,6 +137,16 @@ public class AccountFormController {
         return I18n.pick(type.getNameBn(), type.getNameEn());
     }
 
+    /** Account name with its type in brackets, e.g. "01670932273 (বিকাশ)"; the type is left out when it is the name. */
+    public static String nameWithType(Account a) {
+        String name = I18n.pick(a.getName(), a.getNameEn());
+        if (a.getType() == null) {
+            return name;
+        }
+        String type = typeText(a.getType());
+        return type.equalsIgnoreCase(name) ? name : name + " (" + type + ")";
+    }
+
     /** Shows the number row only when the type needs a number, with that type's digit limit. */
     private void applyRule(AccountNumberRule rule) {
         boolean show = rule != AccountNumberRule.NONE;

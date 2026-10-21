@@ -154,7 +154,9 @@ public class SearchPicker<T> {
         }
         for (T t : shown) {
             Label label = new Label(listText.apply(t));
-            label.setPrefWidth(Math.max(200, field.getWidth() - 24));
+            // At least as wide as the field, wider when the text needs it, so nothing is cut with "…"
+            label.setMinWidth(Math.max(200, field.getWidth() - 24));
+            label.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
             CustomMenuItem item = new CustomMenuItem(label, true);
             item.setOnAction(e -> pick(t));
             menu.getItems().add(item);

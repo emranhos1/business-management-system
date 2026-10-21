@@ -1,11 +1,13 @@
 package com.eh.bms.controller;
 
 import com.eh.bms.model.Account;
+import com.eh.bms.model.AccountStatus;
 import com.eh.bms.model.AppModule;
 import com.eh.bms.service.AccountLedgerService;
 import com.eh.bms.service.AccountService;
 import com.eh.bms.service.UserSession;
 import com.eh.bms.service.UserSession.Action;
+import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.Icons;
 import com.eh.bms.util.MoneyUtil;
@@ -72,16 +74,29 @@ public class AccountsController {
                 a -> a.getAccountNumber() == null ? "—" : a.getAccountNumber()));
         view.getColumns().add(TableHelper.moneyColumn("accounts.col.balance",
                 a -> MoneyUtil.format(balances.get(a.getId()))));
+        view.getColumns().add(TableHelper.column("label.status",
+                a -> I18n.get("label.status." + a.getStatus().name())));
 
         boolean canEdit = UserSession.isLoggedIn() && UserSession.get().can(AppModule.ACCOUNT, Action.EDIT);
         // Row buttons: edit (delete is inside the edit form), view ledger
         List<RowAction<Account>> actions = new ArrayList<>();
         if (canEdit) {
-            actions.add(new RowAction<>(Icons.EDIT, "button.edit", "accounts.form.edit_title", "icon-edit", this::openForm));
+            actions.add(new RowAction<Account>(Icons.EDIT, "button.edit", "accounts.form.edit_title", "icon-edit", this::openForm).enabledWhen(AccountsController::isActive));
         }
-        actions.add(new RowAction<>(Icons.LEDGER, "button.view", "accounts.ledger", "icon-view", this::openLedger));
+        actions.add(new RowAction<Account>(Icons.LEDGER, "button.view", "accounts.ledger", "icon-view", this::openLedger).enabledWhen(AccountsController::isActive));
+        if (canEdit) {
+            // Off only while the balance is 0 (the service checks); an off account can be switched on again
+            actions.add(new RowAction<>(Icons.DEACTIVATE, "accounts.deactivate", "icon-off", this::deactivate,
+                    a -> a.getStatus() == AccountStatus.ACTIVE));
+            actions.add(new RowAction<>(Icons.ACTIVATE, "accounts.activate", "icon-on", this::activate,
+                    a -> a.getStatus() == AccountStatus.INACTIVE));
+        }
         view.getColumns().add(actionsColumn(actions));
-        TableHelper.onDoubleClick(view, true, this::openLedger);
+        TableHelper.onDoubleClick(view, true, a -> {
+            if (isActive(a)) {
+                openLedger(a);
+            }
+        });
 
         tableHolder.getChildren().setAll(table);
         table.reload();
@@ -99,6 +114,37 @@ public class AccountsController {
             LOG.log(Level.SEVERE, "Could not load accounts", e);
             Notifier.error(I18n.get("msg.error"));
             return PageResult.empty();
+        }
+    }
+
+    /** An off account keeps only its switch-on button; everything else on its row is greyed out. */
+    private static boolean isActive(Account a) {
+        return a.getStatus() == AccountStatus.ACTIVE;
+    }
+
+    private void deactivate(Account account) {
+        if (Dialogs.confirm(I18n.get("accounts.confirm_deactivate", I18n.pick(account.getName(), account.getNameEn())))) {
+            changeStatus(account, AccountStatus.INACTIVE, "accounts.deactivated");
+        }
+    }
+
+    private void activate(Account account) {
+        if (Dialogs.confirm(I18n.get("accounts.confirm_activate", I18n.pick(account.getName(), account.getNameEn())))) {
+            changeStatus(account, AccountStatus.ACTIVE, "accounts.activated");
+        }
+    }
+
+    private void changeStatus(Account account, AccountStatus status, String doneKey) {
+        try {
+            switch (service.setStatus(account.getId(), status)) {
+                case DONE -> Notifier.success(I18n.get(doneKey));
+                case HAS_BALANCE -> Notifier.error(I18n.get("accounts.error.has_balance"));
+                case NOT_FOUND -> Notifier.error(I18n.get("msg.error"));
+            }
+            table.refresh();
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not change account status", e);
+            Notifier.error(I18n.get("msg.error"));
         }
     }
 

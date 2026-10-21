@@ -100,9 +100,9 @@ public class UserFormController {
         roleBox.setValue(UserRole.EMPLOYEE);
 
         salaryTypeBox.getItems().setAll(SalaryType.values());
-        salaryTypeBox.setConverter(converter(SalaryController::typeText));
+        salaryTypeBox.setConverter(converter(SalaryText::typeText));
         salaryTypeBox.valueProperty().addListener((obs, old, type) ->
-                baseSalaryLabel.setText(I18n.get(SalaryController.baseSalaryKey(type))));
+                baseSalaryLabel.setText(I18n.get(SalaryText.baseSalaryKey(type))));
         salaryTypeBox.setValue(SalaryType.MONTHLY);
 
         form = new FormValidator()

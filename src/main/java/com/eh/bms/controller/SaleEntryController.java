@@ -99,6 +99,7 @@ public class SaleEntryController {
     private final class PaymentRow {
         final ComboBox<Account> account = new ComboBox<>();
         final TextField amount = new TextField();
+        final Button remove = new Button();
         final HBox node;
 
         PaymentRow(Account selected) {
@@ -106,7 +107,7 @@ public class SaleEntryController {
             account.setConverter(new StringConverter<>() {
                 @Override
                 public String toString(Account a) {
-                    return a == null ? "" : I18n.pick(a.getName(), a.getNameEn());
+                    return a == null ? "" : AccountFormController.nameWithType(a);
                 }
 
                 @Override
@@ -126,8 +127,13 @@ public class SaleEntryController {
             // On a narrow window the account list gets narrower; the amount and the remove button keep their size
             amount.setMinWidth(Region.USE_PREF_SIZE);
             account.setMinWidth(80);
-            amount.textProperty().addListener((obs, old, now) -> recalc());
-            Button remove = new Button();
+            amount.textProperty().addListener((obs, old, now) -> {
+                if (!filling) {
+                    fullMode = false; // typed by hand: it stays as typed
+                }
+                recalc();
+            });
+
             remove.setGraphic(Icons.of(Icons.REMOVE));
             remove.getStyleClass().addAll("icon-button", "icon-out");
             remove.setTooltip(new javafx.scene.control.Tooltip(I18n.get("sale.remove_payment")));
@@ -168,6 +174,10 @@ public class SaleEntryController {
     @FXML private Label subtotalLabel;
     @FXML private TextField billDiscountField;
     @FXML private CheckBox vatCheck;
+    /** True after "Full amount" until an amount is typed by hand: the first row then follows the bill. */
+    private boolean fullMode;
+    /** True while the page itself sets an amount (so it does not count as typed). */
+    private boolean filling;
     @FXML private Label vatLabel;
     @FXML private Label grandLabel;
     @FXML private Label billDiscountError;
@@ -261,6 +271,12 @@ public class SaleEntryController {
                         UnitUtil.quantityText(listStocks.getOrDefault(p.getId(), BigDecimal.ZERO)
                                 .subtract(inList(p, null)), p)));
         productPicker.valueProperty().addListener((obs, old, product) -> onProductPicked(product));
+        // A barcode scanner types the code and Enter (20.5)
+        productField.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER && onScan()) {
+                e.consume();
+            }
+        });
         unitBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(Unit u) {
@@ -280,8 +296,10 @@ public class SaleEntryController {
         TableHelper.setUp(itemsTable);
         itemsTable.setItems(lines);
         itemsTable.getColumns().add(TableHelper.column("sale.product", l -> UnitUtil.productName(l.product())));
-        itemsTable.getColumns().add(TableHelper.moneyColumn("sale.quantity",
-                l -> UnitUtil.number(l.quantity()) + " " + UnitUtil.name(l.unit())));
+        // − / + around the quantity: one more or one less without opening the line
+        itemsTable.getColumns().add(TableHelper.stepperColumn("sale.quantity",
+                l -> UnitUtil.number(l.quantity()) + " " + UnitUtil.name(l.unit()), l -> stepLine(l, BigDecimal.ONE.negate()),
+                l -> stepLine(l, BigDecimal.ONE), l -> l.quantity().compareTo(BigDecimal.ONE) > 0));
         itemsTable.getColumns().add(TableHelper.moneyColumn("sale.price", l -> MoneyUtil.format(l.price())));
         itemsTable.getColumns().add(TableHelper.moneyColumn("sale.discount_unit",
                 l -> l.discount().signum() == 0 ? "—" : MoneyUtil.format(l.discount())));
@@ -291,14 +309,14 @@ public class SaleEntryController {
                 new RowAction<>(Icons.REMOVE, "sale.remove_line", "icon-out", this::removeLine)));
         lines.addListener((javafx.collections.ListChangeListener<Line>) c -> {
             TableHelper.fitColumns(itemsTable);
-            recalc();
+            followBill();
         });
         TableHelper.fitColumns(itemsTable);
         // Before the language switches (the page reloads): offer to finish this sale first
         UnsavedWork.register(itemsTable, this::hasUnsavedSale, this::confirmSale);
 
-        billDiscountField.textProperty().addListener((obs, old, now) -> recalc());
-        vatCheck.selectedProperty().addListener((obs, old, now) -> recalc());
+        billDiscountField.textProperty().addListener((obs, old, now) -> followBill());
+        vatCheck.selectedProperty().addListener((obs, old, now) -> followBill());
 
         try {
             accounts = accountService.all();
@@ -495,9 +513,105 @@ public class SaleEntryController {
             return;
         }
         boolean auto = filledPrice != null && price.compareTo(filledPrice) == 0;
-        lines.add(new Line(product, unit, qty, price, disc, auto));
+        // The same product in the same unit at the same price and discount is one line: the quantity is added
+        Line same = lines.stream()
+                .filter(l -> l.product().getId().equals(product.getId()) && l.unit().getId().equals(unit.getId())
+                        && l.price().compareTo(price) == 0 && l.discount().compareTo(disc) == 0)
+                .findFirst().orElse(null);
+        if (same == null) {
+            lines.add(new Line(product, unit, qty, price, disc, auto));
+        } else {
+            lines.set(lines.indexOf(same),
+                    new Line(product, unit, same.quantity().add(qty), price, disc, same.autoPrice() && auto));
+        }
         clearEntry();
         productField.requestFocus();
+    }
+
+    // ---------------------------------------------------------------- barcode scanner (20.5)
+
+    /**
+     * A scanner types the product's code and presses Enter in the product field. A code that is exactly a product's
+     * SKU adds that product at once: 1 in its main unit at the price of the chosen type; scanning it again adds one
+     * more to the same line. Returns true when the Enter was a scan (anything else is an ordinary search).
+     */
+    private boolean onScan() {
+        String code = InputFilters.toAsciiDigits(productField.getText() == null ? "" : productField.getText()).trim();
+        if (code.isEmpty()) {
+            return false;
+        }
+        Product product;
+        try {
+            product = productService.findBySku(code).orElse(null);
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not look up the scanned code", e);
+            return false;
+        }
+        if (product == null) {
+            return false;
+        }
+        lineError.setText("");
+        Unit unit = product.getUnit();
+        BigDecimal price = PriceUtil.price(product, wholesale(), false);
+        if (unit == null || price == null) {
+            // No price set: pick the product the usual way, the price is typed
+            productPicker.setValue(product);
+            return true;
+        }
+        Line same = lines.stream()
+                .filter(l -> l.product().getId().equals(product.getId()) && l.unit().getId().equals(unit.getId())
+                        && l.autoPrice() && l.discount().signum() == 0)
+                .findFirst().orElse(null);
+        BigDecimal qty = same == null ? BigDecimal.ONE : same.quantity().add(BigDecimal.ONE);
+        try {
+            BigDecimal left = stockService.currentStock(product.getId()).subtract(inList(product, same));
+            if (SaleService.toMain(product, unit, qty).compareTo(left) > 0) {
+                lineError.setText(I18n.get("sale.error.stock", UnitUtil.quantityText(left.max(BigDecimal.ZERO), product)));
+                clearEntry();
+                productField.requestFocus();
+                return true;
+            }
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Could not read stock", e);
+            Notifier.error(I18n.get("msg.error"));
+            return true;
+        }
+        Line line = new Line(product, unit, qty, price, BigDecimal.ZERO, true);
+        if (same == null) {
+            lines.add(line);
+        } else {
+            lines.set(lines.indexOf(same), line);
+        }
+        clearEntry();
+        productField.requestFocus();
+        return true;
+    }
+
+    /** The − / + button of a line: its quantity changes by {@code step}; one more must still be in stock. */
+    private void stepLine(Line line, BigDecimal step) {
+        lineError.setText("");
+        BigDecimal qty = line.quantity().add(step);
+        if (qty.signum() <= 0) {
+            return;
+        }
+        if (step.signum() > 0) {
+            try {
+                BigDecimal left = stockService.currentStock(line.product().getId()).subtract(inList(line.product(), line));
+                if (SaleService.toMain(line.product(), line.unit(), qty).compareTo(left) > 0) {
+                    lineError.setText(I18n.get("sale.error.stock",
+                            UnitUtil.quantityText(left.max(BigDecimal.ZERO), line.product())));
+                    return;
+                }
+            } catch (RuntimeException e) {
+                LOG.log(Level.SEVERE, "Could not read stock", e);
+                Notifier.error(I18n.get("msg.error"));
+                return;
+            }
+        }
+        int i = lines.indexOf(line);
+        if (i >= 0) {
+            lines.set(i, new Line(line.product(), line.unit(), qty, line.price(), line.discount(), line.autoPrice()));
+        }
     }
 
     /** Puts the line back into the entry fields to change it. */
@@ -573,6 +687,11 @@ public class SaleEntryController {
 
     private void updateAddPaymentButton() {
         addPaymentButton.setDisable(payments.size() >= accounts.size());
+        // At least one account always stays: the only row has no remove button
+        for (PaymentRow r : payments) {
+            r.remove.setVisible(payments.size() > 1);
+            r.remove.setManaged(payments.size() > 1);
+        }
     }
 
     /** Puts what is still due into the first row (e.g. the whole bill in cash). */
@@ -581,6 +700,12 @@ public class SaleEntryController {
         if (payments.isEmpty()) {
             addPaymentRow(defaultAccount());
         }
+        fillFull();
+        fullMode = true;
+    }
+
+    /** First row = the bill minus the other rows. */
+    private void fillFull() {
         Totals t = totals();
         BigDecimal others = BigDecimal.ZERO;
         for (int i = 1; i < payments.size(); i++) {
@@ -588,7 +713,20 @@ public class SaleEntryController {
             others = others.add(v == null ? BigDecimal.ZERO : v);
         }
         BigDecimal rest = t.grandTotal().subtract(others).max(BigDecimal.ZERO);
-        payments.get(0).amount.setText(rest.stripTrailingZeros().toPlainString());
+        filling = true;
+        try {
+            payments.get(0).amount.setText(rest.stripTrailingZeros().toPlainString());
+        } finally {
+            filling = false;
+        }
+    }
+
+    /** The bill changed (VAT, discount, items): an amount filled by "Full amount" follows it. */
+    private void followBill() {
+        if (fullMode && !payments.isEmpty()) {
+            fillFull();
+        }
+        recalc();
     }
 
     private Totals totals() {
@@ -637,7 +775,7 @@ public class SaleEntryController {
         lineDiscountLabel.setVisible(hasLineDiscount);
         lineDiscountLabel.setManaged(hasLineDiscount);
         BigDecimal discount = amountOf(billDiscountField);
-        billDiscountError.setText(discount != null && discount.compareTo(t.subtotal()) > 0
+        billDiscountError.setText(discount != null && discount.compareTo(t.subtotal().add(t.vat())) > 0
                 ? I18n.get("sale.error.bill_discount") : "");
     }
 
@@ -832,6 +970,7 @@ public class SaleEntryController {
 
     /** Empty screen for the next sale (date and VAT setting kept). */
     private void reset() {
+        fullMode = false;
         lines.clear();
         clearEntry();
         walkInCheck.setSelected(false);
@@ -864,6 +1003,22 @@ public class SaleEntryController {
         return parsed;
     }
 
+
+    /** The "−" next to the quantity: one less, never to 0 or below. */
+    @FXML
+    private void onQtyMinus() {
+        BigDecimal qty = amountOf(qtyField);
+        if (qty != null && qty.subtract(BigDecimal.ONE).signum() > 0) {
+            qtyField.setText(qty.subtract(BigDecimal.ONE).stripTrailingZeros().toPlainString());
+        }
+    }
+
+    /** The "+" next to the quantity: one more (an empty field becomes 1). */
+    @FXML
+    private void onQtyPlus() {
+        BigDecimal qty = amountOf(qtyField);
+        qtyField.setText((qty == null ? BigDecimal.ONE : qty.add(BigDecimal.ONE)).stripTrailingZeros().toPlainString());
+    }
     /** The number typed (accepted by InputFilters.decimal), or null when empty. */
     private static BigDecimal amountOf(TextField field) {
         String t = field.getText() == null ? "" : field.getText().trim();
