@@ -14,17 +14,15 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 /**
- * One employee's salary sheet for one month (14.3).
- * net_salary = gross_salary - deductions + bonus.
- * Payments are in {@code salary_payments}; account_id and paid_date are no longer used (kept, always empty).
+ * One user's salary for one month (14.3, N12). net_salary = gross_salary - deductions + bonus; a deduction has its
+ * reason in {@code note}. Payments are in {@code salary_payments}.
  */
 @Entity
 @Table(name = "salary_processing",
-        uniqueConstraints = @UniqueConstraint(name = "uk_salary_processing_employee_month",
-                columnNames = {"employee_id", "year", "month"}),
+        uniqueConstraints = @UniqueConstraint(name = "uk_salary_processing_user_month",
+                columnNames = {"user_id", "year", "month"}),
         indexes = @Index(name = "idx_salary_processing_year_month", columnList = "year, month"))
 public class SalaryProcessing {
 
@@ -33,9 +31,9 @@ public class SalaryProcessing {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "employee_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_salary_processing_employee"))
-    private Employee employee;
+    @JoinColumn(name = "user_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_salary_processing_user"))
+    private User user;
 
     /** 1-12. */
     @Column(name = "month", nullable = false)
@@ -44,16 +42,7 @@ public class SalaryProcessing {
     @Column(name = "year", nullable = false)
     private Integer year;
 
-    @Column(name = "working_days", nullable = false)
-    private Integer workingDays;
-
-    @Column(name = "present_days", nullable = false)
-    private Integer presentDays;
-
-    @Column(name = "leave_days", nullable = false)
-    private Integer leaveDays;
-
-    /** Days (daily, monthly) or hours (hourly) worked; the gross of a daily/hourly employee is this x rate. */
+    /** Days (daily) or hours (hourly) worked, typed in; the gross of a daily/hourly user is this x rate. */
     @Column(name = "worked_units", precision = 8, scale = 2)
     private BigDecimal workedUnits;
 
@@ -69,16 +58,7 @@ public class SalaryProcessing {
     @Column(name = "net_salary", nullable = false, precision = 14, scale = 2)
     private BigDecimal netSalary;
 
-    /** No longer used: payments are in salary_payments. */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id",
-            foreignKey = @ForeignKey(name = "fk_salary_processing_account"))
-    private Account account;
-
-    /** No longer used: payments are in salary_payments. */
-    @Column(name = "paid_date")
-    private LocalDate paidDate;
-
+    /** The reason of a deduction (required then), or any note. */
     @Column(name = "note", length = 255)
     private String note;
 
@@ -86,12 +66,12 @@ public class SalaryProcessing {
         return id;
     }
 
-    public Employee getEmployee() {
-        return employee;
+    public User getUser() {
+        return user;
     }
 
-    public void setEmployee(Employee employee) {
-        this.employee = employee;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public Integer getMonth() {
@@ -108,30 +88,6 @@ public class SalaryProcessing {
 
     public void setYear(Integer year) {
         this.year = year;
-    }
-
-    public Integer getWorkingDays() {
-        return workingDays;
-    }
-
-    public void setWorkingDays(Integer workingDays) {
-        this.workingDays = workingDays;
-    }
-
-    public Integer getPresentDays() {
-        return presentDays;
-    }
-
-    public void setPresentDays(Integer presentDays) {
-        this.presentDays = presentDays;
-    }
-
-    public Integer getLeaveDays() {
-        return leaveDays;
-    }
-
-    public void setLeaveDays(Integer leaveDays) {
-        this.leaveDays = leaveDays;
     }
 
     public BigDecimal getWorkedUnits() {
@@ -172,22 +128,6 @@ public class SalaryProcessing {
 
     public void setNetSalary(BigDecimal netSalary) {
         this.netSalary = netSalary;
-    }
-
-    public Account getAccount() {
-        return account;
-    }
-
-    public void setAccount(Account account) {
-        this.account = account;
-    }
-
-    public LocalDate getPaidDate() {
-        return paidDate;
-    }
-
-    public void setPaidDate(LocalDate paidDate) {
-        this.paidDate = paidDate;
     }
 
     public String getNote() {

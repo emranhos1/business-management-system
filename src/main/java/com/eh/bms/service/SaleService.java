@@ -6,6 +6,7 @@ import com.eh.bms.model.AccountTransaction;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AppModule;
+import com.eh.bms.model.BusinessProfile;
 import com.eh.bms.model.BusinessTransaction;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Sales (Stage 11). Confirming a sale (11.4) writes, in one transaction: the sale and its lines, stock out
@@ -114,10 +116,10 @@ public class SaleService {
             subtotal = subtotal.add(l.total());
         }
         BigDecimal discount = billDiscount == null ? BigDecimal.ZERO : billDiscount.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
-        BigDecimal taxable = subtotal.subtract(discount).max(BigDecimal.ZERO);
+        // The bill discount comes off the whole bill, VAT included (user decision), so it can be as big as the bill
         BigDecimal vat = vatPercent == null || vatPercent.signum() <= 0 ? BigDecimal.ZERO.setScale(MONEY_SCALE)
-                : taxable.multiply(vatPercent).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
-        return new Totals(subtotal, discount, vat, taxable.add(vat));
+                : subtotal.multiply(vatPercent).divide(HUNDRED, MONEY_SCALE, RoundingMode.HALF_UP);
+        return new Totals(subtotal, discount, vat, subtotal.add(vat).subtract(discount).max(BigDecimal.ZERO));
     }
 
     /** VAT % from the business profile (Settings); 0 when none. */
@@ -141,6 +143,34 @@ public class SaleService {
                     .orElseThrow(() -> new IllegalStateException("Sale not found: " + saleId));
             return new SaleDetails(sale, repository.items(session, saleId), repository.payments(session, saleId));
         });
+    }
+
+    /**
+     * Everything a printed memo shows (N6). {@code before} / {@code now}: the party's balance just before this
+     * sale and today (+ the party owes us); both null for a walk-in customer.
+     */
+    public record Memo(SaleDetails details, BusinessProfile profile, BigDecimal before, BigDecimal now) {
+    }
+
+    public Memo memo(long saleId) {
+        return TransactionHelper.inTransaction(session -> {
+            BusinessTransaction sale = repository.find(session, saleId)
+                    .orElseThrow(() -> new IllegalStateException("Sale not found: " + saleId));
+            SaleDetails details = new SaleDetails(sale, repository.items(session, saleId), repository.payments(session, saleId));
+            BigDecimal before = null;
+            BigDecimal now = null;
+            if (sale.getParty() != null) {
+                long partyId = sale.getParty().getId();
+                before = partyLedger.balanceBeforeSale(session, partyId, saleId, sale.getDate());
+                now = partyLedger.balance(session, partyId);
+            }
+            return new Memo(details, profileRepository.get(session), before, now);
+        });
+    }
+
+    /** The sale with this memo number, if any. */
+    public Optional<Long> idOfMemo(long memoNo) {
+        return TransactionHelper.inTransaction(session -> repository.idOfMemo(session, memoNo));
     }
 
     /** Confirms a sale (11.4). Nothing is saved unless every step succeeds. */

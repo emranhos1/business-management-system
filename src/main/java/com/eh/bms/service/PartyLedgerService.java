@@ -76,6 +76,18 @@ public class PartyLedgerService {
         return TransactionHelper.inTransaction(session -> balance(session, partyId));
     }
 
+    /**
+     * The party's balance just before a sale (memo, N6): before the sale's goods entry, or, for a 0-total sale
+     * (no entry), at the end of the day before the sale.
+     */
+    public BigDecimal balanceBeforeSale(Session session, long partyId, long saleId, LocalDate saleDate) {
+        BigDecimal now = balance(session, partyId);
+        return repository.saleEntry(session, partyId, saleId)
+                .map(e -> now.subtract(repository.netAfter(session, partyId, e.getDate(), e.getId()))
+                        .subtract(e.getDebit().subtract(e.getCredit())))
+                .orElseGet(() -> now.subtract(repository.netAfter(session, partyId, saleDate.minusDays(1), Long.MAX_VALUE)));
+    }
+
     /** Current balance of each party. */
     public Map<Long, BigDecimal> balances(Collection<Party> parties) {
         List<Long> ids = parties.stream().map(Party::getId).toList();

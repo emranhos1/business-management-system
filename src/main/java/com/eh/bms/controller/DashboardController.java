@@ -62,6 +62,7 @@ public class DashboardController {
     @FXML private Label profitGrossLabel;
     @FXML private Label profitExpensesLabel;
     @FXML private Label profitSalaryLabel;
+    @FXML private Label profitWriteOffLabel;
     @FXML private Label profitNetTitle;
     @FXML private Label profitNetLabel;
     @FXML private Label accountsTotalLabel;
@@ -180,6 +181,7 @@ public class DashboardController {
         profitGrossLabel.setText(MoneyUtil.format(p.grossProfit()));
         profitExpensesLabel.setText("− " + MoneyUtil.format(p.expenses()));
         profitSalaryLabel.setText("− " + MoneyUtil.format(p.salary()));
+        profitWriteOffLabel.setText((p.writtenOff().signum() < 0 ? "+ " : "− ") + MoneyUtil.format(p.writtenOff().abs()));
         // A loss shows as "নিট লোকসান" with the amount without its minus sign
         profitNetTitle.setText(I18n.get(p.net().signum() < 0 ? "dashboard.profit.loss" : "dashboard.profit.net"));
         profitNetLabel.setText(MoneyUtil.format(p.net().abs()));

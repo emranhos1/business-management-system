@@ -12,21 +12,19 @@ import com.eh.bms.util.Dialogs;
 import com.eh.bms.util.FormValidator;
 import com.eh.bms.util.I18n;
 import com.eh.bms.util.InputFilters;
+import com.eh.bms.util.MemoPaper;
 import com.eh.bms.util.MoneyUtil;
 import com.eh.bms.util.Notifier;
 import com.eh.bms.util.PermissionUtil;
-import com.eh.bms.util.TimePicker;
 import com.eh.bms.util.UnsavedWork;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.DirectoryChooser;
@@ -40,19 +38,14 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -77,11 +70,10 @@ public class SettingsController {
     private static final int DASHBOARD_ROWS_MAX = 50;
     private static final int LOW_STOCK_MAX = 1_000_000;
     private static final String LOGO_PREFIX = "logo-";
-    /** Weekly off day ticks in the order shown: Saturday first, as the week starts in Bangladesh. */
-    private static final List<DayOfWeek> WEEK = List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY, DayOfWeek.MONDAY,
-            DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
     @FXML private Region root;
+    /** Second row of cards: backup on this computer and on Google Drive (admin only). */
+    @FXML private Region backupRow;
 
     @FXML private TextField nameField;
     @FXML private Label nameError;
@@ -112,12 +104,7 @@ public class SettingsController {
     @FXML private Label dashboardRowsError;
     @FXML private TextField lowStockField;
     @FXML private Label lowStockError;
-    @FXML private CheckBox autoBackupBox;
-    @FXML private FlowPane weeklyOffPane;
-    @FXML private TimePicker workStartPicker;
-    @FXML private TimePicker workEndPicker;
-    @FXML private Label workTimeError;
-    @FXML private CheckBox paidLeaveBox;
+    @FXML private ComboBox<MemoPaper> memoPaperBox;
     @FXML private TextField storageField;
     @FXML private Label storageError;
     @FXML private Button saveAppButton;
@@ -127,8 +114,6 @@ public class SettingsController {
 
     private FormValidator profileForm;
     private FormValidator appForm;
-    /** One tick per weekday for the weekly off days. */
-    private final Map<DayOfWeek, CheckBox> offDayBoxes = new EnumMap<>(DayOfWeek.class);
 
     /** Logo as stored in the DB (relative to the storage folder); may differ from the DB until Save. */
     private String logoPath;
@@ -145,6 +130,7 @@ public class SettingsController {
     private void initialize() {
         PermissionUtil.require(saveProfileButton, AppModule.SETTINGS, Action.EDIT);
         PermissionUtil.require(saveAppButton, AppModule.SETTINGS, Action.EDIT);
+        BackupJobs.showOnlyForAdmin(backupRow);
 
         InputFilters.maxLength(nameField, 150);
         InputFilters.maxLength(addressField, 255);
@@ -168,12 +154,7 @@ public class SettingsController {
                 .add(itemsPerPageField, itemsPerPageError)
                 .add(dashboardRowsField, dashboardRowsError)
                 .add(lowStockField, lowStockError)
-                .add(workEndPicker, workTimeError)
                 .add(storageField, storageError);
-        workStartPicker.setPrompt(I18n.get("time.pick"));
-        workEndPicker.setPrompt(I18n.get("time.pick"));
-        workStartPicker.setStartTime(() -> AppConfigService.WORK_START_DEFAULT);
-        workEndPicker.setStartTime(() -> AppConfigService.WORK_END_DEFAULT);
 
         fyStartBox.getItems().setAll(IntStream.rangeClosed(1, 12).boxed().toList());
         fyStartBox.setConverter(converter(m -> Month.of(m).getDisplayName(TextStyle.FULL, I18n.getLocale())));
@@ -183,11 +164,8 @@ public class SettingsController {
         timeFormatBox.getItems().setAll(DateUtil.TIME_PATTERNS);
         timeFormatBox.setConverter(converter(p -> I18n.get(DateUtil.TIME_24.equals(p) ? "settings.time.24" : "settings.time.12")));
         timeFormatBox.valueProperty().addListener((obs, old, pattern) -> showTimeExample(pattern));
-        for (DayOfWeek day : WEEK) {
-            CheckBox box = new CheckBox(day.getDisplayName(TextStyle.FULL, I18n.getLocale()));
-            offDayBoxes.put(day, box);
-            weeklyOffPane.getChildren().add(box);
-        }
+        memoPaperBox.getItems().setAll(MemoPaper.values());
+        memoPaperBox.setConverter(converter(p -> I18n.get("settings.memo_paper." + p.name())));
 
         loadProfile();
         loadAppConfig();
@@ -396,12 +374,7 @@ public class SettingsController {
             itemsPerPageField.setText(String.valueOf(configService.getInt(AppConfigService.ITEMS_PER_PAGE, 20)));
             dashboardRowsField.setText(String.valueOf(configService.dashboardRows()));
             lowStockField.setText(String.valueOf(configService.getInt(AppConfigService.LOW_STOCK_DEFAULT, 10)));
-            autoBackupBox.setSelected(configService.getBoolean(AppConfigService.AUTO_BACKUP, false));
-            Set<DayOfWeek> offDays = configService.weeklyOffDays();
-            offDayBoxes.forEach((day, box) -> box.setSelected(offDays.contains(day)));
-            workStartPicker.setValue(configService.workStart());
-            workEndPicker.setValue(configService.workEnd());
-            paidLeaveBox.setSelected(configService.paidLeave());
+            memoPaperBox.setValue(configService.memoPaper());
             currentStorage = AppPaths.storageDir().toAbsolutePath();
             chosenStorage = currentStorage;
             storageField.setText(currentStorage.toString());
@@ -443,13 +416,6 @@ public class SettingsController {
         } else if (storageChanged && !AppPaths.isWritable(chosenStorage)) {
             appForm.error(storageField, I18n.get("settings.storage.not_writable"));
         }
-        LocalTime workStart = workStartPicker.getValue();
-        LocalTime workEnd = workEndPicker.getValue();
-        if (workStart == null || workEnd == null) {
-            appForm.error(workEndPicker, I18n.get("msg.required_field", I18n.get("settings.work_time")));
-        } else if (!workEnd.isAfter(workStart)) {
-            appForm.error(workEndPicker, I18n.get("settings.work_time.order"));
-        }
         if (appForm.hasErrors()) {
             appForm.focusFirstError();
             Notifier.error(I18n.get("msg.form_has_errors"));
@@ -467,12 +433,8 @@ public class SettingsController {
         values.put(AppConfigService.ITEMS_PER_PAGE, String.valueOf(items));
         values.put(AppConfigService.DASHBOARD_ROWS, String.valueOf(dashboardRows));
         values.put(AppConfigService.LOW_STOCK_DEFAULT, String.valueOf(lowStock));
-        values.put(AppConfigService.AUTO_BACKUP, String.valueOf(autoBackupBox.isSelected()));
-        // Same text as AppConfigService.setWeeklyOffDays, saved (and audited) with the other settings
-        values.put(AppConfigService.WEEKLY_OFF_DAYS, AppConfigService.formatOffDays(selectedOffDays()));
-        values.put(AppConfigService.WORK_START_TIME, AppConfigService.formatTime(workStart));
-        values.put(AppConfigService.WORK_END_TIME, AppConfigService.formatTime(workEnd));
-        values.put(AppConfigService.PAID_LEAVE, String.valueOf(paidLeaveBox.isSelected()));
+        values.put(AppConfigService.MEMO_PAPER,
+                (memoPaperBox.getValue() == null ? MemoPaper.DEFAULT : memoPaperBox.getValue()).name());
         try {
             if (storageChanged) {
                 // Copy first: if it fails, nothing is saved and the old folder stays in use
@@ -502,20 +464,8 @@ public class SettingsController {
     private String appState() {
         return String.join("\u0001", String.valueOf(dateFormatBox.getValue()), String.valueOf(timeFormatBox.getValue()),
                 text(itemsPerPageField), text(dashboardRowsField),
-                text(lowStockField), String.valueOf(autoBackupBox.isSelected()), String.valueOf(chosenStorage),
-                AppConfigService.formatOffDays(selectedOffDays()), String.valueOf(workStartPicker.getValue()),
-                String.valueOf(workEndPicker.getValue()), String.valueOf(paidLeaveBox.isSelected()));
-    }
-
-    /** The ticked weekly off days (none = no weekly off). */
-    private Set<DayOfWeek> selectedOffDays() {
-        Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
-        offDayBoxes.forEach((day, box) -> {
-            if (box.isSelected()) {
-                days.add(day);
-            }
-        });
-        return days;
+                text(lowStockField), String.valueOf(chosenStorage),
+                String.valueOf(memoPaperBox.getValue()));
     }
 
     /** Whole number from a digits-only field; shows the field error and returns null if empty or out of range. */

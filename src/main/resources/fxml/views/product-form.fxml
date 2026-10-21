@@ -39,7 +39,7 @@
     </HBox>
 
     <HBox styleClass="form-row">
-        <Label text="%products.sku" styleClass="form-label, form-row-label"/>
+        <Label text="%products.sku" styleClass="form-label, required, form-row-label"/>
         <VBox styleClass="field-box" HBox.hgrow="ALWAYS">
             <TextField fx:id="skuField" maxWidth="Infinity"/>
             <Label fx:id="skuError" styleClass="field-error" wrapText="true"/>

@@ -3,7 +3,8 @@
 <?import com.eh.bms.util.PageTabs?>
 <?import javafx.scene.control.Tab?>
 
-<!-- Users page (Stage 17, admin only): users (add, edit, inactive), permissions of each role, and the audit log. -->
+<!-- Users page (Stage 17, N12, admin only): users (every user is staff: add, edit, inactive, and the month's salary),
+     permissions of each role, and the audit log. -->
 <PageTabs xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
           fx:controller="com.eh.bms.controller.UsersController"
           fx:id="tabs" tabClosingPolicy="UNAVAILABLE" styleClass="side-tabs">

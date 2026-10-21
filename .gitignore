@@ -34,3 +34,7 @@ desktop.ini
 
 # Claude Code (agents, local settings)
 .claude/
+
+# Google Drive backup: the app's own Google key, never in git
+credentials.json
+tokens/

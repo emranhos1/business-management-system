@@ -2,6 +2,8 @@ package com.eh.bms.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -12,6 +14,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -47,6 +51,12 @@ public class Account {
 
     @Column(name = "opening_balance", nullable = false, precision = 14, scale = 2)
     private BigDecimal openingBalance;
+
+    /** Nullable only because the column was added later; a missing value counts as ACTIVE. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "status", length = 20)
+    private AccountStatus status = AccountStatus.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -94,6 +104,14 @@ public class Account {
 
     public void setOpeningBalance(BigDecimal openingBalance) {
         this.openingBalance = openingBalance;
+    }
+
+    public AccountStatus getStatus() {
+        return status == null ? AccountStatus.ACTIVE : status;
+    }
+
+    public void setStatus(AccountStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -9,7 +9,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <!-- Parties page (10.1-10.5): active customers and suppliers with what is due (পাবো / দেবো); each row has
-     icon buttons for ledger, money received / paid and inactive. Inactive parties are listed below. -->
+     icon buttons for ledger, money received / paid and inactive. Inactive parties are in the same list, last. -->
 <VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.eh.bms.controller.PartiesController" spacing="12">
 
@@ -23,6 +23,4 @@
     </HBox>
     <StackPane fx:id="tableHolder" VBox.vgrow="ALWAYS" minHeight="260"/>
 
-    <Label text="%party.section.inactive" styleClass="section-title"/>
-    <StackPane fx:id="inactiveHolder" minHeight="220" prefHeight="240"/>
 </VBox>

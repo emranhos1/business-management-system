@@ -3,22 +3,18 @@ package com.eh.bms.service;
 import com.eh.bms.model.Account;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
-import com.eh.bms.model.Employee;
-import com.eh.bms.model.EmployeeStatus;
 import com.eh.bms.model.SalaryPayment;
 import com.eh.bms.model.SalaryProcessing;
 import com.eh.bms.model.SalaryType;
 import com.eh.bms.model.User;
 import com.eh.bms.repository.AccountTransactionRepository;
-import com.eh.bms.repository.EmployeeRepository;
 import com.eh.bms.repository.SalaryRepository;
-import com.eh.bms.service.AttendanceService.MonthSummary;
+import com.eh.bms.repository.UserRepository;
 import com.eh.bms.util.TransactionHelper;
 import org.hibernate.Session;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -28,32 +24,32 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Monthly salary (14.3), payments (14.4) and history (14.5).
+ * Salary of every user (14.3 - 14.5, N12: users and employees are one; admin only, on the users page).
  * <ul>
- * <li>A month's sheet ({@code salary_processing}): gross by salary type (monthly = base salary, never cut for
- * absence; daily = days worked x rate; hourly = hours x rate), net = gross - deductions + bonus, never below 0.
- * Days or hours come from attendance when the month has any, else they are typed in. Processing a month again
- * changes its sheet.</li>
- * <li>Payments ({@code salary_payments}): each one is an account DEBIT with source SALARY. Paid before the
- * month's sheet exists = advance; after = part payment. A payment never goes above the month's due, except an
- * emergency advance; money out never goes above what the account holds on that date.</li>
- * <li>Carry forward: whatever a processed month got above its net (an emergency advance, or a net lowered after
- * paying) counts as paid for the next processed months, oldest first ({@link #chain}). A due is never below 0;
- * the rest is "advance left".</li>
+ * <li>One popup works out a month and pays in the same save ({@link #save}). The month's sheet
+ * ({@code salary_processing}): gross by salary type (monthly = base salary; daily = days worked x rate; hourly =
+ * hours x rate, days / hours typed in), net = gross - deductions + bonus, never below 0. A deduction needs its
+ * reason. Saving a month again changes its sheet.</li>
+ * <li>Payments ({@code salary_payments}): each one is an account DEBIT with source SALARY. A payment never goes
+ * above the month's due, except an emergency advance; money out never goes above what the account holds on that
+ * date.</li>
+ * <li>Carry forward: whatever a month got above its net (an emergency advance, or a net lowered after paying) counts
+ * as paid for the next months, oldest first ({@link #chain}). A due is never below 0; the rest is "advance left".</li>
  * </ul>
- * Lock order: employee row, then account rows (by id).
+ * Lock order: user row, then account rows (by id).
  */
 public class SalaryService {
 
     public enum Status {
         SAVED,
         NOT_FOUND,
-        /** The sheet is for a month after the current one. */
+        /** The month is after the current one. */
         FUTURE_MONTH,
+        /** The user has no salary type or amount yet (the admin sets it in the user form). */
+        NO_SALARY,
         /** Deductions are more than gross + bonus. */
         NEGATIVE_NET,
         /** Payment (not an emergency advance): more than the month's due; {@code amount} = most still payable. */
@@ -69,38 +65,31 @@ public class SalaryService {
     }
 
     /**
-     * Values from the sheet form. {@code workedUnits}: days (daily) or hours (hourly), required for those, optional
-     * (days, for the record) for monthly. {@code deductions} / {@code bonus} null = 0.
+     * The month as typed. {@code workedUnits}: days (daily) or hours (hourly), required for those, unused for monthly.
+     * {@code deductions} / {@code bonus} null = 0. {@code note}: the reason, required when there is a deduction.
      */
-    public record ProcessData(long employeeId, YearMonth month, int presentDays, int leaveDays, BigDecimal workedUnits,
-                              BigDecimal deductions, BigDecimal bonus, String note) {
+    public record MonthData(long userId, YearMonth month, BigDecimal workedUnits, BigDecimal deductions,
+                            BigDecimal bonus, String note) {
+    }
+
+    /** Money paid in the same save. {@code emergency}: an emergency advance, allowed above the month's due. */
+    public record Pay(LocalDate date, BigDecimal amount, long accountId, boolean emergency) {
     }
 
     /**
-     * What the sheet form opens with. From the saved sheet when the month is processed ({@code sheet} set), else
-     * prefilled from attendance (when {@code attendance.hasRows()}), else empty units to type in.
-     * {@code paid}: paid for the month so far (advances when not processed); {@code carryIn}: advance carried
-     * from earlier months.
+     * What the popup opens with for a user and month: the saved sheet, else empty values (a monthly salary's gross
+     * is its base). {@code paid}: paid for the month so far; {@code carryIn}: advance carried from earlier months.
      */
-    public record Draft(Employee employee, YearMonth month, int workingDays, MonthSummary attendance,
-                        SalaryProcessing sheet, int presentDays, int leaveDays, BigDecimal workedUnits,
-                        BigDecimal gross, BigDecimal deductions, BigDecimal bonus, BigDecimal net, String note,
-                        BigDecimal paid, BigDecimal carryIn) {
+    public record Draft(User user, YearMonth month, SalaryProcessing sheet, BigDecimal workedUnits, BigDecimal gross,
+                        BigDecimal deductions, BigDecimal bonus, BigDecimal net, String note, BigDecimal paid,
+                        BigDecimal carryIn) {
         public boolean processed() {
             return sheet != null;
         }
     }
 
     /**
-     * Values from the payment form. {@code id} null = new payment. {@code month}: the salary month it is for.
-     * {@code emergency}: an emergency advance, allowed above the month's due.
-     */
-    public record PaymentData(Long id, long employeeId, YearMonth month, LocalDate date, BigDecimal amount,
-                              long accountId, String note, boolean emergency) {
-    }
-
-    /**
-     * A month's money for one employee. {@code carryIn}: advance carried from earlier months. When processed,
+     * A month's money for one user. {@code carryIn}: advance carried from earlier months. When processed,
      * net - carryIn - paid = due - advanceLeft (both never below 0). {@code net}, {@code due} and
      * {@code advanceLeft} are null when the month is not processed (then {@code paid} is all advance).
      */
@@ -111,7 +100,7 @@ public class SalaryService {
         }
     }
 
-    /** One month in an employee's history; sheet values (and due, advanceLeft) are null when only advances were paid. */
+    /** One month in a user's history; sheet values (and due, advanceLeft) are null when only advances were paid. */
     public record MonthRow(YearMonth month, SalaryProcessing sheet, BigDecimal gross, BigDecimal deductions,
                            BigDecimal bonus, BigDecimal net, BigDecimal carryIn, BigDecimal paid, BigDecimal due,
                            BigDecimal advanceLeft) {
@@ -121,16 +110,16 @@ public class SalaryService {
     }
 
     /**
-     * An employee's salary history, newest month first, and all payments, newest first. {@code totalDue} sums the
+     * A user's salary history, newest month first, and all payments, newest first. {@code totalDue} sums the
      * processed months' dues; {@code totalAdvance} is advance not earned yet (carried past the last processed month,
      * plus paid for months not processed). totalNet - totalPaid = totalDue - totalAdvance.
      */
-    public record History(Employee employee, List<MonthRow> months, List<SalaryPayment> payments, BigDecimal totalNet,
+    public record History(User user, List<MonthRow> months, List<SalaryPayment> payments, BigDecimal totalNet,
                           BigDecimal totalPaid, BigDecimal totalDue, BigDecimal totalAdvance) {
     }
 
-    /** One employee on the month sheet; {@code sheet} null = not processed (then due and advanceLeft are null). */
-    public record SheetRow(Employee employee, SalaryProcessing sheet, BigDecimal carryIn, BigDecimal paid,
+    /** One user on the month sheet; {@code sheet} null = not processed (then due and advanceLeft are null). */
+    public record SheetRow(User user, SalaryProcessing sheet, BigDecimal carryIn, BigDecimal paid,
                            BigDecimal due, BigDecimal advanceLeft) {
         public boolean processed() {
             return sheet != null;
@@ -138,16 +127,16 @@ public class SalaryService {
     }
 
     /**
-     * All employees' salary for one month (16.10): active employees plus anyone with a sheet or payment that
+     * All users' salary for one month (16.10): active users with a salary plus anyone with a sheet or payment that
      * month, sorted by name. Totals sum the processed rows, except {@code totalPaid} (every payment) and
      * {@code totalCarry} (advance carried in, every row).
      */
-    public record MonthSheet(YearMonth month, int workingDays, List<SheetRow> rows, BigDecimal totalGross,
+    public record MonthSheet(YearMonth month, List<SheetRow> rows, BigDecimal totalGross,
                              BigDecimal totalDeductions, BigDecimal totalBonus, BigDecimal totalNet,
                              BigDecimal totalCarry, BigDecimal totalPaid, BigDecimal totalDue) {
     }
 
-    /** Money still open with an employee: due on processed months, and advance not earned yet. */
+    /** Money still open with a user: due on processed months, and advance not earned yet. */
     public record OpenMoney(BigDecimal due, BigDecimal advance) {
     }
 
@@ -182,30 +171,12 @@ public class SalaryService {
     private static final String PAYMENT = "SALARY_PAYMENT";
 
     private final SalaryRepository repository = new SalaryRepository();
-    private final EmployeeRepository employeeRepository = new EmployeeRepository();
+    private final UserRepository userRepository = new UserRepository();
     private final AccountTransactionRepository accountTransactions = new AccountTransactionRepository();
     private final AccountLedgerService ledger = new AccountLedgerService();
-    private final AttendanceService attendanceService = new AttendanceService();
-    private final AppConfigService appConfig = new AppConfigService();
     private final AuditService auditService = new AuditService();
 
-    // ---------------------------------------------------------------- working days and gross
-
-    /** Days in the month minus the weekly off days from Settings. */
-    public int workingDays(YearMonth month) {
-        return workingDays(month, appConfig.weeklyOffDays());
-    }
-
-    /** Days in the month minus the days falling on {@code offDays} (empty = every day is a working day). */
-    public static int workingDays(YearMonth month, Set<DayOfWeek> offDays) {
-        int days = 0;
-        for (int d = 1; d <= month.lengthOfMonth(); d++) {
-            if (!offDays.contains(month.atDay(d).getDayOfWeek())) {
-                days++;
-            }
-        }
-        return days;
-    }
+    // ---------------------------------------------------------------- gross and net
 
     /** Gross by salary type: monthly = base; daily / hourly = units x base (null units = 0). */
     public static BigDecimal gross(SalaryType type, BigDecimal base, BigDecimal workedUnits) {
@@ -221,165 +192,189 @@ public class SalaryService {
         return zero(gross).subtract(zero(deductions)).add(zero(bonus)).setScale(2, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Days (daily, monthly) or hours (hourly) worked from the month's attendance. With paid leave (Settings) a leave
-     * day counts as a worked day for daily and as {@code dayHours} for hourly; monthly is never affected.
-     */
-    static BigDecimal workedUnits(SalaryType type, MonthSummary att, boolean paidLeave, BigDecimal dayHours) {
-        BigDecimal units = type == SalaryType.HOURLY ? att.hours() : att.workedDays();
-        if (paidLeave && att.leave() > 0 && type != SalaryType.MONTHLY) {
-            BigDecimal leave = BigDecimal.valueOf(att.leave());
-            units = units.add(type == SalaryType.HOURLY ? dayHours.multiply(leave) : leave);
-        }
-        return units.setScale(2, RoundingMode.HALF_UP);
-    }
+    // ---------------------------------------------------------------- the salary popup
 
-    // ---------------------------------------------------------------- month sheet (14.3)
-
-    /** What the sheet form opens with for this employee and month. */
-    public Draft draft(long employeeId, YearMonth month) {
-        Set<DayOfWeek> offDays = appConfig.weeklyOffDays();
-        boolean paidLeave = appConfig.paidLeave();
-        BigDecimal dayHours = appConfig.workDayHours();
+    /** What the salary popup opens with for this user and month. */
+    public Draft draft(long userId, YearMonth month) {
+        requireAdmin();
         return TransactionHelper.inTransaction(session -> {
-            Employee e = employeeRepository.findById(session, employeeId)
-                    .orElseThrow(() -> new IllegalStateException("Employee not found: " + employeeId));
-            int working = workingDays(month, offDays);
-            MonthSummary att = attendanceService.monthSummary(session, employeeId, month);
-            MonthDue due = monthDue(session, employeeId, month, null);
-            BigDecimal paid = due.paid();
+            User u = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+            MonthDue due = monthDue(session, userId, month);
             SalaryProcessing s = due.sheet();
             if (s != null) {
-                return new Draft(e, month, working, att, s, s.getPresentDays(), s.getLeaveDays(), s.getWorkedUnits(),
-                        s.getGrossSalary(), s.getDeductions(), s.getBonus(), s.getNetSalary(), s.getNote(), paid,
-                        due.carryIn());
+                return new Draft(u, month, s, s.getWorkedUnits(), s.getGrossSalary(), s.getDeductions(), s.getBonus(),
+                        s.getNetSalary(), s.getNote(), due.paid(), due.carryIn());
             }
-            BigDecimal units = null;
-            if (att.hasRows()) {
-                units = workedUnits(e.getSalaryType(), att, paidLeave, dayHours);
-            }
-            BigDecimal gross = e.getSalaryType() == SalaryType.MONTHLY || units != null
-                    ? gross(e.getSalaryType(), e.getBaseSalary(), units) : null;
+            BigDecimal gross = u.hasSalary() && u.getSalaryType() == SalaryType.MONTHLY
+                    ? gross(u.getSalaryType(), u.getBaseSalary(), null) : null;
             BigDecimal zero = BigDecimal.ZERO.setScale(2);
-            return new Draft(e, month, working, att, null, att.daysCame(), att.leave(), units, gross, zero, zero,
-                    gross == null ? null : net(gross, zero, zero), null, paid, due.carryIn());
+            return new Draft(u, month, null, null, gross, zero, zero, gross == null ? null : net(gross, zero, zero),
+                    null, due.paid(), due.carryIn());
         });
     }
 
     /**
-     * Works out (or works out again) the employee's sheet for the month with the employee's current salary type and
-     * base salary. Refused when the net would be below 0; paid above the net carries to the next months.
+     * Works out (or works out again) the user's month with the user's current salary type and amount and, when
+     * {@code pay} is given, pays money for it, all in one transaction. Paid above the net carries to the next months.
      *
      * @throws IllegalArgumentException when a value is missing or out of range (the form checks these first)
      */
-    public Result process(ProcessData data) {
+    public Result save(MonthData data, Pay pay) {
+        requireAdmin();
         Objects.requireNonNull(data.month(), "month");
         if (data.month().isAfter(YearMonth.now())) {
             return Result.of(Status.FUTURE_MONTH);
         }
-        int days = data.month().lengthOfMonth();
-        if (data.presentDays() < 0 || data.leaveDays() < 0 || data.presentDays() + data.leaveDays() > days) {
-            throw new IllegalArgumentException("Present and leave days must be 0.." + days);
-        }
-        if (zero(data.deductions()).signum() < 0 || zero(data.bonus()).signum() < 0) {
+        BigDecimal deductions = zero(data.deductions()).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal bonus = zero(data.bonus()).setScale(2, RoundingMode.HALF_UP);
+        String note = note(data.note());
+        if (deductions.signum() < 0 || bonus.signum() < 0) {
             throw new IllegalArgumentException("Deductions and bonus cannot be below 0");
+        }
+        if (deductions.signum() > 0 && note == null) {
+            throw new IllegalArgumentException("A deduction needs its reason");
         }
         if (data.workedUnits() != null
                 && (data.workedUnits().signum() < 0 || data.workedUnits().compareTo(UNITS_MAX) > 0)) {
             throw new IllegalArgumentException("Worked days / hours out of range");
         }
-        int working = workingDays(data.month());
-        return TransactionHelper.inTransaction(session -> {
-            Employee e = employeeRepository.lock(session, data.employeeId()).orElse(null);
-            if (e == null) {
-                return Result.of(Status.NOT_FOUND);
+        if (pay != null) {
+            Objects.requireNonNull(pay.date(), "date");
+            if (pay.amount() == null || pay.amount().signum() <= 0) {
+                throw new IllegalArgumentException("Amount must be more than 0");
             }
-            if (e.getSalaryType() != SalaryType.MONTHLY) {
-                if (data.workedUnits() == null) {
-                    throw new IllegalArgumentException("Worked days / hours are required");
+        }
+        int days = data.month().lengthOfMonth();
+        try {
+            return TransactionHelper.inTransaction(session -> {
+                User u = userRepository.lock(session, data.userId()).orElse(null);
+                if (u == null) {
+                    return Result.of(Status.NOT_FOUND);
                 }
-                if (e.getSalaryType() == SalaryType.DAILY && data.workedUnits().compareTo(BigDecimal.valueOf(days)) > 0) {
-                    throw new IllegalArgumentException("Worked days cannot be more than " + days);
+                if (!u.hasSalary()) {
+                    return Result.of(Status.NO_SALARY);
                 }
-            }
-            BigDecimal gross = gross(e.getSalaryType(), e.getBaseSalary(), data.workedUnits());
-            BigDecimal deductions = zero(data.deductions()).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal bonus = zero(data.bonus()).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal net = net(gross, deductions, bonus);
-            if (net.signum() < 0) {
-                return Result.of(Status.NEGATIVE_NET);
-            }
-            int y = data.month().getYear();
-            int m = data.month().getMonthValue();
-            SalaryProcessing s = repository.findSheet(session, e.getId(), y, m).orElse(null);
-            boolean added = s == null;
-            String old = added ? null : describe(s);
-            if (added) {
-                s = new SalaryProcessing();
-                s.setEmployee(e);
-                s.setYear(y);
-                s.setMonth(m);
-            }
-            s.setWorkingDays(working);
-            s.setPresentDays(data.presentDays());
-            s.setLeaveDays(data.leaveDays());
-            s.setWorkedUnits(data.workedUnits() == null ? null : data.workedUnits().setScale(2, RoundingMode.HALF_UP));
-            s.setGrossSalary(gross);
-            s.setDeductions(deductions);
-            s.setBonus(bonus);
-            s.setNetSalary(net);
-            s.setNote(note(data.note()));
-            if (added) {
-                repository.saveSheet(session, s);
-                auditService.created(session, SHEET, s.getId(), describe(s));
-            } else {
-                String now = describe(s);
-                if (!old.equals(now)) {
-                    auditService.updated(session, SHEET, s.getId(), old, now);
+                if (u.getSalaryType() != SalaryType.MONTHLY) {
+                    if (data.workedUnits() == null) {
+                        throw new IllegalArgumentException("Worked days / hours are required");
+                    }
+                    if (u.getSalaryType() == SalaryType.DAILY && data.workedUnits().compareTo(BigDecimal.valueOf(days)) > 0) {
+                        throw new IllegalArgumentException("Worked days cannot be more than " + days);
+                    }
                 }
-            }
-            return Result.of(Status.SAVED);
-        });
+                BigDecimal units = u.getSalaryType() == SalaryType.MONTHLY || data.workedUnits() == null ? null
+                        : data.workedUnits().setScale(2, RoundingMode.HALF_UP);
+                BigDecimal gross = gross(u.getSalaryType(), u.getBaseSalary(), units);
+                BigDecimal net = net(gross, deductions, bonus);
+                if (net.signum() < 0) {
+                    return Result.of(Status.NEGATIVE_NET);
+                }
+                writeSheet(session, u, data.month(), units, gross, deductions, bonus, net, note);
+                if (pay != null) {
+                    session.flush();
+                    Result paid = pay(session, u, data.month(), pay);
+                    if (paid.status() != Status.SAVED) {
+                        // The sheet is already written: roll it back too
+                        throw new Abort(paid);
+                    }
+                }
+                return Result.of(Status.SAVED);
+            });
+        } catch (Abort a) {
+            return a.result;
+        }
     }
 
-    /** Removes a month's sheet; payments already made for it count as advances again. */
-    public Status deleteSheet(long employeeId, YearMonth month) {
+    private void writeSheet(Session session, User u, YearMonth month, BigDecimal units, BigDecimal gross,
+                            BigDecimal deductions, BigDecimal bonus, BigDecimal net, String note) {
+        int y = month.getYear();
+        int m = month.getMonthValue();
+        SalaryProcessing s = repository.findSheet(session, u.getId(), y, m).orElse(null);
+        boolean added = s == null;
+        String old = added ? null : describe(s);
+        if (added) {
+            s = new SalaryProcessing();
+            s.setUser(u);
+            s.setYear(y);
+            s.setMonth(m);
+        }
+        s.setWorkedUnits(units);
+        s.setGrossSalary(gross);
+        s.setDeductions(deductions);
+        s.setBonus(bonus);
+        s.setNetSalary(net);
+        s.setNote(note);
+        if (added) {
+            repository.saveSheet(session, s);
+            auditService.created(session, SHEET, s.getId(), describe(s));
+        } else {
+            String now = describe(s);
+            if (!old.equals(now)) {
+                auditService.updated(session, SHEET, s.getId(), old, now);
+            }
+        }
+    }
+
+    /** Pays for the month (its sheet already saved): never above its due unless an emergency advance. */
+    private Result pay(Session session, User u, YearMonth month, Pay pay) {
+        MonthDue due = monthDue(session, u.getId(), month);
+        if (!pay.emergency() && due.processed() && due.due().compareTo(pay.amount()) < 0) {
+            return new Result(Status.OVER_NET, due.due());
+        }
+        Account account = ledger.lock(session, pay.accountId());
+        BigDecimal available = ledger.availableOn(session, account.getId(), pay.date());
+        if (available.compareTo(pay.amount()) < 0) {
+            return new Result(Status.INSUFFICIENT_BALANCE, available.max(BigDecimal.ZERO));
+        }
+        SalaryPayment p = new SalaryPayment();
+        p.setUser(u);
+        p.setYear(month.getYear());
+        p.setMonth(month.getMonthValue());
+        p.setDate(pay.date());
+        p.setAmount(pay.amount());
+        p.setAccount(account);
+        p.setEmergency(pay.emergency());
+        if (UserSession.isLoggedIn()) {
+            p.setCreatedBy(session.getReference(User.class, UserSession.get().getUserId()));
+        }
+        repository.savePayment(session, p);
+        ledger.post(session, account.getId(), p.getDate(), AccountTransactionType.DEBIT, p.getAmount(),
+                AccountTransactionSource.SALARY, p.getId(), null);
+        auditService.created(session, PAYMENT, p.getId(), describe(p));
+        return Result.of(Status.SAVED);
+    }
+
+    /** Deletes a salary payment and its money out (the account gets the money back). */
+    public Status deletePayment(long id) {
+        requireAdmin();
         return TransactionHelper.inTransaction(session -> {
-            if (employeeRepository.lock(session, employeeId).isEmpty()) {
+            SalaryPayment p = repository.findPayment(session, id).orElse(null);
+            if (p == null) {
                 return Status.NOT_FOUND;
             }
-            SalaryProcessing s = repository.findSheet(session, employeeId, month.getYear(), month.getMonthValue())
-                    .orElse(null);
-            if (s == null) {
-                return Status.NOT_FOUND;
-            }
-            String old = describe(s);
-            repository.deleteSheet(session, s);
-            auditService.deleted(session, SHEET, s.getId(), old);
+            userRepository.lock(session, p.getUser().getId());
+            ledger.lock(session, p.getAccount().getId());
+            String old = describe(p);
+            accountTransactions.findBySource(session, AccountTransactionSource.SALARY, id)
+                    .forEach(t -> accountTransactions.delete(session, t));
+            repository.deletePayment(session, p);
+            auditService.deleted(session, PAYMENT, id, old);
             return Status.SAVED;
         });
     }
 
-    // ---------------------------------------------------------------- payments (14.4)
+    // ---------------------------------------------------------------- carry chain
 
-    /**
-     * The month's net, advance carried in, paid and due for the payment form, leaving out payment
-     * {@code excludePaymentId} (the one being edited; may be null).
-     */
-    public MonthDue monthDue(long employeeId, YearMonth month, Long excludePaymentId) {
-        return TransactionHelper.inTransaction(session -> monthDue(session, employeeId, month, excludePaymentId));
-    }
-
-    private MonthDue monthDue(Session session, long employeeId, YearMonth month, Long excludePaymentId) {
-        Map<YearMonth, SalaryProcessing> sheets = sheets(session, employeeId);
-        Step st = chain(nets(sheets), repository.paidByMonth(session, employeeId, excludePaymentId), month)
-                .steps().get(month);
+    private MonthDue monthDue(Session session, long userId, YearMonth month) {
+        Map<YearMonth, SalaryProcessing> sheets = sheets(session, userId);
+        Step st = chain(nets(sheets), repository.paidByMonth(session, userId, null), month).steps().get(month);
         return new MonthDue(month, sheets.get(month), st.net(), st.paid(), st.carryIn(), st.due(), st.advanceLeft());
     }
 
-    /** Due on processed months and advance not earned yet (an employee with either cannot be made inactive). */
-    OpenMoney openMoney(Session session, long employeeId) {
-        Chain c = chain(nets(sheets(session, employeeId)), repository.paidByMonth(session, employeeId, null), null);
+    /** Due on processed months and advance not earned yet (a user with either cannot be made inactive). */
+    OpenMoney openMoney(Session session, long userId) {
+        Chain c = chain(nets(sheets(session, userId)), repository.paidByMonth(session, userId, null), null);
         return new OpenMoney(c.totalDue(), c.advance());
     }
 
@@ -414,9 +409,9 @@ public class SalaryService {
         return new Chain(steps, carry, pending);
     }
 
-    private Map<YearMonth, SalaryProcessing> sheets(Session session, long employeeId) {
+    private Map<YearMonth, SalaryProcessing> sheets(Session session, long userId) {
         Map<YearMonth, SalaryProcessing> sheets = new HashMap<>();
-        repository.sheetsOf(session, employeeId).forEach(s -> sheets.put(YearMonth.of(s.getYear(), s.getMonth()), s));
+        repository.sheetsOf(session, userId).forEach(s -> sheets.put(YearMonth.of(s.getYear(), s.getMonth()), s));
         return sheets;
     }
 
@@ -426,135 +421,19 @@ public class SalaryService {
         return nets;
     }
 
-    /** Adds ({@code id} null) or changes a salary payment, with its money out of the account. */
-    public Result savePayment(PaymentData data) {
-        if (data.amount() == null || data.amount().signum() <= 0) {
-            throw new IllegalArgumentException("Amount must be more than 0");
-        }
-        Objects.requireNonNull(data.date(), "date");
-        Objects.requireNonNull(data.month(), "month");
-        try {
-            return TransactionHelper.inTransaction(session -> data.id() == null
-                    ? addPayment(session, data) : changePayment(session, data));
-        } catch (Abort a) {
-            return a.result;
-        }
-    }
-
-    private Result addPayment(Session session, PaymentData data) {
-        Employee e = employeeRepository.lock(session, data.employeeId()).orElse(null);
-        if (e == null) {
-            return Result.of(Status.NOT_FOUND);
-        }
-        MonthDue due = monthDue(session, e.getId(), data.month(), null);
-        if (!data.emergency() && due.processed() && due.due().compareTo(data.amount()) < 0) {
-            return new Result(Status.OVER_NET, due.due());
-        }
-        Account account = ledger.lock(session, data.accountId());
-        BigDecimal available = ledger.availableOn(session, account.getId(), data.date());
-        if (available.compareTo(data.amount()) < 0) {
-            return new Result(Status.INSUFFICIENT_BALANCE, available.max(BigDecimal.ZERO));
-        }
-        SalaryPayment p = new SalaryPayment();
-        p.setEmployee(e);
-        fill(p, account, data);
-        if (UserSession.isLoggedIn()) {
-            p.setCreatedBy(session.getReference(User.class, UserSession.get().getUserId()));
-        }
-        repository.savePayment(session, p);
-        post(session, p);
-        auditService.created(session, PAYMENT, p.getId(), describe(p));
-        return Result.of(Status.SAVED);
-    }
-
-    private Result changePayment(Session session, PaymentData data) {
-        Employee e = employeeRepository.lock(session, data.employeeId()).orElse(null);
-        SalaryPayment p = repository.findPayment(session, data.id()).orElse(null);
-        if (e == null || p == null) {
-            return Result.of(Status.NOT_FOUND);
-        }
-        if (!p.getEmployee().getId().equals(e.getId())) {
-            throw new IllegalArgumentException("A payment cannot move to another employee");
-        }
-        MonthDue due = monthDue(session, e.getId(), data.month(), p.getId());
-        if (!data.emergency() && due.processed() && due.due().compareTo(data.amount()) < 0) {
-            return new Result(Status.OVER_NET, due.due());
-        }
-        String old = describe(p);
-        // Both accounts in id order (the same order as transfers), so two saves cannot deadlock
-        long oldAccountId = p.getAccount().getId();
-        Account first = ledger.lock(session, Math.min(oldAccountId, data.accountId()));
-        Account second = ledger.lock(session, Math.max(oldAccountId, data.accountId()));
-        Account account = first.getId() == data.accountId() ? first : second;
-        // The old money out goes first, so the check below sees the account without it
-        accountTransactions.findBySource(session, AccountTransactionSource.SALARY, p.getId())
-                .forEach(t -> accountTransactions.delete(session, t));
-        session.flush();
-        BigDecimal available = ledger.availableOn(session, account.getId(), data.date());
-        if (available.compareTo(data.amount()) < 0) {
-            // The old entry is already removed: roll back
-            throw new Abort(new Result(Status.INSUFFICIENT_BALANCE, available.max(BigDecimal.ZERO)));
-        }
-        fill(p, account, data);
-        post(session, p);
-        String now = describe(p);
-        if (!old.equals(now)) {
-            auditService.updated(session, PAYMENT, p.getId(), old, now);
-        }
-        return Result.of(Status.SAVED);
-    }
-
-    /** Deletes a salary payment and its money out (the account gets the money back). */
-    public Status deletePayment(long id) {
-        return TransactionHelper.inTransaction(session -> {
-            SalaryPayment p = repository.findPayment(session, id).orElse(null);
-            if (p == null) {
-                return Status.NOT_FOUND;
-            }
-            employeeRepository.lock(session, p.getEmployee().getId());
-            ledger.lock(session, p.getAccount().getId());
-            String old = describe(p);
-            accountTransactions.findBySource(session, AccountTransactionSource.SALARY, id)
-                    .forEach(t -> accountTransactions.delete(session, t));
-            repository.deletePayment(session, p);
-            auditService.deleted(session, PAYMENT, id, old);
-            return Status.SAVED;
-        });
-    }
-
-    /** One employee's payments for one month, oldest first, with the account loaded. */
-    public List<SalaryPayment> payments(long employeeId, YearMonth month) {
-        return TransactionHelper.inTransaction(session ->
-                repository.paymentsOf(session, employeeId, month.getYear(), month.getMonthValue()));
-    }
-
-    private void post(Session session, SalaryPayment p) {
-        ledger.post(session, p.getAccount().getId(), p.getDate(), AccountTransactionType.DEBIT, p.getAmount(),
-                AccountTransactionSource.SALARY, p.getId(), p.getNote());
-    }
-
-    private static void fill(SalaryPayment p, Account account, PaymentData data) {
-        p.setYear(data.month().getYear());
-        p.setMonth(data.month().getMonthValue());
-        p.setDate(data.date());
-        p.setAmount(data.amount());
-        p.setAccount(account);
-        p.setNote(note(data.note()));
-        p.setEmergency(data.emergency());
-    }
-
     // ---------------------------------------------------------------- history (14.5) and month sheet (16.10)
 
-    /** An employee's months (processed or with payments), newest first, and every payment. */
-    public History history(long employeeId) {
+    /** A user's months (processed or with payments), newest first, and every payment. */
+    public History history(long userId) {
+        requireAdmin();
         return TransactionHelper.inTransaction(session -> {
-            Employee e = employeeRepository.findById(session, employeeId)
-                    .orElseThrow(() -> new IllegalStateException("Employee not found: " + employeeId));
-            List<SalaryPayment> payments = repository.paymentsOf(session, employeeId);
+            User u = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
+            List<SalaryPayment> payments = repository.paymentsOf(session, userId);
             Map<YearMonth, BigDecimal> paidByMonth = new HashMap<>();
             payments.forEach(p -> paidByMonth.merge(YearMonth.of(p.getYear(), p.getMonth()), p.getAmount(),
                     BigDecimal::add));
-            Map<YearMonth, SalaryProcessing> sheets = sheets(session, employeeId);
+            Map<YearMonth, SalaryProcessing> sheets = sheets(session, userId);
             Chain chain = chain(nets(sheets), paidByMonth, null);
 
             List<MonthRow> rows = new ArrayList<>();
@@ -573,26 +452,25 @@ public class SalaryService {
                 }
             }
             rows.sort(Comparator.comparing(MonthRow::month).reversed());
-            return new History(e, rows, payments, totalNet, totalPaid, chain.totalDue(), chain.advance());
+            return new History(u, rows, payments, totalNet, totalPaid, chain.totalDue(), chain.advance());
         });
     }
 
-    /** Every employee's salary for one month (active ones, plus anyone with a sheet or payment that month). */
+    /** Every user's salary for one month (active users with a salary, plus anyone with a sheet or payment). */
     public MonthSheet monthSheet(YearMonth month) {
-        int working = workingDays(month);
         return TransactionHelper.inTransaction(session -> {
             int y = month.getYear();
             int m = month.getMonthValue();
             Map<Long, SalaryProcessing> sheets = new HashMap<>();
-            repository.sheetsOfMonth(session, y, m).forEach(s -> sheets.put(s.getEmployee().getId(), s));
-            Map<Long, BigDecimal> paid = repository.paidByEmployee(session, y, m);
+            repository.sheetsOfMonth(session, y, m).forEach(s -> sheets.put(s.getUser().getId(), s));
+            Map<Long, BigDecimal> paid = repository.paidByUser(session, y, m);
             Map<Long, Map<YearMonth, BigDecimal>> netsUpTo = repository.netsUpTo(session, y, m);
             Map<Long, Map<YearMonth, BigDecimal>> paidUpTo = repository.paidUpTo(session, y, m);
-            Map<Long, Employee> employees = new LinkedHashMap<>();
-            employeeRepository.findByStatus(session, EmployeeStatus.ACTIVE).forEach(e -> employees.put(e.getId(), e));
-            sheets.values().forEach(s -> employees.putIfAbsent(s.getEmployee().getId(), s.getEmployee()));
-            List<Long> missing = paid.keySet().stream().filter(id -> !employees.containsKey(id)).toList();
-            employeeRepository.findByIds(session, missing).forEach(e -> employees.put(e.getId(), e));
+            Map<Long, User> users = new LinkedHashMap<>();
+            userRepository.activeWithSalary(session).forEach(u -> users.put(u.getId(), u));
+            sheets.values().forEach(s -> users.putIfAbsent(s.getUser().getId(), s.getUser()));
+            List<Long> missing = paid.keySet().stream().filter(id -> !users.containsKey(id)).toList();
+            userRepository.findByIds(session, missing).forEach(u -> users.put(u.getId(), u));
 
             List<SheetRow> rows = new ArrayList<>();
             BigDecimal gross = BigDecimal.ZERO;
@@ -602,9 +480,9 @@ public class SalaryService {
             BigDecimal carry = BigDecimal.ZERO;
             BigDecimal totalPaid = BigDecimal.ZERO;
             BigDecimal due = BigDecimal.ZERO;
-            for (Employee e : employees.values()) {
-                SalaryProcessing s = sheets.get(e.getId());
-                Step st = chain(netsUpTo.getOrDefault(e.getId(), Map.of()), paidUpTo.getOrDefault(e.getId(), Map.of()),
+            for (User u : users.values()) {
+                SalaryProcessing s = sheets.get(u.getId());
+                Step st = chain(netsUpTo.getOrDefault(u.getId(), Map.of()), paidUpTo.getOrDefault(u.getId(), Map.of()),
                         month).steps().get(month);
                 totalPaid = totalPaid.add(st.paid());
                 carry = carry.add(st.carryIn());
@@ -615,15 +493,22 @@ public class SalaryService {
                     net = net.add(s.getNetSalary());
                     due = due.add(st.due());
                 }
-                rows.add(new SheetRow(e, s, st.carryIn(), st.paid(), st.due(), st.advanceLeft()));
+                rows.add(new SheetRow(u, s, st.carryIn(), st.paid(), st.due(), st.advanceLeft()));
             }
-            rows.sort(Comparator.comparing((SheetRow r) -> r.employee().getName(), String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(r -> r.employee().getId()));
-            return new MonthSheet(month, working, rows, gross, deductions, bonus, net, carry, totalPaid, due);
+            rows.sort(Comparator.comparing((SheetRow r) -> r.user().getName(), String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(r -> r.user().getId()));
+            return new MonthSheet(month, rows, gross, deductions, bonus, net, carry, totalPaid, due);
         });
     }
 
     // ---------------------------------------------------------------- helpers
+
+    /** Salary is on the users page: the admin's alone, whatever a screen shows. */
+    private static void requireAdmin() {
+        if (!UserSession.isLoggedIn() || !UserSession.get().isAdmin()) {
+            throw new IllegalStateException("Only an admin may manage salary");
+        }
+    }
 
     private static BigDecimal zero(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
@@ -635,8 +520,7 @@ public class SalaryService {
     }
 
     private static String describe(SalaryProcessing s) {
-        return "salary employee=" + s.getEmployee().getId() + " month=" + s.getYear() + "-" + s.getMonth()
-                + " working=" + s.getWorkingDays() + " present=" + s.getPresentDays() + " leave=" + s.getLeaveDays()
+        return "salary user=" + s.getUser().getId() + " month=" + s.getYear() + "-" + s.getMonth()
                 + " units=" + (s.getWorkedUnits() == null ? null : s.getWorkedUnits().toPlainString())
                 + " gross=" + s.getGrossSalary().toPlainString() + " deductions=" + s.getDeductions().toPlainString()
                 + " bonus=" + s.getBonus().toPlainString() + " net=" + s.getNetSalary().toPlainString()
@@ -644,10 +528,9 @@ public class SalaryService {
     }
 
     private static String describe(SalaryPayment p) {
-        return "salary payment employee=" + p.getEmployee().getId() + " month=" + p.getYear() + "-" + p.getMonth()
+        return "salary payment user=" + p.getUser().getId() + " month=" + p.getYear() + "-" + p.getMonth()
                 + " date=" + p.getDate() + " account=" + p.getAccount().getNameEn()
-                + " amount=" + p.getAmount().toPlainString() + (p.isEmergency() ? " emergency" : "")
-                + (p.getNote() == null ? "" : " note=" + p.getNote());
+                + " amount=" + p.getAmount().toPlainString() + (p.isEmergency() ? " emergency" : "");
     }
 
     /** Stops a transaction (rolls it back) with a result for the screen. */

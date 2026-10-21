@@ -1,15 +1,14 @@
 package com.eh.bms.config;
 
 import com.eh.bms.model.AccountNumberRule;
+import com.eh.bms.model.AccountStatus;
 import com.eh.bms.model.AccountTransactionSource;
 import com.eh.bms.model.AccountTransactionType;
 import com.eh.bms.model.AccountType;
 import com.eh.bms.model.AppConfigEntry;
 import com.eh.bms.model.AppModule;
-import com.eh.bms.model.AttendanceStatus;
 import com.eh.bms.model.BalanceType;
 import com.eh.bms.model.BusinessProfile;
-import com.eh.bms.model.EmployeeStatus;
 import com.eh.bms.model.ExpenseCategory;
 import com.eh.bms.model.PartyLedgerType;
 import com.eh.bms.model.PartyStatus;
@@ -35,13 +34,12 @@ import com.eh.bms.repository.ProductRepository;
 import com.eh.bms.repository.SchemaRepository;
 import com.eh.bms.repository.UnitRepository;
 import com.eh.bms.repository.UserRepository;
-import com.eh.bms.service.AppConfigService;
 import com.eh.bms.util.TransactionHelper;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -64,12 +62,7 @@ public final class DataSeeder {
             {"date_format", "dd/MM/yyyy", "Date display format"},
             {"time_format", "hh:mm a", "Time display format (12/24-hour)"},
             {"items_per_page", "20", "Table pagination count"},
-            {"dashboard_rows", "5", "Dashboard table rows per page"},
-            {"auto_backup", "false", "Auto backup on app close"},
-            {"weekly_off_days", "FRIDAY", "Weekly off days (comma list of day names, empty = none)"},
-            {"paid_leave", "false", "Leave days are paid for daily and hourly employees"},
-            {"work_start_time", "09:00", "Work day start (HH:mm)"},
-            {"work_end_time", "17:00", "Work day end (HH:mm)"}
+            {"dashboard_rows", "5", "Dashboard table rows per page"}
     };
 
     private static final String DEFAULT_BUSINESS_NAME = "আমার ব্যবসা";
@@ -87,6 +80,10 @@ public final class DataSeeder {
     /** Cashier view only. No HR, reports, settings, users or accounts (user decision). */
     private static final Set<AppModule> CASHIER_VIEW_ONLY =
             EnumSet.of(AppModule.DASHBOARD, AppModule.PRODUCT, AppModule.STOCK);
+
+    /** Settings of the attendance removed in N12. */
+    private static final List<String> ATTENDANCE_SETTINGS = List.of("weekly_off_days", "paid_leave",
+            "work_start_time", "work_end_time", "attendance_auto_from");
 
     /** app_config key: number of one-time data fixes already applied (see {@link #migrateData()}). */
     private static final String DATA_VERSION = "data_version";
@@ -114,7 +111,9 @@ public final class DataSeeder {
     private static final Object[][] DEFAULT_ACCOUNT_TYPES = {
             {"ক্যাশ", "Cash", AccountNumberRule.NONE},
             {"ব্যাংক", "Bank", AccountNumberRule.BANK},
-            {"মোবাইল ব্যাংকিং", "Mobile banking", AccountNumberRule.MOBILE}
+            {"বিকাশ", "bKash", AccountNumberRule.MOBILE},
+            {"নগদ", "Nagad", AccountNumberRule.MOBILE},
+            {"রকেট", "Rocket", AccountNumberRule.MOBILE}
     };
 
     /** Common units: Bangla name, English name. */
@@ -206,13 +205,11 @@ public final class DataSeeder {
             {"account_types", "number_rule", AccountNumberRule.class},
             {"account_transactions", "type", AccountTransactionType.class},
             {"account_transactions", "source", AccountTransactionSource.class},
-            {"attendance", "status", AttendanceStatus.class},
-            {"employees", "salary_type", SalaryType.class},
-            {"employees", "status", EmployeeStatus.class},
             {"parties", "type", PartyType.class},
             {"parties", "party_type", PartyTradeType.class},
             {"parties", "balance_type", BalanceType.class},
             {"parties", "status", PartyStatus.class},
+            {"accounts", "status", AccountStatus.class},
             {"party_ledger", "type", PartyLedgerType.class},
             {"permissions", "role", UserRole.class},
             {"permissions", "module", AppModule.class},
@@ -223,7 +220,8 @@ public final class DataSeeder {
             {"transactions", "status", TransactionStatus.class},
             {"transaction_payments", "payment_method", PaymentMethod.class},
             {"users", "role", UserRole.class},
-            {"users", "status", UserStatus.class}
+            {"users", "status", UserStatus.class},
+            {"users", "salary_type", SalaryType.class}
     };
 
     /** Drops enum CHECKs that miss a newer enum value (e.g. account_transactions.source PARTY). Safe every startup. */
@@ -349,6 +347,80 @@ public final class DataSeeder {
                 done = 3;
             }
 
+            if (done < 4) {
+                // v4 (N12): attendance is gone, and with it its settings
+                int changed = session.createMutationQuery("delete from AppConfigEntry e where e.configKey in :keys")
+                        .setParameter("keys", ATTENDANCE_SETTINGS)
+                        .executeUpdate();
+                LOG.info("Data fix v4: " + changed + " attendance setting(s) removed");
+                done = 4;
+            }
+
+            if (done < 5) {
+                // v5 (20.2): bKash, Nagad and Rocket as account types (mobile rule); one the user already has is kept
+                int added = 0;
+                for (Object[] row : DEFAULT_ACCOUNT_TYPES) {
+                    if (row[2] != AccountNumberRule.MOBILE
+                            || ACCOUNT_TYPE_REPO.existsByNameBn(session, (String) row[0], null)
+                            || ACCOUNT_TYPE_REPO.existsByNameEn(session, (String) row[1], null)) {
+                        continue;
+                    }
+                    AccountType t = new AccountType();
+                    t.setNameBn((String) row[0]);
+                    t.setNameEn((String) row[1]);
+                    t.setNumberRule(AccountNumberRule.MOBILE);
+                    ACCOUNT_TYPE_REPO.save(session, t);
+                    added++;
+                }
+                LOG.info("Data fix v5: " + added + " mobile wallet account type(s) added");
+                done = 5;
+            }
+
+            if (done < 6) {
+                // v6 (20.2): the generic "Mobile banking" type is replaced by bKash / Nagad / Rocket; removed unless
+                // an account still uses it
+                int removed = 0;
+                for (AccountType t : ACCOUNT_TYPE_REPO.findAll(session)) {
+                    if ("Mobile banking".equals(t.getNameEn()) && !ACCOUNT_TYPE_REPO.isUsed(session, t.getId())) {
+                        ACCOUNT_TYPE_REPO.delete(session, t);
+                        removed++;
+                    }
+                }
+                LOG.info("Data fix v6: " + removed + " generic mobile banking type(s) removed");
+                done = 6;
+            }
+
+            if (done < 7) {
+                // v7 (20.4): every product has a code; an old product without one gets "P" and five digits
+                java.util.Set<String> taken = new java.util.HashSet<>(session.createSelectionQuery(
+                        "select p.sku from Product p where p.sku is not null and p.sku <> ''", String.class).getResultList());
+                int filled = 0;
+                for (com.eh.bms.model.Product p : session.createSelectionQuery(
+                        "from Product p where p.sku is null or p.sku = '' order by p.id", com.eh.bms.model.Product.class)
+                        .getResultList()) {
+                    long n = p.getId();
+                    String sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+                    while (taken.contains(sku)) {
+                        n++;
+                        sku = String.format(java.util.Locale.ROOT, "P%05d", n);
+                    }
+                    p.setSku(sku);
+                    taken.add(sku);
+                    filled++;
+                }
+                LOG.info("Data fix v7: " + filled + " product(s) given a code");
+                done = 7;
+            }
+
+            if (done < 8) {
+                // v8 (20.11): there is no "backup on app close" any more (the logout question replaced it)
+                int removed = session.createMutationQuery("delete from AppConfigEntry e where e.configKey = :key")
+                        .setParameter("key", "auto_backup")
+                        .executeUpdate();
+                LOG.info("Data fix v8: " + removed + " auto_backup setting removed");
+                done = 8;
+            }
+
             if (version == null) {
                 version = new AppConfigEntry();
                 version.setConfigKey(DATA_VERSION);
@@ -361,7 +433,7 @@ public final class DataSeeder {
         });
     }
 
-    /** Cash, Bank and Mobile banking, only when the table is empty (the user may delete or rename them later). */
+    /** Cash, Bank, bKash, Nagad and Rocket, only when the table is empty (the user may delete or rename them later). */
     static void seedAccountTypes() {
         TransactionHelper.runInTransaction(session -> {
             if (ACCOUNT_TYPE_REPO.count(session) == 0) {
@@ -397,15 +469,6 @@ public final class DataSeeder {
                     APP_CONFIG_REPO.save(session, e);
                     LOG.info("Seeded app_config: " + row[0]);
                 }
-            }
-            // Auto attendance starts the day it first runs, so older history is never filled
-            if (!APP_CONFIG_REPO.existsByKey(session, AppConfigService.ATTENDANCE_AUTO_FROM)) {
-                AppConfigEntry e = new AppConfigEntry();
-                e.setConfigKey(AppConfigService.ATTENDANCE_AUTO_FROM);
-                e.setConfigValue(LocalDate.now().toString());
-                e.setDescription("First day auto attendance may fill (yyyy-MM-dd)");
-                APP_CONFIG_REPO.save(session, e);
-                LOG.info("Seeded app_config: " + AppConfigService.ATTENDANCE_AUTO_FROM);
             }
         });
     }
@@ -534,9 +597,15 @@ public final class DataSeeder {
                 create = view;
                 editDelete = view;
             }
-            default -> {
+            case CASHIER -> {
                 create = CASHIER_CREATE.contains(module);
                 view = create || CASHIER_VIEW_ONLY.contains(module);
+                editDelete = false;
+            }
+            // Employee (N12): nothing until the admin ticks it in the permission editor
+            default -> {
+                view = false;
+                create = false;
                 editDelete = false;
             }
         }

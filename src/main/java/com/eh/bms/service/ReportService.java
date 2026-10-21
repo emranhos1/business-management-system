@@ -1,8 +1,9 @@
 package com.eh.bms.service;
 
 import com.eh.bms.model.Account;
+import com.eh.bms.model.AccountNumberRule;
 import com.eh.bms.model.AccountTransactionType;
-import com.eh.bms.model.Employee;
+import com.eh.bms.model.User;
 import com.eh.bms.model.Party;
 import com.eh.bms.model.PartyLedger;
 import com.eh.bms.model.PartyLedgerType;
@@ -354,15 +355,15 @@ public class ReportService {
 
     // ------------------------------------------------------------ 16.10 Salary
 
-    /** Every employee's salary for the month: gross, deductions, bonus, net, advance carried in, paid, due. */
+    /** Every user's salary for the month: gross, deductions, bonus, net, advance carried in, paid, due. */
     public ReportTable salary(YearMonth month) {
         MonthSheet sheet = salaryService.monthSheet(month);
         List<List<Object>> rows = new ArrayList<>();
         for (SheetRow r : sheet.rows()) {
-            Employee e = r.employee();
+            User u = r.user();
             SalaryProcessing s = r.sheet();
-            rows.add(row(e.getName(), e.getDesignation() == null ? "" : e.getDesignation(),
-                    I18n.get("salary.type." + e.getSalaryType().name()),
+            rows.add(row(u.getName(), I18n.get("role." + u.getRole().name()),
+                    u.getSalaryType() == null ? "" : I18n.get("salary.type." + u.getSalaryType().name()),
                     s == null ? null : s.getGrossSalary(), s == null ? null : s.getDeductions(),
                     s == null ? null : s.getBonus(), s == null ? null : s.getNetSalary(), r.carryIn(), r.paid(),
                     r.due(), I18n.get(s == null ? "report.salary.not_done" : "report.salary.done")));
@@ -400,24 +401,124 @@ public class ReportService {
                 BigDecimal cost = money(dashboard.costOfSales(session, first, last));
                 BigDecimal expenses = dashboard.expenses(session, first, last);
                 BigDecimal salary = dashboard.salaryOfMonths(session, YearMonth.from(first), YearMonth.from(last));
-                BigDecimal net = sales.subtract(cost).subtract(expenses).subtract(salary);
-                rows.add(row(periodLabel(start, period), sales, cost, sales.subtract(cost), expenses, salary, net,
+                BigDecimal writtenOff = dashboard.writeOffLoss(session, first, last);
+                BigDecimal net = sales.subtract(cost).subtract(expenses).subtract(salary).subtract(writtenOff);
+                rows.add(row(periodLabel(start, period), sales, cost, sales.subtract(cost), expenses, salary, writtenOff, net,
                         I18n.get(net.signum() < 0 ? "report.loss" : "report.profit")));
-                BigDecimal[] parts = {sales, cost, expenses, salary};
+                BigDecimal[] parts = {sales, cost, expenses, salary, writtenOff};
                 for (int i = 0; i < parts.length; i++) {
                     total[i] = total[i].add(parts[i]);
                 }
             }
-            BigDecimal net = total[0].subtract(total[1]).subtract(total[2]).subtract(total[3]);
+            BigDecimal net = total[0].subtract(total[1]).subtract(total[2]).subtract(total[3]).subtract(total[4]);
             return new ReportTable(I18n.get("report.profit_loss"),
                     range(from, to) + " · " + I18n.get("report.period." + period.name()) + " · "
                             + I18n.get("report.salary_note"),
                     List.of(col("report.col.period", Kind.TEXT), col("report.col.sales_net", Kind.MONEY),
                             col("report.col.cost", Kind.MONEY), col("report.col.gross_profit", Kind.MONEY),
                             col("report.col.expenses", Kind.MONEY), col("report.col.salary", Kind.MONEY),
+                            col("report.col.written_off", Kind.MONEY),
                             col("report.col.net_profit", Kind.MONEY), col("report.col.result", Kind.TEXT)), rows,
                     row(I18n.get("label.total"), total[0], total[1], total[0].subtract(total[1]), total[2], total[3],
-                            net, I18n.get(net.signum() < 0 ? "report.loss" : "report.profit")));
+                            total[4], net, I18n.get(net.signum() < 0 ? "report.loss" : "report.profit")));
+        });
+    }
+
+    // ------------------------------------------------------------ N14 Forgiven balances
+
+    /**
+     * Every balance forgiven in {@code from}..{@code to}: the date, the party, whether it was owed to us or by us,
+     * and the amount. The total is what the forgiving cost (what we gave up minus what we no longer owe); the
+     * profit and loss report takes it off the profit.
+     */
+    public ReportTable writeOffs(LocalDate from, LocalDate to) {
+        List<PartyLedger> entries = TransactionHelper.inTransaction(session -> repository.writeOffs(session, from, to));
+        List<List<Object>> rows = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (PartyLedger l : entries) {
+            boolean owedToUs = l.getCredit().signum() > 0;
+            BigDecimal amount = owedToUs ? l.getCredit() : l.getDebit();
+            rows.add(row(l.getDate(), PartyText.name(l.getParty()), l.getParty().getPhone(),
+                    I18n.get(owedToUs ? "report.writeoff.receivable" : "report.writeoff.payable"), amount));
+            total = total.add(owedToUs ? amount : amount.negate());
+        }
+        return new ReportTable(I18n.get("report.writeoffs"), range(from, to),
+                List.of(col("label.date", Kind.DATE), col("report.col.party", Kind.TEXT),
+                        col("report.col.mobile", Kind.TEXT), col("report.col.type", Kind.TEXT),
+                        col("report.col.written_off", Kind.MONEY)), rows,
+                row(I18n.get("label.total"), null, null, null, total));
+    }
+
+    // ------------------------------------------------------------ 20.1 VAT
+
+    /**
+     * VAT of the month's sales, one row for every day that has a sale: bills, sales before VAT, VAT charged, the
+     * VAT of returned goods (the bill's VAT shared by its returned part) and the VAT left to pay.
+     */
+    public ReportTable vat(YearMonth month) {
+        List<Object[]> sales = TransactionHelper.inTransaction(
+                session -> repository.saleVatRows(session, month.atDay(1), month.atEndOfMonth()));
+        Map<LocalDate, BigDecimal[]> days = new TreeMap<>();
+        for (Object[] s : sales) {
+            BigDecimal tax = (BigDecimal) s[1];
+            BigDecimal grand = (BigDecimal) s[2];
+            BigDecimal returned = (BigDecimal) s[3];
+            BigDecimal taxBack = grand.signum() == 0 ? BigDecimal.ZERO
+                    : tax.multiply(returned.min(grand)).divide(grand, MONEY_DECIMALS, RoundingMode.HALF_UP);
+            BigDecimal[] d = days.computeIfAbsent((LocalDate) s[0], k -> zeros(4));
+            d[0] = d[0].add(BigDecimal.ONE);
+            d[1] = d[1].add(grand.subtract(tax));
+            d[2] = d[2].add(tax);
+            d[3] = d[3].add(taxBack);
+        }
+        List<List<Object>> rows = new ArrayList<>();
+        BigDecimal[] total = zeros(4);
+        days.forEach((day, d) -> {
+            rows.add(row(day, d[0], d[1], d[2], d[3], d[2].subtract(d[3])));
+            for (int i = 0; i < 4; i++) {
+                total[i] = total[i].add(d[i]);
+            }
+        });
+        return new ReportTable(I18n.get("report.vat"), monthName(month),
+                List.of(col("label.date", Kind.DATE), col("report.col.sale_count", Kind.NUMBER),
+                        col("report.col.before_vat", Kind.MONEY), col("report.col.vat_charged", Kind.MONEY),
+                        col("report.col.vat_returned", Kind.MONEY), col("report.col.vat_net", Kind.MONEY)), rows,
+                row(I18n.get("label.total"), total[0], total[1], total[2], total[3], total[2].subtract(total[3])));
+    }
+
+    // ------------------------------------------------------------ 20.3 Mobile payments
+
+    /**
+     * Every mobile account (bKash, Nagad, Rocket, ...): money in, money out and the net of {@code from}..{@code to},
+     * transfers between accounts left out (as in the daily cash report). Accounts with nothing in the dates still
+     * show with 0.
+     */
+    public ReportTable mobilePayments(LocalDate from, LocalDate to) {
+        return TransactionHelper.inTransaction(session -> {
+            Map<Long, BigDecimal[]> sums = new java.util.HashMap<>();
+            for (Object[] r : repository.mobileMoney(session, from, to)) {
+                BigDecimal[] s = sums.computeIfAbsent((Long) r[0], k -> zeros(2));
+                s[r[1] == AccountTransactionType.CREDIT ? 0 : 1] = (BigDecimal) r[2];
+            }
+            List<Account> accounts = dashboard.allAccounts(session).stream()
+                    .filter(a -> a.getType() != null && a.getType().getNumberRule() == AccountNumberRule.MOBILE)
+                    .sorted(Comparator.comparing((Account a) -> I18n.pick(a.getType().getNameBn(), a.getType().getNameEn()),
+                            String.CASE_INSENSITIVE_ORDER).thenComparing(a -> I18n.pick(a.getName(), a.getNameEn())))
+                    .toList();
+            List<List<Object>> rows = new ArrayList<>();
+            BigDecimal[] total = zeros(2);
+            for (Account a : accounts) {
+                BigDecimal[] s = sums.getOrDefault(a.getId(), zeros(2));
+                rows.add(row(I18n.pick(a.getType().getNameBn(), a.getType().getNameEn()),
+                        I18n.pick(a.getName(), a.getNameEn()), a.getAccountNumber(), s[0], s[1], s[0].subtract(s[1])));
+                total[0] = total[0].add(s[0]);
+                total[1] = total[1].add(s[1]);
+            }
+            return new ReportTable(I18n.get("report.mobile_payments"), range(from, to),
+                    List.of(col("accounts.type", Kind.TEXT), col("accounts.name", Kind.TEXT),
+                            col("accounts.number", Kind.TEXT), col("report.col.money_in", Kind.MONEY),
+                            col("report.col.money_out", Kind.MONEY), col("report.col.net", Kind.MONEY)), rows,
+                    row(I18n.get("label.total"), null, null, total[0], total[1], total[0].subtract(total[1])));
         });
     }
 
