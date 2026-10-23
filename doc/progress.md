@@ -404,3 +404,84 @@ Depends on: Stage 10
 | N14.1 | "মাফ" button on an active party row that has a balance (either way); confirm; one `WRITE_OFF` ledger entry brings the balance to exactly 0; audit row; ledger shows "বাকি মাফ" | Party with ৳0.56 পাবো: forgive makes it 0; ledger shows the entry; a party with no balance has no button | ✅ |
 | N14.2 | Forgiven amounts count as a loss: dashboard profit card line "মাফ করা বাকি", a column in the profit and loss report, both reducing the net profit; a report "মাফ করা বাকির তালিকা" (date, party, which way, amount, total) | Forgive ৳0.56 owed to us: net profit falls by ৳0.56 in both; the list shows it | ✅ |
 | N14.3 | Sale and purchase line entry on one row (product wide, unit, quantity with − / +, price, discount, add) | Fits one row; the product box is the widest | ✅ |
+
+### N15 — Due Follow-Up (বাকি তাগাদা)
+Know who owes how much, since when, and remind them. Nothing is built before the rules are agreed.
+Depends on: Stage 10, Stage 11
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N15.1 | Rules (user decisions): credit limit per customer (none / fixed), due days, warn or block over the limit, who may override, what the statement shows | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N15.2 | Party gets a credit limit and due days; shown in the form and the party view | Save and reopen: values stay | [ ] |
+| N15.3 | Sale warns (or blocks, per N15.1) when the new due takes the customer over the limit | Sale over the limit shows the message; under it sells normally | [ ] |
+| N15.4 | Overdue list page: customer, due amount, last sale date, days overdue; oldest first; filters | A customer past the due days shows; one who paid does not | [ ] |
+| N15.5 | Customer due statement: preview and print (`NodePrinter`, memo style) | Print shows the shop, customer, bills, payments, balance | [ ] |
+| N15.6 | SMS reminder only if the user later picks a gateway (not built now) | — | [ ] |
+
+### N16 — Repacking (রিপ্যাকিং)
+Open a big bag and make small packs; stock and cost must follow.
+Depends on: Stage 9
+Note: packs are separate products (pack-size rule), so repacking moves stock from one product to another.
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N16.1 | Rules (user decisions): wastage allowed or not, how cost is shared (by weight, average cost), who may repack, price of the new packs | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N16.2 | Repack screen: one big product in, one or more small products out, date, note; weight check (in = out + wastage) | Wrong weight is refused with the message | [ ] |
+| N16.3 | Save posts stock out and stock in through `StockLedgerService.post`; the new packs get their cost from the big pack's average cost; one audit row | 50 kg bag → 2 × 25 kg: stock and average cost are right | [ ] |
+| N16.4 | Repack history list with a view of each repack | Past repack shows in and out lines | [ ] |
+
+### N17 — Cheque Tracking (চেক ট্র্যাকিং)
+Cheques received or given must be followed until the money really moves.
+Depends on: Stage 7, Stage 10
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N17.1 | Rules (user decisions): which statuses, which account gets the money, bounce charge, can a sale or purchase take a cheque as payment | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N17.2 | Cheque record: received or given, party, bank, cheque number, amount, cheque date, status (pending / deposited / cleared / bounced) | New cheque saves with status pending | [ ] |
+| N17.3 | Account ledger entry only when the cheque is cleared; party ledger follows the rules | Pending cheque leaves balances alone; clear moves the money | [ ] |
+| N17.4 | Bounce reverses the party ledger and keeps an audit row | A bounced cheque brings the party's due back | [ ] |
+| N17.5 | List page: filters by status, party, date; "due today" list | A cheque dated today shows in the list | [ ] |
+
+### N18 — Purchase Order and Reorder (কেনার অর্ডার)
+See what is running low and order it from the supplier.
+Depends on: Stage 9, Stage 12
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N18.1 | Rules (user decisions): the low-stock level per product, usual supplier per product, order number format, partial receive | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N18.2 | Reorder list: products at or below the low-stock level, grouped by supplier, with a suggested quantity | A low product shows under its supplier | [ ] |
+| N18.3 | Draft purchase order from the list: edit quantities, save, print | Order prints with supplier and lines | [ ] |
+| N18.4 | Receive an order (full or part): it becomes a normal purchase through `PurchaseService`; the order shows what is still pending | Part receive adds stock, pending quantity falls | [ ] |
+
+### N19 — Product and Customer Profit (পণ্য ও ক্রেতা লাভ)
+Which products and which customers earn the most.
+Depends on: Stage 11, Stage 16
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N19.1 | Rules (user decisions): which dates, show returns and discount, include forgiven balances or not | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N19.2 | Product profit report (`ReportService` + `ReportsController.Report` + text keys): quantity sold, sales, cost, profit, margin | Totals match the dashboard profit rules | [ ] |
+| N19.3 | Customer profit report: bills, sales, cost, profit, due now | A customer's profit matches their sales | [ ] |
+| N19.4 | Both reports export to Excel like the others | Excel opens with real numbers | [ ] |
+
+### N20 — Daily Cash Close (ক্যাশ মিলানো)
+At day end, count the cash in the drawer and compare it with the app.
+Depends on: Stage 7
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N20.1 | Rules (user decisions): which accounts are counted, who may close, can a day be reopened, how a difference is booked | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N20.2 | Close screen: pick date and account, type the counted cash; the app's balance and the difference show at once | Difference = counted − app balance | [ ] |
+| N20.3 | Save stores the close with a note; the difference counts as loss or gain in profit; audit row | A short ৳50 lowers the net profit by ৳50 | [ ] |
+| N20.4 | List of past closes with date, account, counted, app balance, difference | Saved close shows in the list | [ ] |
+
+### N21 — Stock Count (স্টক গণনা)
+Count the real goods and fix the stock in one go.
+Depends on: Stage 9
+
+| ID | Task | Test | Status |
+|----|------|------|--------|
+| N21.1 | Rules (user decisions): count by category or all, who may confirm, reason text, blind count or not | Rules written in `doc/CLAUDE.md` and agreed | [ ] |
+| N21.2 | Count sheet per category: product, app stock, real quantity box, difference | Typing a quantity shows the difference | [ ] |
+| N21.3 | One confirm posts every adjustment with the reason (reuse the stock adjustment); audit row | Stock matches the typed quantities after confirm | [ ] |
+| N21.4 | Print the count sheet; list of past counts | Printed sheet has an empty box per product | [ ] |
